@@ -9,17 +9,25 @@ export function Header({
   title,
   showBack,
   right,
+  onBack,
 }: {
   title: string;
   showBack?: boolean;
   right?: React.ReactNode;
+  /** Overrides the default `router.back()` — for screens whose "back" is an
+   *  in-screen step change rather than a navigation. */
+  onBack?: () => void;
 }) {
   const router = useRouter();
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
         {showBack && (
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={{ marginRight: 6 }}>
+          <TouchableOpacity
+            onPress={onBack ?? (() => router.back())}
+            hitSlop={10}
+            style={{ marginRight: 6 }}
+          >
             <ChevronLeft size={22} color={colors.indigoText} />
           </TouchableOpacity>
         )}
