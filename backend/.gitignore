@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.env
+sur_mezur.db
+uploads/
+!uploads/.gitkeep

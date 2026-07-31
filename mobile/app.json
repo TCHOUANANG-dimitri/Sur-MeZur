@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Sur-MeZur",
+    "slug": "sur-mezur",
+    "scheme": "surmezur",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo-icon.jpeg",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#EDEAF4"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.surmezur.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#EDEAF4",
+        "foregroundImage": "./assets/logo-icon.jpeg"
+      },
+      "package": "com.surmezur.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-asset"
+    ]
+  }
+}
