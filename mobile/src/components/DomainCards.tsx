@@ -3,9 +3,11 @@ import { StyleSheet, Text, TextInput, View } from "react-native";
 import { formatFcfa, useI18n } from "../i18n/I18nProvider";
 import type { Quote } from "../api/types";
 import { Card } from "./Card";
-import { colors, fonts } from "../theme/tokens";
+import { useThemedStyles } from "../theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../theme/tokens";
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.row}>
       <Text style={[styles.rowLabel, bold && styles.rowLabelBold]}>{label}</Text>
@@ -25,6 +27,7 @@ export function PriceSummary({
   balance: number;
   showEscrowNote?: boolean;
 }) {
+  const styles = useThemedStyles(makeStyles);
   const { t } = useI18n();
   return (
     <Card>
@@ -64,6 +67,7 @@ export function MeasurementRow({
   editable?: boolean;
   onChange?: (v: number) => void;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.measureRow}>
       <Text style={styles.measureLabel}>{MEASUREMENT_LABELS[measureKey] || measureKey}</Text>
@@ -82,6 +86,7 @@ export function MeasurementRow({
 }
 
 export function QuoteCard({ quote }: { quote: Quote }) {
+  const styles = useThemedStyles(makeStyles);
   const { t } = useI18n();
   return (
     <Card>
@@ -111,6 +116,7 @@ export function ChatBubble({
   kind: "text" | "modification" | "system";
   time?: string;
 }) {
+  const styles = useThemedStyles(makeStyles);
   const isSystem = kind === "system";
   return (
     <View
@@ -139,7 +145,8 @@ export function ChatBubble({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 },
   rowLabel: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },
   rowLabelBold: { fontSize: 15, color: colors.indigoText, fontFamily: fonts.bodyBold },
@@ -173,7 +180,7 @@ const styles = StyleSheet.create({
   bubbleRow: { flexDirection: "row", marginBottom: 10 },
   bubble: { maxWidth: "78%", borderRadius: 14, paddingVertical: 9, paddingHorizontal: 13 },
   bubbleMine: { backgroundColor: colors.violetPrimary },
-  bubbleTheirs: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
+  bubbleTheirs: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   bubbleSystem: { backgroundColor: colors.backgroundAlt, maxWidth: "90%" },
   bubbleKicker: {
     fontSize: 10,

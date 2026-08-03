@@ -5,7 +5,8 @@ import { Card } from "../../../src/components/Card";
 import { Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { formatFcfa } from "../../../src/i18n/I18nProvider";
-import { colors, fonts } from "../../../src/theme/tokens";
+import { useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../../src/theme/tokens";
 
 interface Tier {
   id: string;
@@ -15,6 +16,7 @@ interface Tier {
 }
 
 export default function CommissionSettings() {
+  const styles = useThemedStyles(makeStyles);
   const [tiers, setTiers] = useState<Tier[] | null>(null);
 
   useEffect(() => {
@@ -43,7 +45,8 @@ export default function CommissionSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   intro: { fontSize: 12, color: colors.textSecondary, marginBottom: 14, fontFamily: fonts.body },
   row: { flexDirection: "row", justifyContent: "space-between" },
   range: { fontSize: 13, color: colors.indigoText, fontFamily: fonts.body },

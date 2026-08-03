@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { AuthApi, UsersApi } from "../api/endpoints";
-import { getToken, setToken } from "../api/client";
+import { getToken, setAuthFailureHandler, setTokens } from "../api/client";
 import type { User } from "../api/types";
 
 interface AuthContextValue {
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const me = await UsersApi.me();
       setUser(me);
     } catch {
-      await setToken(null);
+      await setTokens(null, null);
       setUser(null);
     } finally {
       setLoading(false);
@@ -48,9 +48,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // When even the refresh token is spent, the API layer signals here so the
+  // whole app drops to the logged-out state instead of each screen throwing.
+  useEffect(() => {
+    setAuthFailureHandler(() => setUser(null));
+    return () => setAuthFailureHandler(null);
+  }, []);
+
   const login = async (phone: string, password: string) => {
     const tok = await AuthApi.login(phone, password);
-    await setToken(tok.access_token);
+    await setTokens(tok.access_token, tok.refresh_token);
     const me = await UsersApi.me();
     setUser(me);
     return me;
@@ -58,14 +65,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register: AuthContextValue["register"] = async (body) => {
     const tok = await AuthApi.register(body);
-    await setToken(tok.access_token);
+    await setTokens(tok.access_token, tok.refresh_token);
     const me = await UsersApi.me();
     setUser(me);
     return me;
   };
 
   const logout = async () => {
-    await setToken(null);
+    await setTokens(null, null);
     setUser(null);
   };
 

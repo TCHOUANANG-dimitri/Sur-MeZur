@@ -49,6 +49,7 @@ class ReadyToWearOut(ORMModel):
     name: str
     description: str | None
     photo_url: str | None
+    photos: list[str] = []
     price: float
     item_measurements: dict
     measurement_method: MeasurementMethod

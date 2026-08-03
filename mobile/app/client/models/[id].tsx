@@ -9,9 +9,12 @@ import { LikeButton } from "../../../src/components/Badges";
 import { Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { StatusChip } from "../../../src/components/Chip";
-import { colors, fonts, radii } from "../../../src/theme/tokens";
+import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, radii, type ThemeColors } from "../../../src/theme/tokens";
 
 export default function ModelDetail() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { id, tailorId } = useLocalSearchParams<{ id: string; tailorId?: string }>();
   const router = useRouter();
   const [model, setModel] = useState<GarmentModel | null>(null);
@@ -68,7 +71,8 @@ export default function ModelDetail() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   hero: { height: 260 },
   likeOverlay: { position: "absolute", top: 12, right: 12 },
   title: { fontFamily: fonts.display, fontSize: 20, color: colors.indigoText, marginTop: 10, marginBottom: 6 },

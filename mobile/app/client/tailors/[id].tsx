@@ -13,9 +13,11 @@ import { Screen } from "../../../src/components/Screen";
 import { Stars } from "../../../src/components/Stars";
 import { VerifiedBadge } from "../../../src/components/Badges";
 import { formatFcfa, useI18n } from "../../../src/i18n/I18nProvider";
-import { colors, fonts, gradientColors, radii } from "../../../src/theme/tokens";
+import { useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, gradientColors, radii, type ThemeColors } from "../../../src/theme/tokens";
 
 export default function TailorProfilePage() {
+  const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useI18n();
@@ -92,7 +94,8 @@ export default function TailorProfilePage() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   banner: { height: 90, borderRadius: radii.card },
   avatarWrap: { alignItems: "center", marginTop: -34 },
   avatar: { width: 68, height: 68, borderRadius: 34, backgroundColor: colors.white, borderWidth: 3, borderColor: colors.white },

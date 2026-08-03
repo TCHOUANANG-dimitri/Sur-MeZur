@@ -1,7 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from "react-native";
-import { colors, fonts, gradientColors, radii } from "../theme/tokens";
+import { useTheme, useThemedStyles } from "../theme/ThemeProvider";
+import { fonts, gradientFor, radii, type ThemeColors } from "../theme/tokens";
 
 type Variant = "primary" | "secondary" | "text" | "danger";
 
@@ -16,10 +17,19 @@ interface Props {
 }
 
 export function Button({ children, onPress, variant = "primary", fullWidth, disabled, loading, style }: Props) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const isDisabled = disabled || loading;
+
   const content = (
     <View style={styles.contentRow}>
-      {loading && <ActivityIndicator size="small" color={variant === "primary" || variant === "danger" ? colors.white : colors.violetPrimary} style={{ marginRight: 8 }} />}
+      {loading && (
+        <ActivityIndicator
+          size="small"
+          color={variant === "primary" || variant === "danger" ? colors.white : colors.violetPrimary}
+          style={{ marginRight: 8 }}
+        />
+      )}
       <Text
         style={[
           styles.label,
@@ -40,7 +50,7 @@ export function Button({ children, onPress, variant = "primary", fullWidth, disa
         disabled={isDisabled}
         style={[fullWidth && styles.fullWidth, isDisabled && styles.disabled, style]}
       >
-        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.base}>
+        <LinearGradient colors={gradientFor(colors)} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.base}>
           {content}
         </LinearGradient>
       </TouchableOpacity>
@@ -67,48 +77,49 @@ export function Button({ children, onPress, variant = "primary", fullWidth, disa
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    borderRadius: radii.button,
-    paddingVertical: 13,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  contentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  secondary: {
-    backgroundColor: colors.white,
-    borderWidth: 1.5,
-    borderColor: colors.violetPrimary,
-  },
-  danger: {
-    backgroundColor: colors.error,
-  },
-  text: {
-    backgroundColor: "transparent",
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  fullWidth: {
-    width: "100%",
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  label: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 14,
-  },
-  labelOnColor: {
-    color: colors.white,
-  },
-  labelOnLight: {
-    color: colors.violetPrimary,
-  },
-  labelText: {
-    color: colors.violetPrimary,
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    base: {
+      borderRadius: radii.button,
+      paddingVertical: 13,
+      paddingHorizontal: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    contentRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    secondary: {
+      backgroundColor: colors.surface,
+      borderWidth: 1.5,
+      borderColor: colors.violetPrimary,
+    },
+    danger: {
+      backgroundColor: colors.error,
+    },
+    text: {
+      backgroundColor: "transparent",
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+    },
+    fullWidth: {
+      width: "100%",
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+    label: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 14,
+    },
+    labelOnColor: {
+      color: colors.white,
+    },
+    labelOnLight: {
+      color: colors.violetPrimary,
+    },
+    labelText: {
+      color: colors.violetPrimary,
+    },
+  });

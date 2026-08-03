@@ -12,7 +12,8 @@ import { Screen } from "../../../src/components/Screen";
 import { Stars } from "../../../src/components/Stars";
 import { useI18n } from "../../../src/i18n/I18nProvider";
 import { useAuth } from "../../../src/state/AuthContext";
-import { colors, fonts, gradientColors, radii } from "../../../src/theme/tokens";
+import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, gradientColors, radii, type ThemeColors } from "../../../src/theme/tokens";
 
 const CATEGORIES: { key: GarmentCategory; label: string }[] = [
   { key: "top", label: "Hauts" },
@@ -23,6 +24,8 @@ const CATEGORIES: { key: GarmentCategory; label: string }[] = [
 ];
 
 export default function Home() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user } = useAuth();
   const { t, lang, setLang } = useI18n();
   const router = useRouter();
@@ -133,7 +136,8 @@ export default function Home() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",

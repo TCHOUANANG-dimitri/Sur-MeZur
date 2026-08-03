@@ -1,7 +1,7 @@
 import { Star } from "lucide-react-native";
 import React from "react";
 import { TouchableOpacity, View } from "react-native";
-import { colors } from "../theme/tokens";
+import { useTheme } from "../theme/ThemeProvider";
 
 export function Stars({
   value,
@@ -14,6 +14,7 @@ export function Stars({
   interactive?: boolean;
   onChange?: (v: number) => void;
 }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flexDirection: "row", gap: 2 }}>
       {[1, 2, 3, 4, 5].map((i) => {

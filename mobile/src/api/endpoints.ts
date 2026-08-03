@@ -83,6 +83,7 @@ export const TailorsApi = {
     return api.get<TailorProfile[]>(`/tailors?${qs.toString()}`);
   },
   get: (id: string) => api.get<TailorProfile>(`/tailors/${id}`),
+  reviews: (tailorId: string) => api.get<Review[]>(`/tailors/${tailorId}/reviews`),
   submitVerification: (fields: {
     tailor_type: string;
     shop_name: string;
@@ -102,7 +103,8 @@ export const TailorsApi = {
 
 // --- Measurements / avatars ------------------------------------------
 export const MeasurementsApi = {
-  createSession: (body: { height_cm: number; weight_kg?: number; gender?: string }) =>
+  /** Height, weight and sex are all required — they drive the estimator. */
+  createSession: (body: { height_cm: number; weight_kg: number; gender: "female" | "male" }) =>
     api.post<MeasurementSession>("/measurements/session", body),
   uploadPhotos: (sessionId: string, front: PickedFile, side: PickedFile) => {
     const form = new FormData();
@@ -140,6 +142,14 @@ export const CatalogApi = {
     api.get<ReadyToWear[]>(`/ready-to-wear${tailorId ? `?tailor_id=${tailorId}` : ""}`),
   readyToWearItem: (id: string) => api.get<ReadyToWear>(`/ready-to-wear/${id}`),
   createReadyToWear: (body: Partial<ReadyToWear>) => api.post<ReadyToWear>("/ready-to-wear", body),
+  /** Tailor's own stock, including out-of-stock items. */
+  myReadyToWear: () => api.get<ReadyToWear[]>("/ready-to-wear/mine"),
+  uploadReadyToWearPhotos: (id: string, files: PickedFile[]) => {
+    const form = new FormData();
+    files.forEach((f) => appendFile(form, "files", f));
+    return api.postForm<ReadyToWear>(`/ready-to-wear/${id}/photos`, form);
+  },
+  deleteReadyToWear: (id: string) => api.del<void>(`/ready-to-wear/${id}`),
   compare: (measurement_id: string, ready_to_wear_id: string) =>
     api.post<{ match: boolean; deltas: Record<string, number>; message: string }>("/compare", {
       measurement_id,
@@ -222,7 +232,30 @@ export const NotificationsApi = {
 };
 
 // --- Admin ---------------------------------------------------------------
+export interface AdminStats {
+  clients: number;
+  tailors: number;
+  tailors_pending: number;
+  suspended: number;
+  orders_total: number;
+  orders_by_status: Record<string, number>;
+  open_disputes: number;
+  pending_reviews: number;
+  gmv: number;
+  commission_earned: number;
+}
+
 export const AdminApi = {
+  stats: () => api.get<AdminStats>("/admin/stats"),
+  users: (params: { role?: string; q?: string; active?: boolean } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => v !== undefined && v !== "" && qs.set(k, String(v)));
+    return api.get<User[]>(`/admin/users?${qs.toString()}`);
+  },
+  setUserActive: (userId: string, is_active: boolean) =>
+    api.post<User>(`/admin/users/${userId}/active`, { is_active }),
+  allOrders: (status_filter?: string) =>
+    api.get<Order[]>(`/admin/orders${status_filter ? `?status_filter=${status_filter}` : ""}`),
   pendingVerifications: () => api.get<TailorProfile[]>("/admin/verifications"),
   decideVerification: (tailorId: string, status: "approved" | "rejected") =>
     api.post<TailorProfile>(`/admin/verifications/${tailorId}/decide`, { status }),

@@ -10,9 +10,12 @@ import { Card } from "../../../../src/components/Card";
 import { ErrorBanner, Field, Header, Input, Spinner } from "../../../../src/components/Misc";
 import { Screen } from "../../../../src/components/Screen";
 import { formatFcfa, useI18n } from "../../../../src/i18n/I18nProvider";
-import { colors, fonts } from "../../../../src/theme/tokens";
+import { useTheme, useThemedStyles } from "../../../../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../../../src/theme/tokens";
 
 export default function Payment() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useI18n();
@@ -114,7 +117,8 @@ export default function Payment() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   totalLabel: { fontSize: 12, color: colors.textSecondary, fontFamily: fonts.body },
   total: { fontSize: 20, fontFamily: fonts.bodyBold, color: colors.indigoText, marginBottom: 12 },
   line: { fontSize: 13, color: colors.indigoText, marginTop: 2, fontFamily: fonts.body },

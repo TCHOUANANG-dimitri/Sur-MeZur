@@ -8,7 +8,8 @@ import { Card } from "../../../../src/components/Card";
 import { ErrorBanner, Field, Header, Input } from "../../../../src/components/Misc";
 import { Screen } from "../../../../src/components/Screen";
 import { formatFcfa, useI18n } from "../../../../src/i18n/I18nProvider";
-import { colors, fonts } from "../../../../src/theme/tokens";
+import { useThemedStyles } from "../../../../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../../../src/theme/tokens";
 
 // Mirrors CDC §10.1 for the live preview; the server is authoritative.
 function previewCommission(total: number) {
@@ -19,6 +20,7 @@ function previewCommission(total: number) {
 }
 
 export default function QuoteForm() {
+  const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useI18n();
@@ -99,6 +101,7 @@ export default function QuoteForm() {
 }
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -107,7 +110,8 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   label: { fontSize: 12, fontFamily: fonts.bodyBold, marginBottom: 8, color: colors.indigoText },
   itemRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
   row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },

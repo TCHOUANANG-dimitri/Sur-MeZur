@@ -6,9 +6,11 @@ import { AuthApi } from "../src/api/endpoints";
 import { Button } from "../src/components/Button";
 import { ErrorBanner, Field, Header, Input } from "../src/components/Misc";
 import { Screen } from "../src/components/Screen";
-import { colors, fonts } from "../src/theme/tokens";
+import { useThemedStyles } from "../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../src/theme/tokens";
 
 export default function ForgotPassword() {
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const [phone, setPhone] = useState("+237");
   const [step, setStep] = useState<"phone" | "reset" | "done">("phone");
@@ -104,7 +106,8 @@ export default function ForgotPassword() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   body: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body, marginBottom: 16 },
   devCode: {
     backgroundColor: colors.backgroundAlt,

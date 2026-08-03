@@ -7,9 +7,11 @@ import { Button } from "../../../src/components/Button";
 import { Card } from "../../../src/components/Card";
 import { EmptyState, Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
-import { colors, fonts } from "../../../src/theme/tokens";
+import { useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../../src/theme/tokens";
 
 export default function Verifications() {
+  const styles = useThemedStyles(makeStyles);
   const [tailors, setTailors] = useState<TailorProfile[] | null>(null);
 
   const load = useCallback(() => {
@@ -59,7 +61,8 @@ export default function Verifications() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   name: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.indigoText },
   meta: { fontSize: 12, color: colors.textSecondary, marginTop: 4, fontFamily: fonts.body },
   bio: { fontSize: 12, marginTop: 8, color: colors.indigoText, fontFamily: fonts.body },

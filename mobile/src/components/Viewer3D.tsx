@@ -2,7 +2,8 @@ import { GLView, ExpoWebGLRenderingContext } from "expo-gl";
 import React, { useEffect, useRef } from "react";
 import { PanResponder, StyleSheet, View } from "react-native";
 import * as THREE from "three";
-import { colors, radii } from "../theme/tokens";
+import { useThemedStyles } from "../theme/ThemeProvider";
+import { radii, type ThemeColors } from "../theme/tokens";
 
 /**
  * three's WebGLRenderer falls back to `createCanvasElement()` (which touches
@@ -48,6 +49,7 @@ export function Viewer3D({
   autoRotate = true,
   height = 320,
 }: Viewer3DProps) {
+  const styles = useThemedStyles(makeStyles);
   const groupRef = useRef<THREE.Group | null>(null);
   const dragging = useRef(false);
   const lastDx = useRef(0);
@@ -214,7 +216,8 @@ export function Viewer3D({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   wrap: {
     width: "100%",
     borderRadius: radii.card,

@@ -8,9 +8,11 @@ import { Card } from "../../../src/components/Card";
 import { EmptyState, Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { formatFcfa } from "../../../src/i18n/I18nProvider";
-import { colors, fonts } from "../../../src/theme/tokens";
+import { useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../../src/theme/tokens";
 
 export default function Disputes() {
+  const styles = useThemedStyles(makeStyles);
   const [orders, setOrders] = useState<Order[] | null>(null);
 
   const load = useCallback(() => {
@@ -57,7 +59,8 @@ export default function Disputes() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   id: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.indigoText },
   price: { fontSize: 12, marginTop: 4, color: colors.textSecondary, fontFamily: fonts.body },
 });

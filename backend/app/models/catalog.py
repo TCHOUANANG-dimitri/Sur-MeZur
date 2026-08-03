@@ -64,7 +64,10 @@ class ReadyToWear(Base, IDMixin, TimestampMixin):
     tailor_id: Mapped[str] = mapped_column(ForeignKey("tailor_profiles.id"))
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    # Kept as the "cover" for existing clients/screens; `photos` is the full
+    # gallery and always holds the cover as its first entry.
     photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    photos: Mapped[list] = mapped_column(JSON, default=list)
     price: Mapped[float] = mapped_column(Numeric(12, 2))
     item_measurements: Mapped[dict] = mapped_column(JSON, default=dict)
     measurement_method: Mapped[MeasurementMethod] = mapped_column(

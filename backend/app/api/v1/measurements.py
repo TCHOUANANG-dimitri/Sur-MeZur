@@ -1,8 +1,20 @@
+import logging
 import time
+from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.deps import get_current_user, get_db, require_roles
 from app.db.base import SessionLocal
 from app.models.enums import JobStatus, MeasurementSource
@@ -14,10 +26,47 @@ from app.schemas.measurements import (
     MeasurementSessionCreateIn,
     MeasurementSessionOut,
 )
+from app.services import vision
 from app.services.mock_ai import generate_measurements
 from app.services.storage import save_upload
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/measurements", tags=["measurements"])
+
+
+@router.get("/capabilities")
+def measurement_capabilities():
+    """Diagnostic : ce qui est réellement actif dans la chaîne de mesure."""
+    return vision.capabilities()
+
+
+@router.post("/debug/analyze")
+def debug_analyze(
+    front: UploadFile = File(...),
+    side: UploadFile | None = File(None),
+    height_cm: float = Form(...),
+    weight_kg: float = Form(...),
+    gender: str = Form(...),
+    user: User = Depends(get_current_user),
+):
+    """
+    Renvoie **toute la trace intermédiaire** de la chaîne de mesure : les 33
+    points MediaPipe, l'échelle, les 12 variables du modèle, les prédictions.
+
+    Rien n'est enregistré en base — c'est un outil d'inspection, destiné en
+    particulier à mesurer l'écart entre les estimations MediaPipe et de vraies
+    mensurations prises au mètre ruban.
+    """
+    front_path = save_upload(front, "debug")
+    side_path = save_upload(side, "debug") if side is not None else None
+    return vision.analyze_debug(
+        front_photo=_photo_path(front_path),
+        side_photo=_photo_path(side_path),
+        height_cm=height_cm,
+        weight_kg=weight_kg,
+        gender=gender,
+    )
 
 
 def _client_profile(user: User, db: Session) -> ClientProfile:
@@ -27,6 +76,48 @@ def _client_profile(user: User, db: Session) -> ClientProfile:
     return profile
 
 
+def _photo_path(url: str | None) -> str | None:
+    """Les URL stockées sont servies sous /uploads : on remonte au fichier."""
+    if not url:
+        return None
+    relative = url.split("/uploads/", 1)[-1]
+    path = Path(settings.upload_dir) / relative
+    return str(path) if path.exists() else None
+
+
+def _measure(session_row: MeasurementSession) -> tuple[dict, dict, MeasurementSource]:
+    """
+    Chaîne réelle si elle aboutit, heuristique sinon.
+
+    Le repli est volontaire : une photo mal cadrée, un modèle non déployé ou une
+    dépendance absente ne doivent jamais bloquer la commande du client.
+    """
+    front = _photo_path(session_row.front_photo_url)
+    if front and session_row.height_cm and session_row.weight_kg and session_row.gender:
+        try:
+            result = vision.run(
+                front_photo=front,
+                side_photo=_photo_path(session_row.side_photo_url),
+                height_cm=session_row.height_cm,
+                weight_kg=session_row.weight_kg,
+                gender=session_row.gender,
+            )
+            if result is not None:
+                logger.info(
+                    "Mesures obtenues par vision (%s)%s",
+                    result.source,
+                    f" — {'; '.join(result.notes)}" if result.notes else "",
+                )
+                return result.data, result.confidence, MeasurementSource.ai
+        except Exception:
+            logger.exception("Chaîne vision en échec — repli heuristique")
+
+    data, confidence = generate_measurements(
+        session_row.height_cm or 170, session_row.weight_kg, session_row.gender
+    )
+    return data, confidence, MeasurementSource.ai
+
+
 def _run_measurement_job(session_id: str) -> None:
     time.sleep(2)  # mimics the "Analyse en cours..." wait from doc 1 §4.6
     with SessionLocal() as db:
@@ -34,12 +125,10 @@ def _run_measurement_job(session_id: str) -> None:
         if not session_row:
             return
         try:
-            data, confidence = generate_measurements(
-                session_row.height_cm or 170, session_row.weight_kg, session_row.gender
-            )
+            data, confidence, source = _measure(session_row)
             measurement = Measurement(
                 client_id=session_row.client_id,
-                source=MeasurementSource.ai,
+                source=source,
                 version=1,
                 height_cm=session_row.height_cm or 170,
                 weight_kg=session_row.weight_kg,

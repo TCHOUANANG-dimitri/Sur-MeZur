@@ -7,9 +7,12 @@ import type { GarmentModel } from "../../src/api/types";
 import { LikeButton } from "../../src/components/Badges";
 import { EmptyState, Header, Spinner } from "../../src/components/Misc";
 import { Screen } from "../../src/components/Screen";
-import { colors, fonts, radii } from "../../src/theme/tokens";
+import { useTheme, useThemedStyles } from "../../src/theme/ThemeProvider";
+import { fonts, radii, type ThemeColors } from "../../src/theme/tokens";
 
 export default function LikedModels() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const [models, setModels] = useState<GarmentModel[] | null>(null);
 
@@ -60,7 +63,8 @@ export default function LikedModels() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   item: { width: "47%" },
   thumb: { height: 150, borderRadius: radii.card },

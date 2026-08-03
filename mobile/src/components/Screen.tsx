@@ -1,7 +1,8 @@
 import React from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../theme/tokens";
+import { useThemedStyles } from "../theme/ThemeProvider";
+import type { ThemeColors } from "../theme/tokens";
 
 /** Root wrapper for every screen: safe-area + background, optional scroll. */
 export function Screen({
@@ -17,6 +18,8 @@ export function Screen({
   style?: ViewStyle;
   edges?: ("top" | "bottom" | "left" | "right")[];
 }) {
+  const styles = useThemedStyles(makeStyles);
+
   const body = scroll ? (
     <ScrollView
       contentContainerStyle={[padded && styles.padded, style]}
@@ -41,12 +44,13 @@ export function Screen({
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.white,
-  },
-  padded: {
-    padding: 18,
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    padded: {
+      padding: 18,
+    },
+  });

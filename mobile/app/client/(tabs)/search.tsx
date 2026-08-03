@@ -11,11 +11,14 @@ import { Header, Input, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { Stars } from "../../../src/components/Stars";
 import { useI18n } from "../../../src/i18n/I18nProvider";
-import { colors, fonts, gradientColors, radii } from "../../../src/theme/tokens";
+import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, gradientColors, radii, type ThemeColors } from "../../../src/theme/tokens";
 
 const CATEGORIES: GarmentCategory[] = ["top", "bottom", "dress", "traditional", "other"];
 
 export default function Search() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { t } = useI18n();
   const router = useRouter();
   const [tab, setTab] = useState<"tailors" | "models">("tailors");
@@ -113,7 +116,8 @@ export default function Search() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   row: { flexDirection: "row", gap: 8, marginVertical: 12 },
   avatar: { width: 44, height: 44, borderRadius: 12 },
   tailorName: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.indigoText },

@@ -1,0 +1,32 @@
+# Dépendances de la chaîne de mesure par vision — OPTIONNELLES.
+#
+# Le backend démarre et fonctionne sans elles : la chaîne se désactive d'
+# elle-même et l'estimation heuristique prend le relais. À installer seulement
+# quand on veut activer la mesure réelle.
+#
+#   pip install -r requirements-vision.txt
+#
+# Vérifier ensuite l'état réel :  GET /api/measurements/capabilities
+
+# --- MediaPipe : les 33 points du squelette -------------------------------
+mediapipe==0.10.14
+opencv-python-headless==4.10.0.84
+
+# --- Modèle de mensurations (artefacts .joblib) ---------------------------
+# scikit-learn DOIT correspondre à la version d'entraînement : un artefact
+# rechargé sous une version différente peut échouer ou dériver silencieusement.
+scikit-learn==1.7.2
+joblib==1.5.3
+numpy==2.2.6
+# pandas permet de passer des colonnes nommées au modèle : sklearn valide alors
+# les noms au lieu de se fier à l'ordre positionnel.
+pandas>=2.0
+
+# --- SAM : silhouette (largeurs et profondeurs réelles) -------------------
+# Lourd (~2 Go avec torch). Sans SAM la chaîne reste utilisable : les largeurs
+# sont alors estimées depuis le squelette, avec une précision moindre.
+torch==2.5.1
+torchvision==0.20.1
+segment-anything==1.0
+# Checkpoint à télécharger séparément puis référencer via SAM_CHECKPOINT_PATH :
+#   vit_b (375 Mo) https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth

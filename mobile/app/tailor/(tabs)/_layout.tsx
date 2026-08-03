@@ -2,10 +2,12 @@ import { Tabs } from "expo-router";
 import { LayoutDashboard, Package, Scissors, User, Wallet } from "lucide-react-native";
 import React from "react";
 import { useI18n } from "../../../src/i18n/I18nProvider";
-import { colors, fonts } from "../../../src/theme/tokens";
+import { useTheme } from "../../../src/theme/ThemeProvider";
+import { fonts } from "../../../src/theme/tokens";
 
 export default function TailorTabsLayout() {
   const { t } = useI18n();
+  const { colors } = useTheme();
 
   return (
     <Tabs
@@ -14,7 +16,7 @@ export default function TailorTabsLayout() {
         tabBarActiveTintColor: colors.violetPrimary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: { fontFamily: fonts.bodySemiBold, fontSize: 10 },
-        tabBarStyle: { borderTopColor: colors.border },
+        tabBarStyle: { borderTopColor: colors.border, backgroundColor: colors.surface },
       }}
     >
       <Tabs.Screen

@@ -84,6 +84,7 @@
   "payment.phone": "Numéro Mobile Money",
   "payment.pay": "Payer",
   "order.status.new": "Nouvelle",
+  "order.status.ready_for_pickup": "Prête à récupérer",
   "order.status.in_progress": "En cours",
   "order.status.finished_delivered": "Livrée",
   "order.status.finished_not_delivered": "Non livrée",

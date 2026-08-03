@@ -8,11 +8,13 @@ import { Header, Spinner } from "../../src/components/Misc";
 import { Screen } from "../../src/components/Screen";
 import { Viewer3D } from "../../src/components/Viewer3D";
 import { useI18n } from "../../src/i18n/I18nProvider";
-import { colors, fonts } from "../../src/theme/tokens";
+import { useThemedStyles } from "../../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../src/theme/tokens";
 
 const SKIN_TONES = ["#F2D0B4", "#E8B584", "#C68863", "#9C6644", "#6B4226", "#3E2723"];
 
 export default function AvatarPage() {
+  const styles = useThemedStyles(makeStyles);
   const params = useLocalSearchParams<{ measurementId?: string; modelId?: string; tailorId?: string }>();
   const router = useRouter();
   const { t } = useI18n();
@@ -87,7 +89,8 @@ export default function AvatarPage() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   label: { fontSize: 12, fontFamily: fonts.bodyBold, marginTop: 16, marginBottom: 8, color: colors.indigoText },
   swatchRow: { flexDirection: "row", gap: 8, marginBottom: 18 },
   swatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: colors.border },

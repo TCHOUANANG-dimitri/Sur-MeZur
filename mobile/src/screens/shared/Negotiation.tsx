@@ -10,9 +10,12 @@ import { Card } from "../../components/Card";
 import { StatusChip } from "../../components/Chip";
 import { Header, Field, Input, Spinner } from "../../components/Misc";
 import { Screen } from "../../components/Screen";
-import { colors, fonts } from "../../theme/tokens";
+import { useTheme, useThemedStyles } from "../../theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../theme/tokens";
 
 export function NegotiationScreen({ orderId }: { orderId: string }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user } = useAuth();
   const { t } = useI18n();
   const [offers, setOffers] = useState<Offer[] | null>(null);
@@ -114,7 +117,8 @@ export function NegotiationScreen({ orderId }: { orderId: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   actor: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.indigoText },
   amount: { marginTop: 6, fontFamily: fonts.bodyBold, fontSize: 15, color: colors.indigoText },

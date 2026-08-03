@@ -8,9 +8,12 @@ import { ErrorBanner, Field, Input } from "../src/components/Misc";
 import { Screen } from "../src/components/Screen";
 import { useI18n } from "../src/i18n/I18nProvider";
 import { useAuth } from "../src/state/AuthContext";
-import { colors, fonts } from "../src/theme/tokens";
+import { useTheme, useThemedStyles } from "../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../src/theme/tokens";
 
 export default function Register() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const params = useLocalSearchParams<{ role?: string }>();
   const role = (params.role as "client" | "tailor") || "client";
   const { t, lang } = useI18n();
@@ -106,7 +109,8 @@ export default function Register() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   logo: { width: "100%", height: 100, alignSelf: "center", marginBottom: 8 },
   title: { fontFamily: fonts.display, fontSize: 20, color: colors.indigoText, marginBottom: 18 },
   consentRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 18 },

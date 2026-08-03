@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user_optional, get_db, require_roles
+from app.services.storage import save_upload
 from app.models.catalog import Accessory, Fabric, GarmentModel, GarmentModelLike, ReadyToWear
 from app.models.enums import GarmentCategory
 from app.models.measurements import Measurement
@@ -174,6 +175,62 @@ def create_ready_to_wear(
     db.commit()
     db.refresh(item)
     return item
+
+
+@router.get("/ready-to-wear/mine", response_model=list[ReadyToWearOut])
+def list_my_ready_to_wear(
+    user: User = Depends(require_roles("tailor")),
+    db: Session = Depends(get_db),
+):
+    """The tailor's own stock — unlike the public listing this also returns
+    out-of-stock items, since that's what the management screen edits."""
+    tailor = db.query(TailorProfile).filter(TailorProfile.user_id == user.id).first()
+    if not tailor:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor profile not found")
+    return (
+        db.query(ReadyToWear)
+        .filter(ReadyToWear.tailor_id == tailor.id)
+        .order_by(ReadyToWear.created_at.desc())
+        .all()
+    )
+
+
+@router.post("/ready-to-wear/{item_id}/photos", response_model=ReadyToWearOut)
+def upload_ready_to_wear_photos(
+    item_id: str,
+    files: list[UploadFile] = File(...),
+    user: User = Depends(require_roles("tailor")),
+    db: Session = Depends(get_db),
+):
+    tailor = db.query(TailorProfile).filter(TailorProfile.user_id == user.id).first()
+    item = db.get(ReadyToWear, item_id)
+    if not item or not tailor or item.tailor_id != tailor.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Item not found")
+
+    saved = [save_upload(f, "ready-to-wear") for f in files if f is not None]
+    if not saved:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No file received")
+
+    item.photos = list(item.photos or []) + saved
+    if not item.photo_url:
+        item.photo_url = item.photos[0]
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.delete("/ready-to-wear/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_ready_to_wear(
+    item_id: str,
+    user: User = Depends(require_roles("tailor")),
+    db: Session = Depends(get_db),
+):
+    tailor = db.query(TailorProfile).filter(TailorProfile.user_id == user.id).first()
+    item = db.get(ReadyToWear, item_id)
+    if not item or not tailor or item.tailor_id != tailor.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Item not found")
+    db.delete(item)
+    db.commit()
 
 
 @router.get("/ready-to-wear", response_model=list[ReadyToWearOut])

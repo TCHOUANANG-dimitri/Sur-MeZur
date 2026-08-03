@@ -7,9 +7,11 @@ import { ErrorBanner, Field, Input } from "../src/components/Misc";
 import { Screen } from "../src/components/Screen";
 import { useI18n } from "../src/i18n/I18nProvider";
 import { useAuth } from "../src/state/AuthContext";
-import { colors, fonts } from "../src/theme/tokens";
+import { useThemedStyles } from "../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../src/theme/tokens";
 
 export default function Login() {
+  const styles = useThemedStyles(makeStyles);
   const { t } = useI18n();
   const { login } = useAuth();
   const router = useRouter();
@@ -24,7 +26,7 @@ export default function Login() {
     try {
       const user = await login(phone, password);
       const dest =
-        user.role === "client" ? "/client/(tabs)/home" : user.role === "tailor" ? "/tailor/(tabs)/dashboard" : "/admin/(tabs)/verifications";
+        user.role === "client" ? "/client/(tabs)/home" : user.role === "tailor" ? "/tailor/(tabs)/dashboard" : "/admin/(tabs)/overview";
       router.replace(dest as never);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
@@ -60,7 +62,8 @@ export default function Login() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   logo: { width: "100%", height: 110, alignSelf: "center", marginBottom: 8 },
   title: { fontFamily: fonts.display, fontSize: 20, color: colors.indigoText, marginBottom: 18 },
   hint: { textAlign: "center", fontSize: 11, color: colors.textSecondary, marginTop: 16, fontFamily: fonts.body },

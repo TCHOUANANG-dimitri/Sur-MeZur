@@ -39,6 +39,9 @@ class OrderType(str, enum.Enum):
 class OrderStatus(str, enum.Enum):
     new = "new"
     in_progress = "in_progress"
+    # Work is done and the client has been told it can be collected; the order
+    # only becomes `finished_delivered` once handover actually happens.
+    ready_for_pickup = "ready_for_pickup"
     finished_delivered = "finished_delivered"
     finished_not_delivered = "finished_not_delivered"
 

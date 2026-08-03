@@ -2,7 +2,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { CheckCircle2, Plus, Shirt } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { BackHandler, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { AvatarsApi, CatalogApi, MeasurementsApi, TryonApi } from "../../../src/api/endpoints";
 import type { Accessory, Avatar, Fabric, GarmentModel, Measurement, TryonSession } from "../../../src/api/types";
 import { fileUrl } from "../../../src/api/client";
@@ -12,7 +12,8 @@ import { EmptyState, Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { Viewer3D } from "../../../src/components/Viewer3D";
 import { useI18n } from "../../../src/i18n/I18nProvider";
-import { colors, fonts, radii } from "../../../src/theme/tokens";
+import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, radii, type ThemeColors } from "../../../src/theme/tokens";
 
 /**
  * Entering the try-on tab lands on the client's saved try-on sessions (their
@@ -23,6 +24,8 @@ import { colors, fonts, radii } from "../../../src/theme/tokens";
 type Mode = "list" | "detail" | "new";
 
 export default function TryOn() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const params = useLocalSearchParams<{ avatarId?: string; modelId?: string; tailorId?: string }>();
   const router = useRouter();
   const { t } = useI18n();
@@ -118,6 +121,27 @@ export default function TryOn() {
     setDetailAvatar(null);
     setDetailMeasurement(null);
   };
+
+  /**
+   * Detail and configurator are internal states, not routes, so Android's back
+   * button finds nothing to pop in this screen and falls through to the tab
+   * navigator — which lands the user on Home. Intercept it and step back to the
+   * list instead; returning false outside the list keeps the default behaviour.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (mode !== "list") {
+          backToList();
+          return true;
+        }
+        return false;
+      };
+      const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => sub.remove();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mode])
+  );
 
   const selectedFabric = fabrics.find((f) => f.id === fabricId);
 
@@ -355,7 +379,8 @@ export default function TryOn() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   emptyWrap: { padding: 24, alignItems: "center", gap: 14 },
   emptyText: { color: colors.textSecondary, fontSize: 13, textAlign: "center", fontFamily: fonts.body },
   label: { fontSize: 12, fontFamily: fonts.bodyBold, marginBottom: 8, color: colors.indigoText },

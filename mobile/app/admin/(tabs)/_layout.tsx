@@ -1,9 +1,11 @@
 import { Tabs } from "expo-router";
-import { BadgeCheck, Percent, Scale, Star } from "lucide-react-native";
+import { BadgeCheck, LayoutDashboard, Percent, Scale, Users } from "lucide-react-native";
 import React from "react";
-import { colors, fonts } from "../../../src/theme/tokens";
+import { useTheme } from "../../../src/theme/ThemeProvider";
+import { fonts } from "../../../src/theme/tokens";
 
 export default function AdminTabsLayout() {
+  const { colors } = useTheme();
   return (
     <Tabs
       screenOptions={{
@@ -11,9 +13,17 @@ export default function AdminTabsLayout() {
         tabBarActiveTintColor: colors.violetPrimary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: { fontFamily: fonts.bodySemiBold, fontSize: 10 },
-        tabBarStyle: { borderTopColor: colors.border },
+        tabBarStyle: { borderTopColor: colors.border, backgroundColor: colors.surface },
       }}
     >
+      <Tabs.Screen
+        name="overview"
+        options={{ title: "Vue d'ensemble", tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} /> }}
+      />
+      <Tabs.Screen
+        name="users"
+        options={{ title: "Utilisateurs", tabBarIcon: ({ color, size }) => <Users color={color} size={size} /> }}
+      />
       <Tabs.Screen
         name="verifications"
         options={{ title: "Vérifications", tabBarIcon: ({ color, size }) => <BadgeCheck color={color} size={size} /> }}
@@ -21,10 +31,6 @@ export default function AdminTabsLayout() {
       <Tabs.Screen
         name="disputes"
         options={{ title: "Litiges", tabBarIcon: ({ color, size }) => <Scale color={color} size={size} /> }}
-      />
-      <Tabs.Screen
-        name="reviews"
-        options={{ title: "Avis", tabBarIcon: ({ color, size }) => <Star color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="commission"

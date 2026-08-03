@@ -1,13 +1,26 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.enums import JobStatus, MeasurementSource
 from app.schemas.common import ORMModel
 
+ALLOWED_GENDERS = ("female", "male")
+
 
 class MeasurementSessionCreateIn(BaseModel):
-    height_cm: float
-    weight_kg: float | None = None
-    gender: str | None = None
+    """All three are required: the measurement estimator is driven by height,
+    weight and sex, so letting any of them through empty silently degrades
+    every measurement derived from the session."""
+
+    height_cm: float = Field(..., gt=50, lt=260)
+    weight_kg: float = Field(..., gt=20, lt=400)
+    gender: str
+
+    @field_validator("gender")
+    @classmethod
+    def _known_gender(cls, v: str) -> str:
+        if v not in ALLOWED_GENDERS:
+            raise ValueError(f"gender must be one of {', '.join(ALLOWED_GENDERS)}")
+        return v
 
 
 class MeasurementSessionOut(ORMModel):

@@ -1,15 +1,15 @@
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { AdminApi } from "../../../src/api/endpoints";
-import type { Review } from "../../../src/api/types";
-import { Button } from "../../../src/components/Button";
-import { Card } from "../../../src/components/Card";
-import { StatusChip } from "../../../src/components/Chip";
-import { EmptyState, Header, Spinner } from "../../../src/components/Misc";
-import { Screen } from "../../../src/components/Screen";
-import { Stars } from "../../../src/components/Stars";
-import { fonts } from "../../../src/theme/tokens";
+import { AdminApi } from "../../src/api/endpoints";
+import type { Review } from "../../src/api/types";
+import { Button } from "../../src/components/Button";
+import { Card } from "../../src/components/Card";
+import { StatusChip } from "../../src/components/Chip";
+import { EmptyState, Header, Spinner } from "../../src/components/Misc";
+import { Screen } from "../../src/components/Screen";
+import { Stars } from "../../src/components/Stars";
+import { fonts } from "../../src/theme/tokens";
 
 export default function ReviewModeration() {
   const [reviews, setReviews] = useState<Review[] | null>(null);
@@ -33,7 +33,7 @@ export default function ReviewModeration() {
 
   return (
     <Screen>
-      <Header title="Modération avis" />
+      <Header title="Modération avis" showBack />
       <View style={{ padding: 18 }}>
         {reviews.length === 0 ? (
           <EmptyState text="Aucun avis." />

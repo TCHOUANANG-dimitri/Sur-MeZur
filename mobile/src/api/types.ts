@@ -2,7 +2,12 @@ export type UserRole = "client" | "tailor" | "admin";
 export type Language = "fr" | "en";
 export type JobStatus = "processing" | "ready" | "failed";
 export type VerificationStatus = "pending" | "approved" | "rejected";
-export type OrderStatus = "new" | "in_progress" | "finished_delivered" | "finished_not_delivered";
+export type OrderStatus =
+  | "new"
+  | "in_progress"
+  | "ready_for_pickup"
+  | "finished_delivered"
+  | "finished_not_delivered";
 export type OfferActor = "client" | "tailor";
 export type OfferStatus = "pending" | "accepted" | "refused" | "expired";
 export type ModificationStatus = "proposed" | "accepted" | "refused";
@@ -134,6 +139,7 @@ export interface ReadyToWear {
   name: string;
   description: string | null;
   photo_url: string | null;
+  photos: string[];
   price: number;
   item_measurements: Record<string, number>;
   measurement_method: string;

@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Button } from "../src/components/Button";
 import { useI18n } from "../src/i18n/I18nProvider";
-import { colors, fonts, gradientColors } from "../src/theme/tokens";
+import { useTheme, useThemedStyles } from "../src/theme/ThemeProvider";
+import { fonts, gradientColors, type ThemeColors } from "../src/theme/tokens";
 
 const SLIDES = [
   { Icon: Camera, key: "onboarding.slide1" },
@@ -13,6 +14,8 @@ const SLIDES = [
 ];
 
 export default function Onboarding() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { t } = useI18n();
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -45,8 +48,9 @@ export default function Onboarding() {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { flex: 1, padding: 24, justifyContent: "space-between", backgroundColor: colors.white, paddingTop: 48, paddingBottom: 32 },
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+  wrap: { flex: 1, padding: 24, justifyContent: "space-between", backgroundColor: colors.background, paddingTop: 48, paddingBottom: 32 },
   dots: { flexDirection: "row", justifyContent: "center", gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 999, backgroundColor: colors.border },
   dotActive: { width: 22, backgroundColor: gradientColors[0] },

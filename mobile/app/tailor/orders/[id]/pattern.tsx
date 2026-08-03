@@ -7,9 +7,11 @@ import { OrdersApi } from "../../../../src/api/endpoints";
 import type { Pattern } from "../../../../src/api/types";
 import { ErrorBanner, Header, Spinner } from "../../../../src/components/Misc";
 import { Screen } from "../../../../src/components/Screen";
-import { colors, radii } from "../../../../src/theme/tokens";
+import { useThemedStyles } from "../../../../src/theme/ThemeProvider";
+import { radii, type ThemeColors } from "../../../../src/theme/tokens";
 
 export default function PatternView() {
+  const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [pattern, setPattern] = useState<Pattern | null>(null);
   const [error, setError] = useState("");
@@ -44,7 +46,8 @@ export default function PatternView() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   svgWrap: {
     borderWidth: 1,
     borderColor: colors.border,

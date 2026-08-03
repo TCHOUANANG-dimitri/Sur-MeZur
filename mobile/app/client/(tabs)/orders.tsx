@@ -8,16 +8,19 @@ import { StatusChip } from "../../../src/components/Chip";
 import { EmptyState, Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { formatFcfa, useI18n } from "../../../src/i18n/I18nProvider";
-import { colors, fonts } from "../../../src/theme/tokens";
+import { useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../../src/theme/tokens";
 
 const STATUS_VARIANT: Record<string, "success" | "error" | "pending" | "neutral"> = {
   new: "pending",
   in_progress: "neutral",
+  ready_for_pickup: "pending",
   finished_delivered: "success",
   finished_not_delivered: "error",
 };
 
 export default function OrderList() {
+  const styles = useThemedStyles(makeStyles);
   const { t } = useI18n();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[] | null>(null);
@@ -51,7 +54,8 @@ export default function OrderList() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   id: { fontSize: 12, color: colors.textSecondary, marginBottom: 6, fontFamily: fonts.body },
   price: { marginTop: 8, fontFamily: fonts.bodyBold, fontSize: 15, color: colors.indigoText },
   date: { marginTop: 2, fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },

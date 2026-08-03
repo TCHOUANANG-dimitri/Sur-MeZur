@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, TouchableOpacity, View, ViewStyle } from "react-native";
-import { colors, radii, shadow } from "../theme/tokens";
+import { useThemedStyles } from "../theme/ThemeProvider";
+import { radii, shadow, type ThemeColors } from "../theme/tokens";
 
 export function Card({
   children,
@@ -11,6 +12,8 @@ export function Card({
   style?: ViewStyle;
   onPress?: () => void;
 }) {
+  const styles = useThemedStyles(makeStyles);
+
   if (onPress) {
     return (
       <TouchableOpacity activeOpacity={0.7} onPress={onPress} style={[styles.card, style]}>
@@ -21,13 +24,14 @@ export function Card({
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.card,
-    padding: 16,
-    ...shadow,
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.card,
+      padding: 16,
+      ...shadow,
+    },
+  });

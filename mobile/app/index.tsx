@@ -2,9 +2,11 @@ import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { useAuth } from "../src/state/AuthContext";
-import { colors } from "../src/theme/tokens";
+import { useThemedStyles } from "../src/theme/ThemeProvider";
+import { type ThemeColors } from "../src/theme/tokens";
 
 export default function Splash() {
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const { user, loading } = useAuth();
 
@@ -13,7 +15,7 @@ export default function Splash() {
     const timer = setTimeout(() => {
       if (user) {
         const dest =
-          user.role === "client" ? "/client/(tabs)/home" : user.role === "tailor" ? "/tailor/(tabs)/dashboard" : "/admin/(tabs)/verifications";
+          user.role === "client" ? "/client/(tabs)/home" : user.role === "tailor" ? "/tailor/(tabs)/dashboard" : "/admin/(tabs)/overview";
         router.replace(dest as never);
       } else {
         // App defaults to French (I18nProvider); language is changed from
@@ -31,12 +33,13 @@ export default function Splash() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   wrap: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
   },
   logo: {
     width: "70%",

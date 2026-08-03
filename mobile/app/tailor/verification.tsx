@@ -12,9 +12,11 @@ import { ErrorBanner, Field, Header, Input } from "../../src/components/Misc";
 import { Screen } from "../../src/components/Screen";
 import { StatusChip } from "../../src/components/Chip";
 import { useI18n } from "../../src/i18n/I18nProvider";
-import { colors, fonts } from "../../src/theme/tokens";
+import { useTheme, useThemedStyles } from "../../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../src/theme/tokens";
 
 export default function Verification() {
+  const styles = useThemedStyles(makeStyles);
   const { t } = useI18n();
   const router = useRouter();
   const [profile, setProfile] = useState<TailorProfile | null | undefined>(undefined);
@@ -127,6 +129,8 @@ export default function Verification() {
 }
 
 function FilePickerField({ label, file, onPick }: { label: string; file: PickedFile | null; onPick: () => void }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <Field label={label}>
       <TouchableOpacity style={styles.fileRow} onPress={onPick}>
@@ -137,7 +141,8 @@ function FilePickerField({ label, file, onPick }: { label: string; file: PickedF
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   statusWrap: { padding: 24, alignItems: "center", gap: 14 },
   statusText: { fontSize: 13, color: colors.textSecondary, textAlign: "center", fontFamily: fonts.body },
   fileRow: {

@@ -2,7 +2,17 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { CatalogApi, DeliveriesApi, MeasurementsApi, OrdersApi, PaymentsApi } from "../../api/endpoints";
-import type { Fabric, GarmentModel, Measurement, Order, Payment, PaymentSplit, Quote } from "../../api/types";
+import { BellRing, Check, PackageCheck } from "lucide-react-native";
+import type {
+  Fabric,
+  GarmentModel,
+  Measurement,
+  Order,
+  OrderStatus,
+  Payment,
+  PaymentSplit,
+  Quote,
+} from "../../api/types";
 import { useAuth } from "../../state/AuthContext";
 import { formatFcfa, useI18n } from "../../i18n/I18nProvider";
 import { Button } from "../../components/Button";
@@ -11,16 +21,60 @@ import { StatusChip } from "../../components/Chip";
 import { Header, Spinner } from "../../components/Misc";
 import { Screen } from "../../components/Screen";
 import { PriceSummary, QuoteCard } from "../../components/DomainCards";
-import { colors, fonts } from "../../theme/tokens";
+import { useTheme, useThemedStyles } from "../../theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../theme/tokens";
 
 const STATUS_VARIANT: Record<string, "success" | "error" | "pending" | "neutral"> = {
   new: "pending",
   in_progress: "neutral",
+  ready_for_pickup: "pending",
   finished_delivered: "success",
   finished_not_delivered: "error",
 };
 
+/** Ordered stages of the happy path; `finished_not_delivered` is an exit, not a
+ *  step, so it isn't part of the track. */
+const TRACK: { status: OrderStatus; label: string }[] = [
+  { status: "new", label: "Commande reçue" },
+  { status: "in_progress", label: "En confection" },
+  { status: "ready_for_pickup", label: "Prête à récupérer" },
+  { status: "finished_delivered", label: "Remise au client" },
+];
+
+function OrderTracker({ status }: { status: OrderStatus }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const currentIndex = TRACK.findIndex((s) => s.status === status);
+
+  return (
+    <Card style={{ marginBottom: 14 }}>
+      <Text style={styles.detailTitle}>Suivi de la commande</Text>
+      {TRACK.map((step, i) => {
+        const done = currentIndex >= 0 && i <= currentIndex;
+        const active = i === currentIndex;
+        return (
+          <View key={step.status} style={styles.trackRow}>
+            <View style={styles.trackRail}>
+              <View style={[styles.trackDot, done && { backgroundColor: colors.violetPrimary }]}>
+                {done && <Check size={10} color={colors.white} />}
+              </View>
+              {i < TRACK.length - 1 && (
+                <View style={[styles.trackLine, done && { backgroundColor: colors.violetPrimary }]} />
+              )}
+            </View>
+            <Text style={[styles.trackLabel, active && styles.trackLabelActive, done && !active && styles.trackLabelDone]}>
+              {step.label}
+            </Text>
+          </View>
+        );
+      })}
+    </Card>
+  );
+}
+
 export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "client" | "tailor" }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
@@ -76,6 +130,36 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
         <View style={{ marginBottom: 14 }}>
           <StatusChip status={STATUS_VARIANT[order.status]} label={t(`order.status.${order.status}`)} />
         </View>
+
+        <OrderTracker status={order.status} />
+
+        {/* The whole point of the pickup step: the client must not have to
+            guess that the garment is waiting for them. */}
+        {order.status === "ready_for_pickup" && isClient && (
+          <Card style={styles.readyBanner}>
+            <View style={styles.readyHead}>
+              <BellRing size={16} color={colors.success} />
+              <Text style={styles.readyTitle}>Votre commande est prête</Text>
+            </View>
+            <Text style={styles.readyText}>
+              Le tailleur a terminé votre vêtement. Vous pouvez venir le récupérer, puis confirmer la remise
+              ci-dessous.
+            </Text>
+          </Card>
+        )}
+
+        {order.status === "ready_for_pickup" && isTailor && (
+          <Card style={styles.readyBanner}>
+            <View style={styles.readyHead}>
+              <PackageCheck size={16} color={colors.success} />
+              <Text style={styles.readyTitle}>Client prévenu</Text>
+            </View>
+            <Text style={styles.readyText}>
+              Le client a été notifié que sa commande est prête. Elle passera en « livrée » dès qu&apos;il
+              confirmera la remise.
+            </Text>
+          </Card>
+        )}
 
         <Card style={{ marginBottom: 14 }}>
           {model && <Text style={styles.modelName}>{model.name}</Text>}
@@ -143,11 +227,34 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
           </Button>
         )}
 
-        {depositPaid && order.status === "in_progress" && isClient && (
-          <Button fullWidth loading={busy} onPress={confirmDelivery} style={{ marginTop: 10 }}>
-            Confirmer la livraison
+        {/* The tailor closes out their side of the work here; delivery itself
+            is still confirmed by the client. */}
+        {depositPaid && isTailor && order.status === "in_progress" && (
+          <Button
+            fullWidth
+            loading={busy}
+            style={{ marginTop: 10 }}
+            onPress={async () => {
+              setBusy(true);
+              try {
+                await OrdersApi.setStatus(orderId, "ready_for_pickup");
+                await load();
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Signaler la commande prête
           </Button>
         )}
+
+        {depositPaid &&
+          isClient &&
+          (order.status === "ready_for_pickup" || order.status === "in_progress") && (
+            <Button fullWidth loading={busy} onPress={confirmDelivery} style={{ marginTop: 10 }}>
+              {order.status === "ready_for_pickup" ? "J'ai récupéré ma commande" : "Confirmer la livraison"}
+            </Button>
+          )}
 
         {depositPaid && isTailor && order.status === "new" && (
           <Button
@@ -199,7 +306,8 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   modelName: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.indigoText },
   detail: { fontSize: 12, color: colors.textSecondary, marginTop: 4, fontFamily: fonts.body },
   detailTitle: { fontSize: 12, fontFamily: fonts.bodyBold, marginBottom: 8, color: colors.indigoText },
@@ -207,4 +315,28 @@ const styles = StyleSheet.create({
   price: { marginTop: 8, fontFamily: fonts.bodyBold, fontSize: 16, color: colors.indigoText },
   hint: { fontSize: 12, color: colors.textSecondary, fontFamily: fonts.body },
   disputeNote: { fontSize: 12, color: colors.pending, textAlign: "center", marginTop: 8, fontFamily: fonts.body },
+  trackRow: { flexDirection: "row", gap: 10 },
+  trackRail: { alignItems: "center", width: 18 },
+  trackDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trackLine: { width: 2, flex: 1, minHeight: 16, backgroundColor: colors.border },
+  trackLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontFamily: fonts.body,
+    paddingBottom: 14,
+    marginTop: 1,
+  },
+  trackLabelDone: { color: colors.indigoText },
+  trackLabelActive: { color: colors.violetPrimary, fontFamily: fonts.bodyBold },
+  readyBanner: { backgroundColor: colors.successBg, borderColor: colors.success, marginBottom: 14 },
+  readyHead: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 6 },
+  readyTitle: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.indigoText },
+  readyText: { fontSize: 12, color: colors.textSecondary, fontFamily: fonts.body, lineHeight: 17 },
 });

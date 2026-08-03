@@ -8,11 +8,14 @@ import { LikeButton } from "../../../src/components/Badges";
 import { Chip } from "../../../src/components/Chip";
 import { Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
-import { colors, fonts, radii } from "../../../src/theme/tokens";
+import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, radii, type ThemeColors } from "../../../src/theme/tokens";
 
 const CATEGORIES: GarmentCategory[] = ["top", "bottom", "dress", "traditional", "other"];
 
 export default function Gallery() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const params = useLocalSearchParams<{ tailorId?: string; category?: GarmentCategory }>();
   const router = useRouter();
   const [category, setCategory] = useState<GarmentCategory | null>(params.category || null);
@@ -74,7 +77,8 @@ export default function Gallery() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: 16, paddingBottom: 24 },
   item: { width: "47%" },
   thumb: { height: 150, borderRadius: radii.card },

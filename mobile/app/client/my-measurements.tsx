@@ -7,9 +7,11 @@ import { Button } from "../../src/components/Button";
 import { MeasurementRow } from "../../src/components/DomainCards";
 import { EmptyState, Header, Spinner } from "../../src/components/Misc";
 import { Screen } from "../../src/components/Screen";
-import { colors, fonts } from "../../src/theme/tokens";
+import { useTheme } from "../../src/theme/ThemeProvider";
+import { fonts } from "../../src/theme/tokens";
 
 export default function MyMeasurements() {
+  const { colors } = useTheme();
   const router = useRouter();
   const [measurements, setMeasurements] = useState<Measurement[] | null>(null);
 

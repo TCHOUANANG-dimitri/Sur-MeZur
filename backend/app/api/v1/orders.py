@@ -106,7 +106,29 @@ def set_order_status(
     order, user = order_and_user
     if user.role not in ("tailor", "admin"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the tailor can update order status")
+
+    previous = order.status
     order.status = payload.status
+
+    # Keep the client informed of every step the tailor takes, not just pickup:
+    # tracking is only useful if each transition reaches them.
+    if payload.status != previous:
+        client = db.get(ClientProfile, order.client_id)
+        if client:
+            notification_type = {
+                OrderStatus.in_progress: "order_in_progress",
+                OrderStatus.ready_for_pickup: "order_ready_for_pickup",
+                OrderStatus.finished_delivered: "order_delivered",
+                OrderStatus.finished_not_delivered: "order_not_delivered",
+            }.get(payload.status)
+            if notification_type:
+                notify(
+                    db,
+                    client.user_id,
+                    notification_type,
+                    {"order_id": order.id, "status": payload.status.value},
+                )
+
     db.commit()
     db.refresh(order)
     return order

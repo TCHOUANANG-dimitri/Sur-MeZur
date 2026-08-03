@@ -1,6 +1,7 @@
 import React from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radii } from "../theme/tokens";
+import { useThemedStyles } from "../theme/ThemeProvider";
+import { fonts, radii, type ThemeColors } from "../theme/tokens";
 
 export function BottomSheet({
   visible,
@@ -13,6 +14,7 @@ export function BottomSheet({
   title?: string;
   children: React.ReactNode;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
@@ -28,14 +30,15 @@ export function BottomSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(31,42,68,0.45)",
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: radii.card,
     borderTopRightRadius: radii.card,
     padding: 20,

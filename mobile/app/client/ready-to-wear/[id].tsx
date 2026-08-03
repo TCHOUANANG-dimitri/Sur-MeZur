@@ -7,9 +7,12 @@ import { Button } from "../../../src/components/Button";
 import { Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { formatFcfa } from "../../../src/i18n/I18nProvider";
-import { colors, fonts, radii } from "../../../src/theme/tokens";
+import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, radii, type ThemeColors } from "../../../src/theme/tokens";
 
 export default function ReadyToWearDetail() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [item, setItem] = useState<ReadyToWear | null>(null);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
@@ -62,7 +65,8 @@ export default function ReadyToWearDetail() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   hero: { height: 220, backgroundColor: colors.backgroundAlt },
   title: { fontFamily: fonts.display, fontSize: 18, color: colors.indigoText, marginBottom: 6 },
   description: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },

@@ -2,10 +2,13 @@ import { useRouter } from "expo-router";
 import {
   BadgeCheck,
   Bell,
+  BellRing,
   CheckCircle2,
   FileText,
   Package,
   Pencil,
+  Scissors,
+  XCircle,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -13,7 +16,8 @@ import { NotificationsApi } from "../../api/endpoints";
 import type { Notification } from "../../api/types";
 import { EmptyState, Header, Spinner } from "../../components/Misc";
 import { Screen } from "../../components/Screen";
-import { colors, fonts } from "../../theme/tokens";
+import { useTheme, useThemedStyles } from "../../theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../theme/tokens";
 
 const NOTIF_META: Record<string, { Icon: typeof Bell; label: string }> = {
   order_received: { Icon: Package, label: "Nouvelle commande" },
@@ -22,9 +26,15 @@ const NOTIF_META: Record<string, { Icon: typeof Bell; label: string }> = {
   modification_proposed: { Icon: Pencil, label: "Modification proposée" },
   verification_decided: { Icon: BadgeCheck, label: "Vérification traitée" },
   delivery_confirmed: { Icon: CheckCircle2, label: "Livraison confirmée" },
+  order_in_progress: { Icon: Scissors, label: "Confection démarrée" },
+  order_ready_for_pickup: { Icon: BellRing, label: "Commande prête à récupérer" },
+  order_delivered: { Icon: CheckCircle2, label: "Commande remise" },
+  order_not_delivered: { Icon: XCircle, label: "Commande non livrée" },
 };
 
 export function NotificationsScreen({ base }: { base: "client" | "tailor" }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
 
@@ -71,7 +81,8 @@ export function NotificationsScreen({ base }: { base: "client" | "tailor" }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",

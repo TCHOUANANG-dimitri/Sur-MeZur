@@ -11,7 +11,8 @@ import { BottomSheet } from "../../components/BottomSheet";
 import { ChatBubble } from "../../components/DomainCards";
 import { EmptyState, Header, Field, Input, Spinner } from "../../components/Misc";
 import { Screen } from "../../components/Screen";
-import { colors, fonts } from "../../theme/tokens";
+import { useTheme, useThemedStyles } from "../../theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../theme/tokens";
 
 function dayLabel(iso: string): string {
   const d = new Date(iso);
@@ -23,6 +24,8 @@ function dayLabel(iso: string): string {
 }
 
 export function ChatScreenBody({ orderId, base }: { orderId: string; base: "client" | "tailor" }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
@@ -174,7 +177,8 @@ export function ChatScreenBody({ orderId, base }: { orderId: string; base: "clie
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   modActions: { flexDirection: "row", gap: 8, justifyContent: "center", marginTop: -4, marginBottom: 12 },
   ordersBtn: {
     width: 34,

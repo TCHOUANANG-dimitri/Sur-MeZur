@@ -9,9 +9,11 @@ import { Card } from "../../../src/components/Card";
 import { ErrorBanner, Field, Header, Input, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { useI18n } from "../../../src/i18n/I18nProvider";
-import { colors, fonts } from "../../../src/theme/tokens";
+import { useThemedStyles } from "../../../src/theme/ThemeProvider";
+import { fonts, type ThemeColors } from "../../../src/theme/tokens";
 
 export default function OrderCreate() {
+  const styles = useThemedStyles(makeStyles);
   const params = useLocalSearchParams<{
     modelId?: string;
     measurementId?: string;
@@ -146,7 +148,8 @@ export default function OrderCreate() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   sectionTitle: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.indigoText, marginBottom: 10 },
   tailorName: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.indigoText },
   tailorCity: { fontSize: 11, color: colors.textSecondary, marginTop: 2, fontFamily: fonts.body },
