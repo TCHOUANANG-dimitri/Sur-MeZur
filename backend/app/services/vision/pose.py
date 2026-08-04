@@ -89,6 +89,60 @@ def unavailable_reason() -> str | None:
     return f"paquets absents: {', '.join(missing)}" if missing else None
 
 
+def _process_rgb_array(rgb, width: int, height: int, min_detection_confidence: float):
+    import mediapipe as mp
+
+    with mp.solutions.pose.Pose(
+        static_image_mode=True,
+        model_complexity=2,
+        enable_segmentation=False,
+        min_detection_confidence=min_detection_confidence,
+    ) as pose:
+        result = pose.process(rgb)
+
+    if not result.pose_landmarks:
+        return None
+
+    landmarks = [
+        Landmark(x=lm.x * width, y=lm.y * height, z=lm.z * width, visibility=lm.visibility)
+        for lm in result.pose_landmarks.landmark
+    ]
+    if len(landmarks) != LANDMARK_COUNT:
+        return None
+    return PoseResult(landmarks=landmarks, image_width=width, image_height=height)
+
+
+def warm_up() -> bool:
+    """
+    Force l'initialisation du graphe MediaPipe (chargement des poids, mise en
+    place des délégués XNNPACK) à un moment qui n'est PAS la requête d'un
+    client.
+
+    Mesuré : un premier appel dans un processus fraîchement démarré prend
+    10 à 90+ s selon la charge machine, contre ~2 s en régime établi — un
+    écart que le budget d'attente du mobile (quelques dizaines de secondes)
+    ne peut pas absorber. Sans préchauffage, le premier client à mesurer ses
+    mensurations après chaque redémarrage du serveur reçoit presque
+    systématiquement "Échec de l'analyse" alors que le calcul aboutit
+    quelques secondes plus tard, en arrière-plan, sans que personne ne le
+    voie.
+
+    Ne lève jamais : le préchauffage est un gain de latence, pas une
+    condition de démarrage.
+    """
+    if not is_available():
+        return False
+    try:
+        import numpy as np
+
+        blank = np.zeros((640, 480, 3), dtype="uint8")
+        _process_rgb_array(blank, 480, 640, 0.5)
+        return True
+    except Exception:
+        logger.exception("Préchauffage MediaPipe en échec (non bloquant)")
+        return False
+
+
 def extract_pose(image_path: str | Path, min_detection_confidence: float = 0.5) -> PoseResult | None:
     """
     Détecte les 33 points sur une image.
@@ -101,7 +155,6 @@ def extract_pose(image_path: str | Path, min_detection_confidence: float = 0.5) 
         return None
 
     import cv2
-    import mediapipe as mp
 
     path = str(image_path)
     image = cv2.imread(path)
@@ -112,37 +165,20 @@ def extract_pose(image_path: str | Path, min_detection_confidence: float = 0.5) 
     height, width = image.shape[:2]
     rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    with mp.solutions.pose.Pose(
-        static_image_mode=True,
-        model_complexity=2,          # le plus précis : on traite une photo, pas un flux
-        enable_segmentation=False,
-        min_detection_confidence=min_detection_confidence,
-    ) as pose:
-        result = pose.process(rgb)
-
-    if not result.pose_landmarks:
+    result = _process_rgb_array(rgb, width, height, min_detection_confidence)
+    if result is None:
         logger.info("Aucune pose détectée dans %s", path)
         return None
 
-    landmarks = [
-        # MediaPipe renvoie des coordonnées normalisées : on repasse en pixels
-        # car toutes les distances métier se calculent dans l'espace image.
-        Landmark(x=lm.x * width, y=lm.y * height, z=lm.z * width, visibility=lm.visibility)
-        for lm in result.pose_landmarks.landmark
-    ]
-    if len(landmarks) != LANDMARK_COUNT:
-        logger.warning("Nombre de points inattendu: %d", len(landmarks))
-        return None
-
-    weak = [i for i, lm in enumerate(landmarks) if lm.visibility < 0.5]
+    weak = [i for i, lm in enumerate(result.landmarks) if lm.visibility < 0.5]
     logger.info(
         "Pose détectée sur %s (%dx%d) : %d points, visibilité moyenne %.2f%s",
         Path(path).name,
         width,
         height,
-        len(landmarks),
-        sum(lm.visibility for lm in landmarks) / len(landmarks),
+        len(result.landmarks),
+        sum(lm.visibility for lm in result.landmarks) / len(result.landmarks),
         f", {len(weak)} point(s) peu fiables {weak}" if weak else "",
     )
 
-    return PoseResult(landmarks=landmarks, image_width=width, image_height=height)
+    return result

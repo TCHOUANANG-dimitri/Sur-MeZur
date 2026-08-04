@@ -167,12 +167,12 @@ def main() -> int:
 
     # --- Silhouette ---
     print(f"\n{BAR}\n4. SILHOUETTE (SAM)\n{BAR}")
-    fw = silhouette_mod.measure_widths(args.front, front)
+    fw = silhouette_mod.measure_widths(args.front, front, orientation="front")
     sw = None
     if args.side and args.side.exists():
         side_pose = pose_mod.extract_pose(args.side)
         if side_pose is not None:
-            sw = silhouette_mod.measure_widths(args.side, side_pose)
+            sw = silhouette_mod.measure_widths(args.side, side_pose, orientation="side")
         else:
             print("  photo de profil : aucune pose détectée")
     if fw:

@@ -42,7 +42,19 @@ export default function MyMeasurements() {
               .map(([key, value]) => (
                 <MeasurementRow key={key} measureKey={key} value={value} />
               ))}
-            <Button fullWidth onPress={() => router.push("/client/measurements")} style={{ marginTop: 20 }}>
+            <Button
+              fullWidth
+              onPress={() => router.push({ pathname: "/client/avatar", params: { measurementId: latest.id } })}
+              style={{ marginTop: 20 }}
+            >
+              Créer mon avatar avec ces mesures
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              onPress={() => router.push("/client/measurements")}
+              style={{ marginTop: 8 }}
+            >
               Mettre à jour mes mesures
             </Button>
           </>

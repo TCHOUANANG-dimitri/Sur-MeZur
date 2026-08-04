@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     # squelettiques MediaPipe, complétées par des ratios anthropométriques.
     sam_checkpoint_path: str = ""
     sam_model_type: str = "vit_b"
+    # "sam" (précis, lourd, ~375 Mo, plusieurs dizaines de secondes par image
+    # sur CPU) ou "mobile_sam" (distillé, ~40 Mo, bien plus rapide sur CPU,
+    # légère perte de précision de segmentation). Avec "mobile_sam",
+    # sam_checkpoint_path doit pointer vers mobile_sam.pt et sam_model_type
+    # est ignoré (toujours "vit_t").
+    sam_backend: str = "sam"
     # Confiance minimale d'un point MediaPipe pour être exploité.
     pose_min_visibility: float = 0.5
     pose_min_detection_confidence: float = 0.5

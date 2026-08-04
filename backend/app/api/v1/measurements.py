@@ -28,6 +28,7 @@ from app.schemas.measurements import (
 )
 from app.services import vision
 from app.services.mock_ai import generate_measurements
+from app.services.notify import notify
 from app.services.storage import save_upload
 
 logger = logging.getLogger(__name__)
@@ -144,6 +145,13 @@ def _run_measurement_job(session_id: str) -> None:
             client = db.get(ClientProfile, session_row.client_id)
             if client and not client.default_measurement_id:
                 client.default_measurement_id = measurement.id
+            # L'analyse par vision peut prendre bien plus longtemps que ce que
+            # le mobile attend en direct (SAM à froid : jusqu'à plusieurs
+            # minutes) : plutôt que de forcer une attente bloquante côté
+            # client, on le prévient dès que c'est prêt, qu'il ait attendu ou
+            # non l'ait fait.
+            if client:
+                notify(db, client.user_id, "measurement_ready", {"measurement_id": measurement.id})
             db.commit()
         except Exception as exc:  # pragma: no cover - defensive
             session_row.status = JobStatus.failed

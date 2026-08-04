@@ -1,0 +1,14 @@
+# Full SAM checkpoint (~375MB) — not used in production, MobileSAM is.
+# GitHub hard-rejects files over 100MB; keep it local-only.
+backend/ml/weights/sam_vit_b_01ec64.pth
+
+# Common junk that shouldn't be tracked.
+__pycache__/
+*.pyc
+.venv/
+venv/
+node_modules/
+*.db
+.expo/
+dist/
+build/

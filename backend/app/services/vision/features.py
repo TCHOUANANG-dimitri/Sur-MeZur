@@ -136,14 +136,28 @@ def build_model_features(
         features["chestbreadth"] = round(biacromial * 0.70, 1)
         features["waistbreadth"] = round(hip_breadth * 0.94, 1)
 
-    if side_widths is not None:
-        features["chestdepth"] = cm(side_widths.chest_px)
-        features["waistdepth"] = cm(side_widths.waist_px)
-        features["buttockdepth"] = cm(side_widths.hip_px)
-    else:
-        features["chestdepth"] = round(features["chestbreadth"] * DEPTH_FROM_BREADTH["chestdepth"], 1)
-        features["waistdepth"] = round(features["waistbreadth"] * DEPTH_FROM_BREADTH["waistdepth"], 1)
-        features["buttockdepth"] = round(features["hipbreadth"] * DEPTH_FROM_BREADTH["buttockdepth"], 1)
+    # `side_widths` (SAM sur la photo de profil) est délibérément IGNORÉ pour
+    # l'instant, même quand SAM est disponible : les profondeurs retombent
+    # toujours sur le ratio squelette. `side_widths` reste un paramètre de la
+    # fonction pour permettre de le réactiver une fois le point ci-dessous
+    # réglé.
+    #
+    # Testé sur photo réelle (02/08) : un bras qui pend naturellement le long
+    # du corps couvre, en profil, exactement la même plage verticale que la
+    # poitrine, la taille ET les hanches (épaule → poignet ≈ hauteur du
+    # torse). Élargir ou rétrécir la bande d'exclusion du bras n'a quasiment
+    # rien changé (−48 % d'écart ANSUR à −44 % en réduisant la bande de
+    # moitié) : le problème n'est pas la largeur de la bande, c'est qu'elle
+    # doit effacer une zone qui recouvre presque exactement la zone à
+    # mesurer. Un seul sujet/pose ne suffit pas non plus pour valider un
+    # correctif algorithmique sans risquer de le sur-ajuster à cette pose
+    # précise — nécessite soit une consigne de prise de vue différente (bras
+    # écarté du buste aussi de profil, pas seulement de face), soit un
+    # algorithme plus fin, validé sur davantage de sujets.
+    del side_widths  # non utilisé pour l'instant, voir ci-dessus
+    features["chestdepth"] = round(features["chestbreadth"] * DEPTH_FROM_BREADTH["chestdepth"], 1)
+    features["waistdepth"] = round(features["waistbreadth"] * DEPTH_FROM_BREADTH["waistdepth"], 1)
+    features["buttockdepth"] = round(features["hipbreadth"] * DEPTH_FROM_BREADTH["buttockdepth"], 1)
 
     return features
 

@@ -48,6 +48,30 @@ CONFIDENCE_PREDICTED_POSE = 0.74
 CONFIDENCE_GEOMETRIC = 0.82
 
 
+def warm_up() -> None:
+    """
+    Paie le coût d'initialisation de MediaPipe/SAM au démarrage du serveur.
+
+    Sans cela, le premier client à mesurer ses mensurations après chaque
+    redémarrage paie ce coût lui-même — mesuré entre 10 et plus de 90 s selon
+    la charge, contre ~2 s en régime établi. Le budget d'attente du mobile ne
+    peut pas absorber cet écart, donc ce premier client voit systématiquement
+    "Échec de l'analyse" alors que le calcul aboutit quelques instants plus
+    tard, en arrière-plan.
+
+    Appelé depuis un thread au démarrage (voir main.py) : ne doit jamais
+    bloquer ni faire échouer le démarrage du serveur lui-même.
+    """
+    if not settings.vision_enabled:
+        return
+    try:
+        ok_pose = pose_mod.warm_up()
+        ok_sam = silhouette_mod.warm_up()
+        logger.info("Préchauffage vision terminé (mediapipe=%s, sam=%s)", ok_pose, ok_sam)
+    except Exception:
+        logger.exception("Préchauffage vision en échec (non bloquant)")
+
+
 def capabilities() -> dict[str, object]:
     """État de la chaîne, pour un endpoint de diagnostic."""
     return {
@@ -123,11 +147,11 @@ def analyze_debug(
         return out
 
     # 3. Silhouette
-    front_widths = silhouette_mod.measure_widths(front_photo, pose_front)
+    front_widths = silhouette_mod.measure_widths(front_photo, pose_front, orientation="front")
     side_widths = None
     pose_side = pose_mod.extract_pose(side_photo, settings.pose_min_detection_confidence) if side_photo else None
     if pose_side is not None:
-        side_widths = silhouette_mod.measure_widths(side_photo, pose_side)
+        side_widths = silhouette_mod.measure_widths(side_photo, pose_side, orientation="side")
     out["steps"]["silhouette"] = {
         "ok": front_widths is not None or side_widths is not None,
         "reason": silhouette_mod.unavailable_reason(),
@@ -192,12 +216,26 @@ def run(
         return None
 
     # 3. Silhouette (optionnelle) : c'est elle qui fait la précision V2.
-    front_widths = silhouette_mod.measure_widths(front_photo, pose_front)
+    #
+    # Les deux photos sont envoyées à SAM (MobileSAM, léger : ce calcul
+    # coûtait ~35-40 s de trop par image avec le SAM classique, d'où le choix
+    # précédent de sauter la photo de profil — n'a plus lieu d'être ici).
+    #
+    # ATTENTION : `side_widths` est calculé mais `build_model_features`
+    # (features.py) l'ignore TOUJOURS pour les profondeurs, quel que soit le
+    # backend SAM utilisé. La raison n'a rien à voir avec la vitesse : sur la
+    # photo de profil, un bras qui pend naturellement le long du corps couvre
+    # la même plage verticale que la poitrine, la taille et les hanches — la
+    # bande qu'on efface pour retirer le bras du masque mange alors une
+    # bonne part de ce qu'il y a à mesurer, quel que soit le modèle qui a
+    # produit ce masque. Passer à MobileSAM règle la latence, pas ce
+    # problème-là. Voir §3.9 du rapport de projet.
+    front_widths = silhouette_mod.measure_widths(front_photo, pose_front, orientation="front")
     side_widths = None
     if side_photo:
         pose_side = pose_mod.extract_pose(side_photo, settings.pose_min_detection_confidence)
         if pose_side is not None:
-            side_widths = silhouette_mod.measure_widths(side_photo, pose_side)
+            side_widths = silhouette_mod.measure_widths(side_photo, pose_side, orientation="side")
         else:
             notes.append("pose non détectée sur la photo de profil")
 

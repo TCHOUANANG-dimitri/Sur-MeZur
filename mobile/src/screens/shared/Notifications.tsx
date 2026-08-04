@@ -7,6 +7,7 @@ import {
   FileText,
   Package,
   Pencil,
+  Ruler,
   Scissors,
   XCircle,
 } from "lucide-react-native";
@@ -30,6 +31,7 @@ const NOTIF_META: Record<string, { Icon: typeof Bell; label: string }> = {
   order_ready_for_pickup: { Icon: BellRing, label: "Commande prête à récupérer" },
   order_delivered: { Icon: CheckCircle2, label: "Commande remise" },
   order_not_delivered: { Icon: XCircle, label: "Commande non livrée" },
+  measurement_ready: { Icon: Ruler, label: "Vos mensurations sont prêtes" },
 };
 
 export function NotificationsScreen({ base }: { base: "client" | "tailor" }) {
@@ -46,6 +48,10 @@ export function NotificationsScreen({ base }: { base: "client" | "tailor" }) {
   }, []);
 
   const openNotification = (n: Notification) => {
+    if (n.type === "measurement_ready" && base === "client") {
+      router.push("/client/my-measurements");
+      return;
+    }
     const orderId = (n.payload as { order_id?: string })?.order_id;
     if (orderId) router.push(`/${base}/orders/${orderId}`);
   };
