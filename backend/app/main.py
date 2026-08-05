@@ -100,7 +100,7 @@ def _guard_bind_address() -> None:
 
 _guard_bind_address()
 
-app = FastAPI(title="Sur-MeZur API", version="0.1.0")
+app = FastAPI(title="Sur-MeZur API", version="0.1.1")
 
 app.add_middleware(
     CORSMiddleware,
