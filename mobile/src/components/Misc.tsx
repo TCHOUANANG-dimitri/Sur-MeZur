@@ -147,6 +147,9 @@ const makeStyles = (colors: ThemeColors) =>
       color: colors.error,
       fontSize: 13,
       fontFamily: fonts.body,
+      // Certains messages sont des consignes de reprise sur plusieurs lignes
+      // (échec d'analyse des photos) : sans interligne, la liste est illisible.
+      lineHeight: 19,
     },
     emptyWrap: {
       alignItems: "center",

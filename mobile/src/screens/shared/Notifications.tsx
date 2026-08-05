@@ -32,6 +32,7 @@ const NOTIF_META: Record<string, { Icon: typeof Bell; label: string }> = {
   order_delivered: { Icon: CheckCircle2, label: "Commande remise" },
   order_not_delivered: { Icon: XCircle, label: "Commande non livrée" },
   measurement_ready: { Icon: Ruler, label: "Vos mensurations sont prêtes" },
+  measurement_failed: { Icon: XCircle, label: "Analyse des photos échouée" },
 };
 
 export function NotificationsScreen({ base }: { base: "client" | "tailor" }) {
@@ -50,6 +51,12 @@ export function NotificationsScreen({ base }: { base: "client" | "tailor" }) {
   const openNotification = (n: Notification) => {
     if (n.type === "measurement_ready" && base === "client") {
       router.push("/client/my-measurements");
+      return;
+    }
+    // Échec : renvoyer vers la prise de mesure pour recommencer, pas vers une
+    // fiche de mensurations qui n'existe pas.
+    if (n.type === "measurement_failed" && base === "client") {
+      router.push("/client/measurements");
       return;
     }
     const orderId = (n.payload as { order_id?: string })?.order_id;
