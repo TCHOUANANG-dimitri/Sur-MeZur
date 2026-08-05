@@ -22,11 +22,20 @@ numpy==2.2.6
 # les noms au lieu de se fier à l'ordre positionnel.
 pandas>=2.0
 
-# --- SAM : silhouette (largeurs et profondeurs réelles) -------------------
-# Lourd (~2 Go avec torch). Sans SAM la chaîne reste utilisable : les largeurs
-# sont alors estimées depuis le squelette, avec une précision moindre.
-torch==2.5.1
-torchvision==0.20.1
-segment-anything==1.0
-# Checkpoint à télécharger séparément puis référencer via SAM_CHECKPOINT_PATH :
-#   vit_b (375 Mo) https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
+# --- MobileSAM : silhouette (largeurs et profondeurs réelles) -------------
+# Backend retenu en production (SAM_BACKEND=mobile_sam, voir config.py) :
+# ~40 Mo de poids contre 375 Mo pour le SAM complet, et nettement plus rapide
+# sur CPU (~1s de chargement, quelques secondes par image). Le SAM complet
+# (segment-anything, torch avec CUDA) n'est plus installé ici — voir
+# RAPPORT_PROJET.md pour le comparatif qui a motivé ce choix.
+#
+# --extra-index-url + suffixe +cpu : sans ça, pip installe la variante CUDA de
+# torch par défaut (plusieurs Go de bibliothèques nvidia-*) alors qu'aucun GPU
+# n'est disponible ici, ni en local ni sur Render.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
+torchvision==0.20.1+cpu
+timm
+mobile-sam @ git+https://github.com/ChaoningZhang/MobileSAM.git
+# Checkpoint déjà versionné dans le dépôt : backend/ml/weights/mobile_sam.pt
+# (SAM_CHECKPOINT_PATH n'a donc rien à préciser, voir config.py)

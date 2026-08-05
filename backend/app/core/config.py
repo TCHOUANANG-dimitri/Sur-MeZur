@@ -1,5 +1,13 @@
 import os
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# app/core/config.py -> backend/. Calculé depuis ce fichier plutôt que codé en
+# dur : marche tel quel en local (Windows) comme sur Render (Linux), quel que
+# soit le chemin absolu où le dépôt est cloné.
+_BACKEND_DIR = Path(__file__).resolve().parents[2]
+_DEFAULT_MOBILE_SAM_CHECKPOINT = _BACKEND_DIR / "ml" / "weights" / "mobile_sam.pt"
 
 
 class Settings(BaseSettings):
@@ -20,16 +28,22 @@ class Settings(BaseSettings):
     # Tout est désactivable : sans modèle ni dépendances, le backend retombe sur
     # l'estimation heuristique et l'application continue de fonctionner.
     vision_enabled: bool = True
-    # Laisser vide désactive SAM : on reste alors sur les seules entrées
-    # squelettiques MediaPipe, complétées par des ratios anthropométriques.
-    sam_checkpoint_path: str = ""
+    # Vide désactive SAM : on reste alors sur les seules entrées squelettiques
+    # MediaPipe, complétées par des ratios anthropométriques. Le checkpoint
+    # MobileSAM (40 Mo) est versionné dans le dépôt (backend/ml/weights/) : ce
+    # chemin par défaut fonctionne donc sans rien à configurer, en local comme
+    # sur Render — une variable SAM_CHECKPOINT_PATH reste possible pour
+    # pointer ailleurs (ex. le SAM complet en local, non versionné).
+    sam_checkpoint_path: str = (
+        str(_DEFAULT_MOBILE_SAM_CHECKPOINT) if _DEFAULT_MOBILE_SAM_CHECKPOINT.exists() else ""
+    )
     sam_model_type: str = "vit_b"
     # "sam" (précis, lourd, ~375 Mo, plusieurs dizaines de secondes par image
     # sur CPU) ou "mobile_sam" (distillé, ~40 Mo, bien plus rapide sur CPU,
     # légère perte de précision de segmentation). Avec "mobile_sam",
     # sam_checkpoint_path doit pointer vers mobile_sam.pt et sam_model_type
-    # est ignoré (toujours "vit_t").
-    sam_backend: str = "sam"
+    # est ignoré (toujours "vit_t"). C'est le backend retenu en production.
+    sam_backend: str = "mobile_sam"
     # Confiance minimale d'un point MediaPipe pour être exploité.
     pose_min_visibility: float = 0.5
     pose_min_detection_confidence: float = 0.5
