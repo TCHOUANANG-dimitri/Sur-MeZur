@@ -27,7 +27,6 @@ from app.schemas.measurements import (
     MeasurementSessionOut,
 )
 from app.services import vision
-from app.services.mock_ai import generate_measurements
 from app.services.notify import notify
 from app.services.storage import save_upload
 
@@ -86,37 +85,76 @@ def _photo_path(url: str | None) -> str | None:
     return str(path) if path.exists() else None
 
 
+class MeasurementFailed(Exception):
+    """Échec destiné au client : le message est affiché tel quel dans l'app."""
+
+
+# Consigne de reprise, alignée sur l'écran de capture du mobile.
+_RETRY_GUIDANCE = (
+    "Nous n'avons pas pu analyser vos photos. Reprenez-les en vérifiant que :\n"
+    "• tout le corps est visible, de la tête aux pieds\n"
+    "• vous êtes seul·e devant un fond dégagé et bien éclairé\n"
+    "• votre tenue est ajustée (ni ample, ni très sombre sur fond sombre)\n"
+    "• de face : bras légèrement écartés du corps (~45°)\n"
+    "• de profil : mains derrière la tête, coudes vers l'arrière\n"
+    "• le téléphone est tenu à la verticale, à hauteur de poitrine"
+)
+
+
 def _measure(session_row: MeasurementSession) -> tuple[dict, dict, MeasurementSource]:
     """
-    Chaîne réelle si elle aboutit, heuristique sinon.
+    Mesure réelle depuis les photos, ou échec explicite.
 
-    Le repli est volontaire : une photo mal cadrée, un modèle non déployé ou une
-    dépendance absente ne doivent jamais bloquer la commande du client.
+    Aucun repli heuristique : produire des chiffres déduits de la seule taille
+    donnerait une fiche plausible mais fausse, indiscernable d'une vraie
+    mesure — et un vêtement serait taillé dessus. Mieux vaut demander au
+    client de reprendre ses photos.
     """
     front = _photo_path(session_row.front_photo_url)
-    if front and session_row.height_cm and session_row.weight_kg and session_row.gender:
-        try:
-            result = vision.run(
-                front_photo=front,
-                side_photo=_photo_path(session_row.side_photo_url),
-                height_cm=session_row.height_cm,
-                weight_kg=session_row.weight_kg,
-                gender=session_row.gender,
-            )
-            if result is not None:
-                logger.info(
-                    "Mesures obtenues par vision (%s)%s",
-                    result.source,
-                    f" — {'; '.join(result.notes)}" if result.notes else "",
-                )
-                return result.data, result.confidence, MeasurementSource.ai
-        except Exception:
-            logger.exception("Chaîne vision en échec — repli heuristique")
+    if not front:
+        raise MeasurementFailed(
+            "La photo de face n'a pas pu être enregistrée. Reprenez les deux photos."
+        )
+    if not (session_row.height_cm and session_row.weight_kg and session_row.gender):
+        raise MeasurementFailed(
+            "Taille, poids et sexe sont nécessaires au calcul. Reprenez le formulaire."
+        )
 
-    data, confidence = generate_measurements(
-        session_row.height_cm or 170, session_row.weight_kg, session_row.gender
+    # Panne de service (dépendance absente, modèle non déployé) : ce n'est pas
+    # la faute du client, inutile de lui faire refaire ses photos pour rien.
+    caps = vision.capabilities()
+    if not caps.get("vision_enabled") or not caps.get("mediapipe", {}).get("available"):
+        logger.error(
+            "Chaîne de vision indisponible côté serveur : mediapipe=%s, sam=%s",
+            caps.get("mediapipe"), caps.get("sam"),
+        )
+        raise MeasurementFailed(
+            "Le service de mesure est temporairement indisponible. "
+            "Réessayez dans quelques minutes."
+        )
+
+    try:
+        result = vision.run(
+            front_photo=front,
+            side_photo=_photo_path(session_row.side_photo_url),
+            height_cm=session_row.height_cm,
+            weight_kg=session_row.weight_kg,
+            gender=session_row.gender,
+        )
+    except Exception:
+        logger.exception("Chaîne vision en erreur — session %s", session_row.id)
+        raise MeasurementFailed(_RETRY_GUIDANCE)
+
+    if result is None:
+        logger.warning("Chaîne vision sans résultat — session %s", session_row.id)
+        raise MeasurementFailed(_RETRY_GUIDANCE)
+
+    logger.info(
+        "Mesures obtenues par vision (%s)%s",
+        result.source,
+        f" — {'; '.join(result.notes)}" if result.notes else "",
     )
-    return data, confidence, MeasurementSource.ai
+    return result.data, result.confidence, MeasurementSource.ai
 
 
 def _run_measurement_job(session_id: str) -> None:
@@ -153,10 +191,43 @@ def _run_measurement_job(session_id: str) -> None:
             if client:
                 notify(db, client.user_id, "measurement_ready", {"measurement_id": measurement.id})
             db.commit()
-        except Exception as exc:  # pragma: no cover - defensive
-            session_row.status = JobStatus.failed
-            session_row.error_message = str(exc)
-            db.commit()
+        except MeasurementFailed as exc:
+            # Échec attendu : le message est rédigé pour le client, l'app
+            # l'affiche tel quel et le renvoie vers l'écran de reprise.
+            _fail_session(db, session_id, str(exc))
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("Échec inattendu du calcul de mensurations")
+            # Pas de détail technique côté client : il n'y peut rien.
+            _fail_session(
+                db,
+                session_id,
+                "Une erreur inattendue est survenue pendant l'analyse. Réessayez.",
+            )
+
+
+def _fail_session(db: Session, session_id: str, message: str) -> None:
+    """
+    Marque la session en échec et prévient le client.
+
+    La notification n'est pas un détail : l'écran de mesure propose « Continuer
+    sans attendre — je serai notifié·e ». Sans notification d'échec, un client
+    parti attendrait un résultat qui n'arrive jamais.
+    """
+    db.rollback()
+    session_row = db.get(MeasurementSession, session_id)
+    if not session_row:
+        return
+    session_row.status = JobStatus.failed
+    session_row.error_message = message
+    client = db.get(ClientProfile, session_row.client_id)
+    if client:
+        notify(
+            db,
+            client.user_id,
+            "measurement_failed",
+            {"session_id": session_id, "message": message},
+        )
+    db.commit()
 
 
 @router.post("/session", response_model=MeasurementSessionOut)

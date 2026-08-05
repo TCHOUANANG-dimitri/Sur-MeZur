@@ -22,12 +22,20 @@ from app.schemas.auth import (
     RegisterIn,
     TokenOut,
 )
+from app.services import vision
 from app.services.otp import generate_otp, verify_otp
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _issue_token(user: User) -> TokenOut:
+    # Un utilisateur vient de s'authentifier : c'est le moment de charger
+    # MediaPipe/SAM en tâche de fond. Placé ici plutôt que dans `login` seul
+    # pour couvrir aussi l'inscription et le rafraîchissement de jeton — un
+    # habitué qui rouvre l'app ne repasse pas par le formulaire de connexion.
+    # L'appel rend la main immédiatement et ne peut pas faire échouer
+    # l'authentification (thread démonisé, au plus un par processus).
+    vision.warm_up_async()
     return TokenOut(
         access_token=create_access_token(user.id, user.role.value if hasattr(user.role, "value") else user.role),
         refresh_token=create_refresh_token(user.id, user.role.value if hasattr(user.role, "value") else user.role),

@@ -45,12 +45,20 @@ def _guard_bind_address() -> None:
     qui coûte beaucoup de temps à diagnostiquer — mieux vaut échouer ici, tout
     de suite, avec la bonne commande sous les yeux.
 
+    Ne s'applique qu'au poste de développement : sur un hébergement géré, la
+    plateforme impose elle-même l'adresse d'écoute, et refuser de démarrer ici
+    couperait la production pour un problème qui n'existe qu'en local.
+
     Contournement volontaire : SURMEZUR_ALLOW_LOCALHOST=1
     """
     argv = " ".join(sys.argv)
     if "uvicorn" not in argv.lower():
         return  # lancé autrement (tests, gunicorn, import) : rien à vérifier
     if os.environ.get("SURMEZUR_ALLOW_LOCALHOST") == "1":
+        return
+    # Render définit RENDER et PORT ; PORT seul couvre les autres plateformes
+    # (Railway, Heroku, Fly…). Aucune ne correspond à un poste de dev.
+    if os.environ.get("RENDER") or os.environ.get("PORT"):
         return
 
     host = None
@@ -110,16 +118,14 @@ app.include_router(api_router, prefix="/api")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
 
-    # Préchauffage MediaPipe/SAM dans un thread : sans lui, le premier client à
-    # mesurer ses mensurations après un redémarrage paie le coût d'initialisation
-    # (10-90+ s selon la charge) et voit "Échec de l'analyse" bien que le calcul
-    # aboutisse peu après en arrière-plan. Threadé pour ne pas retarder le
-    # "Uvicorn running" et l'ouverture du port.
-    import threading
-
-    from app.services import vision
-
-    threading.Thread(target=vision.warm_up, daemon=True, name="vision-warmup").start()
+    # Le préchauffage MediaPipe/SAM n'est volontairement PAS déclenché ici : il
+    # part à la connexion d'un utilisateur (voir auth.py et
+    # vision.warm_up_async). Charger ~40 Mo de poids pendant le démarrage entre
+    # en concurrence avec l'ouverture du port et retarde les toutes premières
+    # réponses — sur un hébergement contraint, au-delà du budget d'attente du
+    # mobile, qui abandonne alors avant d'avoir obtenu quoi que ce soit.
+    # Déclenché à la connexion, le chargement a lieu pendant que l'utilisateur
+    # navigue, largement avant qu'il n'atteigne l'écran de prise de mesure.
 
 
 @app.get("/api/health")

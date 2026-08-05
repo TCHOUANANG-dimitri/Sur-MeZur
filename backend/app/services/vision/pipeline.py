@@ -17,6 +17,7 @@ mesure ne doit jamais empêcher un client de poursuivre sa commande.
 from __future__ import annotations
 
 import logging
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -48,9 +49,13 @@ CONFIDENCE_PREDICTED_POSE = 0.74
 CONFIDENCE_GEOMETRIC = 0.82
 
 
+_warm_up_lock = threading.Lock()
+_warm_up_started = False
+
+
 def warm_up() -> None:
     """
-    Paie le coût d'initialisation de MediaPipe/SAM au démarrage du serveur.
+    Paie le coût d'initialisation de MediaPipe/SAM.
 
     Sans cela, le premier client à mesurer ses mensurations après chaque
     redémarrage paie ce coût lui-même — mesuré entre 10 et plus de 90 s selon
@@ -59,8 +64,9 @@ def warm_up() -> None:
     "Échec de l'analyse" alors que le calcul aboutit quelques instants plus
     tard, en arrière-plan.
 
-    Appelé depuis un thread au démarrage (voir main.py) : ne doit jamais
-    bloquer ni faire échouer le démarrage du serveur lui-même.
+    Ne doit jamais bloquer ni faire échouer l'appelant : passer par
+    `warm_up_async()` plutôt que d'appeler cette fonction directement depuis
+    une route.
     """
     if not settings.vision_enabled:
         return
@@ -70,6 +76,32 @@ def warm_up() -> None:
         logger.info("Préchauffage vision terminé (mediapipe=%s, sam=%s)", ok_pose, ok_sam)
     except Exception:
         logger.exception("Préchauffage vision en échec (non bloquant)")
+
+
+def warm_up_async() -> None:
+    """
+    Déclenche le préchauffage en tâche de fond, au plus une fois par processus.
+
+    Appelé à la connexion d'un utilisateur plutôt qu'au démarrage du serveur :
+    charger MediaPipe et SAM (~40 Mo de poids) pendant le boot entre en
+    concurrence avec l'ouverture du port, ce qui sur un hébergement contraint
+    retarde les toutes premières réponses — au point de dépasser le budget
+    d'attente du mobile. Déclenché à la connexion, le chargement se fait
+    pendant que l'utilisateur navigue, bien avant qu'il n'atteigne l'écran de
+    prise de mesure.
+
+    Le verrou est indispensable : sans lui, plusieurs connexions simultanées
+    lanceraient chacune un chargement complet des modèles en parallèle, ce qui
+    saturerait la mémoire d'un petit hébergement.
+    """
+    global _warm_up_started
+    if not settings.vision_enabled:
+        return
+    with _warm_up_lock:
+        if _warm_up_started:
+            return
+        _warm_up_started = True
+    threading.Thread(target=warm_up, daemon=True, name="vision-warmup").start()
 
 
 def capabilities() -> dict[str, object]:
