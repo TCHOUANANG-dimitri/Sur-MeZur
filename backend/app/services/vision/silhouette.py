@@ -190,13 +190,21 @@ def _mask_without_arms(mask, pose: PoseResult, orientation: str):
     `orientation` sélectionne l'épaisseur de la bande — voir
     `_ARM_EXCLUSION_RATIO` : la largeur (face) et la profondeur (profil) ne
     tolèrent pas le même rayon.
+
+    Un bras dont le coude ET le poignet sont sous le seuil de visibilité est
+    laissé intact : de profil, le bras opposé est caché derrière le corps et
+    MediaPipe lui invente des coordonnées (visibilité 0,00-0,01) qui descendent
+    le long du torse. Tracer la bande dessus effaçait le torse lui-même, en
+    plein sur les lignes de poitrine et de taille — mesuré sur photo réelle :
+    profondeurs de poitrine et de taille identiques au pixel près (71 px),
+    anatomiquement impossible. On ne masque pas ce qu'on n'a pas vu.
     """
     import cv2
-    import numpy as np
 
     shoulder_width = pose.distance(LEFT_SHOULDER, RIGHT_SHOULDER)
     ratio = _ARM_EXCLUSION_RATIO.get(orientation, _ARM_EXCLUSION_RATIO["front"])
     radius = max(4, int(round(shoulder_width * ratio)))
+    min_visibility = settings.pose_min_visibility
 
     out = mask.astype("uint8")
     for shoulder, elbow, wrist in (
@@ -204,7 +212,17 @@ def _mask_without_arms(mask, pose: PoseResult, orientation: str):
         (RIGHT_SHOULDER, RIGHT_ELBOW, RIGHT_WRIST),
     ):
         p1, p2, p3 = pose.point(shoulder), pose.point(elbow), pose.point(wrist)
-        for a, b in ((p1, p2), (p2, p3)):
+        # L'épaule reste fiable même de profil : c'est le reste du bras qui
+        # est deviné. Sans coude ni poignet crédibles, le tracé n'a plus de
+        # support réel.
+        if p2.visibility < min_visibility and p3.visibility < min_visibility:
+            logger.debug(
+                "Bras ignoré (non visible) : coude=%.2f poignet=%.2f",
+                p2.visibility, p3.visibility,
+            )
+            continue
+        segments = [(p1, p2)] if p3.visibility < min_visibility else [(p1, p2), (p2, p3)]
+        for a, b in segments:
             cv2.line(out, (int(a.x), int(a.y)), (int(b.x), int(b.y)), 0, thickness=radius * 2)
     return out.astype(bool)
 
