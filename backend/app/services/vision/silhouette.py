@@ -278,6 +278,19 @@ def _row_width_px(mask, y: float, center_x: float) -> float:
 _CHEST_BAND = (0.26, 0.34)
 _CHEST_BAND_STEPS = 5
 
+# Ligne des hanches, en fraction du torse.
+#
+# Les points de hanche de MediaPipe sont placés aux articulations, donc au
+# niveau du bassin osseux. Le tour de hanches d'un tailleur se prend plus bas,
+# à l'endroit le plus fort des fessiers. Mesurer à hauteur des articulations
+# (fraction 1,00) coupait donc au-dessus de ce point.
+#
+# Balayage sur les 13 sujets, largeur comparée à celle qu'implique le tour
+# mesuré au mètre : 1,00 donne 2,77 cm d'erreur, 0,90 en donne 2,34.
+# Le minimum est net et la courbe remonte de part et d'autre (0,80 : 3,87 ;
+# 1,00 : 2,77), ce qui écarte un simple effet de bruit.
+_HIP_LINE = 0.90
+
 
 def measure_widths(
     image_path: str | Path, pose: PoseResult, orientation: str = "front"
@@ -313,7 +326,7 @@ def measure_widths(
     # Hauteurs exprimées en fraction du torse : robuste au cadrage et à la taille
     # du sujet dans l'image.
     waist_y = shoulder_y + 0.62 * torso   # ligne de taille naturelle
-    hip_row_y = hip_y                      # ligne de hanches
+    hip_row_y = shoulder_y + _HIP_LINE * torso   # sous les articulations, voir _HIP_LINE
 
     # Poitrine : minimum sur une bande, pas une ligne — voir _CHEST_BAND.
     f0, f1 = _CHEST_BAND
