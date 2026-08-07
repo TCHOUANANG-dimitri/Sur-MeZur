@@ -261,6 +261,24 @@ def _row_width_px(mask, y: float, center_x: float) -> float:
     return float(right - left)
 
 
+# Bande sur laquelle la poitrine est cherchée, en fraction du torse
+# (0 = ligne d'épaules, 1 = ligne de hanches).
+#
+# Une ligne unique à 0,22 tombait en pleine aisselle, là où le deltoïde et le
+# haut du bras se rattachent au thorax : le segment contigu mesuré englobait
+# les épaules. Mesuré sur 13 sujets, la largeur de poitrine sortait alors
+# jusqu'à 64 cm pour 32 attendus, et 4 sujets sur 13 étaient rejetés par la
+# garde de plausibilité.
+#
+# On cherche désormais le minimum sur une bande située sous l'aisselle. Le
+# minimum, plutôt qu'une ligne fixe, trouve naturellement le creux du thorax
+# et encaisse un pli de vêtement ou un artefact ponctuel du masque.
+# Résultats sur les mêmes 13 sujets : largeur de poitrine ramenée à 31,1 cm
+# pour le pire cas, et 12 sujets sur 13 aboutissent.
+_CHEST_BAND = (0.26, 0.34)
+_CHEST_BAND_STEPS = 5
+
+
 def measure_widths(
     image_path: str | Path, pose: PoseResult, orientation: str = "front"
 ) -> SilhouetteWidths | None:
@@ -294,12 +312,21 @@ def measure_widths(
 
     # Hauteurs exprimées en fraction du torse : robuste au cadrage et à la taille
     # du sujet dans l'image.
-    chest_y = shoulder_y + 0.22 * torso   # ligne de poitrine
     waist_y = shoulder_y + 0.62 * torso   # ligne de taille naturelle
     hip_row_y = hip_y                      # ligne de hanches
 
+    # Poitrine : minimum sur une bande, pas une ligne — voir _CHEST_BAND.
+    f0, f1 = _CHEST_BAND
+    chest_candidates = []
+    for k in range(_CHEST_BAND_STEPS):
+        frac = f0 + (f1 - f0) * k / (_CHEST_BAND_STEPS - 1)
+        y = shoulder_y + frac * torso
+        w = _row_width_px(mask, y, center_x_at(y))
+        if w > 0:
+            chest_candidates.append(w)
+
     widths = SilhouetteWidths(
-        chest_px=_row_width_px(mask, chest_y, center_x_at(chest_y)),
+        chest_px=min(chest_candidates) if chest_candidates else 0.0,
         waist_px=_row_width_px(mask, waist_y, center_x_at(waist_y)),
         hip_px=_row_width_px(mask, hip_row_y, center_x_at(hip_row_y)),
     )

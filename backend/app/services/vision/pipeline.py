@@ -184,18 +184,21 @@ def analyze_debug(
     pose_side = pose_mod.extract_pose(side_photo, settings.pose_min_detection_confidence) if side_photo else None
     if pose_side is not None:
         side_widths = silhouette_mod.measure_widths(side_photo, pose_side, orientation="side")
+    side_cm_per_pixel = estimate_scale(pose_side, height_cm) if pose_side is not None else None
     out["steps"]["silhouette"] = {
         "ok": front_widths is not None or side_widths is not None,
         "reason": silhouette_mod.unavailable_reason(),
         "front_px": vars(front_widths) if front_widths else None,
         "side_px": vars(side_widths) if side_widths else None,
         "side_pose_detected": pose_side is not None,
+        "side_cm_per_pixel": round(side_cm_per_pixel, 4) if side_cm_per_pixel else None,
     }
 
     # 4. Variables du modèle
     features = build_model_features(
         pose_front=pose_front, cm_per_pixel=cm_per_pixel, height_cm=height_cm,
         weight_kg=weight_kg, front_widths=front_widths, side_widths=side_widths,
+        side_cm_per_pixel=side_cm_per_pixel,
     )
     out["steps"]["features"] = {"ok": features is not None, "values_cm": features}
     if features is None:
@@ -253,21 +256,20 @@ def run(
     # coûtait ~35-40 s de trop par image avec le SAM classique, d'où le choix
     # précédent de sauter la photo de profil — n'a plus lieu d'être ici).
     #
-    # ATTENTION : `side_widths` est calculé mais `build_model_features`
-    # (features.py) l'ignore TOUJOURS pour les profondeurs, quel que soit le
-    # backend SAM utilisé. La raison n'a rien à voir avec la vitesse : sur la
-    # photo de profil, un bras qui pend naturellement le long du corps couvre
-    # la même plage verticale que la poitrine, la taille et les hanches — la
-    # bande qu'on efface pour retirer le bras du masque mange alors une
-    # bonne part de ce qu'il y a à mesurer, quel que soit le modèle qui a
-    # produit ce masque. Passer à MobileSAM règle la latence, pas ce
-    # problème-là. Voir §3.9 du rapport de projet.
+    # `side_widths` alimente désormais les profondeurs (voir features.py) : le
+    # bras fantôme qui faussait ces mesures est corrigé.
     front_widths = silhouette_mod.measure_widths(front_photo, pose_front, orientation="front")
     side_widths = None
+    side_cm_per_pixel = None
     if side_photo:
         pose_side = pose_mod.extract_pose(side_photo, settings.pose_min_detection_confidence)
         if pose_side is not None:
             side_widths = silhouette_mod.measure_widths(side_photo, pose_side, orientation="side")
+            # Échelle propre à la photo de profil : le sujet n'y occupe pas
+            # forcément la même place que de face.
+            side_cm_per_pixel = estimate_scale(pose_side, height_cm)
+            if side_cm_per_pixel is None and side_widths is not None:
+                notes.append("échelle du profil non calculable : profondeurs estimées par ratio")
         else:
             notes.append("pose non détectée sur la photo de profil")
 
@@ -283,6 +285,7 @@ def run(
         weight_kg=weight_kg,
         front_widths=front_widths,
         side_widths=side_widths,
+        side_cm_per_pixel=side_cm_per_pixel,
     )
     if features is None:
         return None

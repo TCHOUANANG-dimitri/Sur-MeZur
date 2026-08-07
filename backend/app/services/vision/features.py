@@ -78,6 +78,7 @@ def build_model_features(
     weight_kg: float,
     front_widths: SilhouetteWidths | None = None,
     side_widths: SilhouetteWidths | None = None,
+    side_cm_per_pixel: float | None = None,
 ) -> dict[str, float] | None:
     """
     Construit les 12 entrées attendues par le modèle, en centimètres
@@ -136,28 +137,36 @@ def build_model_features(
         features["chestbreadth"] = round(biacromial * 0.70, 1)
         features["waistbreadth"] = round(hip_breadth * 0.94, 1)
 
-    # `side_widths` (SAM sur la photo de profil) est délibérément IGNORÉ pour
-    # l'instant, même quand SAM est disponible : les profondeurs retombent
-    # toujours sur le ratio squelette. `side_widths` reste un paramètre de la
-    # fonction pour permettre de le réactiver une fois le point ci-dessous
-    # réglé.
+    # --- Profondeurs (photo de profil) -------------------------------------
+    # `side_widths` a longtemps été ignoré : le diagnostic de l'époque
+    # attribuait l'échec à un bras pendant le long du corps, qui aurait couvert
+    # la zone à mesurer. Ce diagnostic était faux. Le vrai coupable était un
+    # bras FANTÔME : de profil, le bras opposé est caché derrière le corps et
+    # MediaPipe lui inventait des coordonnées (visibilité 0,00-0,01)
+    # descendant le long du torse ; la bande d'exclusion effaçait donc le
+    # torse lui-même. Corrigé dans silhouette._mask_without_arms.
     #
-    # Testé sur photo réelle (02/08) : un bras qui pend naturellement le long
-    # du corps couvre, en profil, exactement la même plage verticale que la
-    # poitrine, la taille ET les hanches (épaule → poignet ≈ hauteur du
-    # torse). Élargir ou rétrécir la bande d'exclusion du bras n'a quasiment
-    # rien changé (−48 % d'écart ANSUR à −44 % en réduisant la bande de
-    # moitié) : le problème n'est pas la largeur de la bande, c'est qu'elle
-    # doit effacer une zone qui recouvre presque exactement la zone à
-    # mesurer. Un seul sujet/pose ne suffit pas non plus pour valider un
-    # correctif algorithmique sans risquer de le sur-ajuster à cette pose
-    # précise — nécessite soit une consigne de prise de vue différente (bras
-    # écarté du buste aussi de profil, pas seulement de face), soit un
-    # algorithme plus fin, validé sur davantage de sujets.
-    del side_widths  # non utilisé pour l'instant, voir ci-dessus
-    features["chestdepth"] = round(features["chestbreadth"] * DEPTH_FROM_BREADTH["chestdepth"], 1)
-    features["waistdepth"] = round(features["waistbreadth"] * DEPTH_FROM_BREADTH["waistdepth"], 1)
-    features["buttockdepth"] = round(features["hipbreadth"] * DEPTH_FROM_BREADTH["buttockdepth"], 1)
+    # Mesuré sur 13 sujets : les profondeurs issues du profil s'écartent en
+    # moyenne de 5,7 cm de la valeur qu'impliquent les tours réels, contre
+    # 6,9 cm pour les ratios fixes — et elles restent anatomiquement
+    # plausibles là où le ratio dérapait (35,9 cm de profondeur de poitrine
+    # pour un sujet de 60 kg).
+    #
+    # L'échelle du profil est calculée sur SA propre photo : le sujet n'y a
+    # aucune raison d'occuper la même place que sur la photo de face, et
+    # réutiliser l'échelle de face fausserait toutes les profondeurs.
+    if side_widths is not None and side_cm_per_pixel and side_cm_per_pixel > 0:
+        def side_cm(px: float) -> float:
+            return px_to_cm(px, side_cm_per_pixel)
+
+        features["chestdepth"] = round(side_cm(side_widths.chest_px), 1)
+        features["waistdepth"] = round(side_cm(side_widths.waist_px), 1)
+        features["buttockdepth"] = round(side_cm(side_widths.hip_px), 1)
+    else:
+        # Sans photo de profil exploitable : ratios anthropométriques ANSUR.
+        features["chestdepth"] = round(features["chestbreadth"] * DEPTH_FROM_BREADTH["chestdepth"], 1)
+        features["waistdepth"] = round(features["waistbreadth"] * DEPTH_FROM_BREADTH["waistdepth"], 1)
+        features["buttockdepth"] = round(features["hipbreadth"] * DEPTH_FROM_BREADTH["buttockdepth"], 1)
 
     return features
 
