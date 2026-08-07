@@ -39,22 +39,11 @@ export function PriceSummary({
   );
 }
 
-const MEASUREMENT_LABELS: Record<string, string> = {
-  neck: "Cou",
-  chest: "Poitrine",
-  waist: "Taille",
-  hips: "Hanches",
-  shoulder: "Épaules",
-  sleeve: "Manche",
-  back_length: "Dos",
-  inseam: "Entrejambe",
-  outseam: "Long. jambe",
-  biceps: "Biceps",
-  wrist: "Poignet",
-  thigh: "Cuisse",
-  ankle: "Cheville",
-  height_total: "Hauteur totale",
-};
+/** Les libellés vivent dans les dictionnaires de traduction (`measure.*`) :
+ *  codés en dur ici, ils restaient en français quelle que soit la langue
+ *  choisie. Une clé sans traduction retombe sur la clé technique, ce qui la
+ *  rend visible plutôt que silencieuse — c'est ainsi qu'on a repéré
+ *  `sleeve_length`, renvoyé par le serveur mais absent de l'ancienne table. */
 
 export function MeasurementRow({
   measureKey,
@@ -68,9 +57,10 @@ export function MeasurementRow({
   onChange?: (v: number) => void;
 }) {
   const styles = useThemedStyles(makeStyles);
+  const { t } = useI18n();
   return (
     <View style={styles.measureRow}>
-      <Text style={styles.measureLabel}>{MEASUREMENT_LABELS[measureKey] || measureKey}</Text>
+      <Text style={styles.measureLabel}>{t(`measure.${measureKey}`)}</Text>
       {editable ? (
         <TextInput
           keyboardType="numeric"

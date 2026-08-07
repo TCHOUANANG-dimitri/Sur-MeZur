@@ -57,6 +57,19 @@ JOINT_TO_BODY = {
     "crotchheight": 1.13,       # 84,6 / 75,0
 }
 
+# Distance entre points d'épaule -> CARRURE (largeur entre les deux
+# emmanchures), la mesure que le tailleur reporte sur son patron.
+#
+# À ne pas confondre avec JOINT_TO_BODY["biacromialbreadth"] ci-dessus, qui
+# vise la largeur d'acromion à acromion attendue par le modèle. Les deux
+# partaient du même facteur, ce qui affichait au tailleur une mesure
+# d'anthropométrie ~7 cm trop large pour son usage.
+#
+# Calibré sur 12 sujets mesurés au mètre ruban ; validation croisée à 1,6 cm
+# d'erreur résiduelle. Repose sur une seule personne mesurant : à revoir si
+# d'autres tailleurs prennent la carrure autrement.
+JOINT_TO_SHOULDER_WIDTH = 0.90
+
 # `sittingheight` ANSUR = fesses -> sommet du crâne. La longueur de tronc
 # épaules->hanches en représente ~59 % (0,55 sur-estimait de 7 %).
 TORSO_TO_SITTING_HEIGHT = 0.59
@@ -197,11 +210,26 @@ def build_geometric_measurements(pose: PoseResult, cm_per_pixel: float) -> dict[
     back_px = ((shoulder_mid[0] - hip_mid[0]) ** 2 + (shoulder_mid[1] - hip_mid[1]) ** 2) ** 0.5
 
     return {
-        # Même calibration que la variable du modèle : c'est la largeur d'épaules
-        # livrée au tailleur, elle ne peut pas contredire celle utilisée en interne.
-        "shoulder": round(
-            cm(pose.distance(LEFT_SHOULDER, RIGHT_SHOULDER)) * JOINT_TO_BODY["biacromialbreadth"], 1
-        ),
+        # CARRURE, pas largeur biacromiale — deux mesures distinctes, longtemps
+        # confondues ici. Le commentaire précédent affirmait que la valeur
+        # livrée au tailleur « ne peut pas contredire celle utilisée en
+        # interne » ; c'était une erreur de raisonnement, parce que les deux
+        # usages ne demandent pas la même mesure.
+        #
+        #   - le MODÈLE attend `biacromialbreadth` (acromion à acromion), la
+        #     définition ANSUR sur laquelle il a été entraîné : ~40 cm pour un
+        #     adulte de 1,80 m, et la chaîne la produit correctement (vérifié
+        #     contre la distribution ANSUR : 42,1 ± 1,7 cm sur 175-185 cm).
+        #   - le TAILLEUR reporte une CARRURE, mesurée entre les deux
+        #     emmanchures : ~33 cm chez les mêmes sujets. Lui afficher 40 cm
+        #     lui donnait une valeur inutilisable sur son patron.
+        #
+        # Les points d'épaule de MediaPipe tombent à l'articulation, donc à
+        # l'emmanchure : la distance brute correspond à la carrure, au léger
+        # débord latéral des points près. Facteur calibré sur 12 sujets mesurés
+        # au mètre, en validation croisée (chacun évalué avec un facteur calculé
+        # sans lui) : erreur ramenée de 6,7 à 1,6 cm.
+        "shoulder": round(cm(pose.distance(LEFT_SHOULDER, RIGHT_SHOULDER)) * JOINT_TO_SHOULDER_WIDTH, 1),
         "sleeve_length": cm(sleeve_px),
         "inseam": cm(inseam_px),
         "back_length": cm(back_px),

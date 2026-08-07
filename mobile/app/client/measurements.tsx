@@ -8,6 +8,7 @@ import type { PickedFile } from "../../src/api/endpoints";
 import { BottomSheet } from "../../src/components/BottomSheet";
 import { Button } from "../../src/components/Button";
 import { MeasurementRow } from "../../src/components/DomainCards";
+import { GuidedCapture } from "../../src/components/GuidedCapture";
 import { ErrorBanner, Field, Header, Input, Spinner } from "../../src/components/Misc";
 import { Screen } from "../../src/components/Screen";
 import { useI18n } from "../../src/i18n/I18nProvider";
@@ -34,6 +35,7 @@ export default function MeasurementFlow() {
   const [measurementId, setMeasurementId] = useState<string | null>(null);
   // Which slot the source-picker sheet is currently choosing for.
   const [pickingTarget, setPickingTarget] = useState<"front" | "side" | null>(null);
+  const [captureTarget, setCaptureTarget] = useState<"front" | "side" | null>(null);
   // Flips once the analysis outlasts the fast (warm) path — see submitPhotos.
   const [processingSlow, setProcessingSlow] = useState(false);
 
@@ -47,23 +49,15 @@ export default function MeasurementFlow() {
     setPickingTarget(target);
   };
 
-  const pickFromCamera = async () => {
+  /** Capture guidée : silhouette à l'écran + décompte, plutôt que l'appareil
+   *  photo du système. Le cadrage et la pose conditionnent directement la
+   *  qualité de la mesure — une photo mal cadrée fait échouer l'analyse. */
+  const pickFromCamera = () => {
     const target = pickingTarget;
     setPickingTarget(null);
     if (!target) return;
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) {
-      setError("Autorisez l'accès à l'appareil photo dans les réglages pour prendre une photo.");
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.9, allowsEditing: false });
-    if (result.canceled || !result.assets?.[0]) return;
-    const asset = result.assets[0];
-    setForTarget(target, {
-      uri: asset.uri,
-      name: asset.fileName || `photo-${Date.now()}.jpg`,
-      type: asset.mimeType || "image/jpeg",
-    });
+    setError("");
+    setCaptureTarget(target);
   };
 
   /** The explicit "upload" path: pick an existing photo instead of shooting a
@@ -74,7 +68,7 @@ export default function MeasurementFlow() {
     if (!target) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      setError("Autorisez l'accès à vos photos dans les réglages pour en importer une.");
+      setError(t("measurement.err.libraryPerm"));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -95,11 +89,11 @@ export default function MeasurementFlow() {
 
   /** Blocks the step rather than the upload, so the user is told immediately. */
   const validateForm = (): string | null => {
-    if (!height.trim() || Number.isNaN(heightNum)) return "Indiquez votre taille en centimètres.";
-    if (heightNum <= 50 || heightNum >= 260) return "La taille doit être comprise entre 50 et 260 cm.";
-    if (!weight.trim() || Number.isNaN(weightNum)) return "Indiquez votre poids en kilogrammes.";
-    if (weightNum <= 20 || weightNum >= 400) return "Le poids doit être compris entre 20 et 400 kg.";
-    if (!gender) return "Sélectionnez votre sexe.";
+    if (!height.trim() || Number.isNaN(heightNum)) return t("measurement.err.height");
+    if (heightNum <= 50 || heightNum >= 260) return t("measurement.err.heightRange");
+    if (!weight.trim() || Number.isNaN(weightNum)) return t("measurement.err.weight");
+    if (weightNum <= 20 || weightNum >= 400) return t("measurement.err.weightRange");
+    if (!gender) return t("measurement.err.gender");
     return null;
   };
 
@@ -115,7 +109,7 @@ export default function MeasurementFlow() {
 
   const submitPhotos = async () => {
     if (!front || !side) {
-      setError("Ajoutez les deux photos (face et profil).");
+      setError(t("measurement.err.photos"));
       return;
     }
     const problem = validateForm();
@@ -148,7 +142,7 @@ export default function MeasurementFlow() {
         current = await MeasurementsApi.getSession(session.id);
       }
       if (current.status !== "ready" || !current.measurement_id) {
-        throw new Error(current.error_message || "Échec de l'analyse");
+        throw new Error(current.error_message || t("measurement.err.failed"));
       }
       const list = await MeasurementsApi.list();
       const measurement = list.find((m) => m.id === current.measurement_id) || list[0];
@@ -263,7 +257,7 @@ export default function MeasurementFlow() {
             <Spinner
               label={
                 processingSlow
-                  ? "Cette première analyse peut prendre jusqu'à une minute…"
+                  ? t("measurement.firstRun")
                   : t("measurement.processing")
               }
             />
@@ -289,8 +283,10 @@ export default function MeasurementFlow() {
           <>
             <Text style={styles.reviewTitle}>{t("measurement.review.title")}</Text>
             <Text style={styles.reviewNote}>{t("measurement.review.note")}</Text>
+            {/* Toutes les mesures sont affichées, hauteur totale comprise : le
+                tailleur travaille sur l'ensemble, et masquer une valeur qu'il
+                utilise l'obligerait à la redemander. */}
             {Object.entries(data)
-              .filter(([k]) => k !== "height_total")
               .map(([key, value]) => (
                 <MeasurementRow
                   key={key}
@@ -311,15 +307,15 @@ export default function MeasurementFlow() {
       <BottomSheet
         visible={pickingTarget !== null}
         onClose={() => setPickingTarget(null)}
-        title="Choisir une photo"
+        title={t("measurement.pickPhoto")}
       >
         <TouchableOpacity style={styles.sourceRow} onPress={pickFromCamera}>
           <View style={styles.sourceIcon}>
             <Camera size={18} color={colors.violetPrimary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.sourceLabel}>Prendre une photo</Text>
-            <Text style={styles.sourceHint}>Utiliser l'appareil photo maintenant</Text>
+            <Text style={styles.sourceLabel}>Prendre une photo guidée</Text>
+            <Text style={styles.sourceHint}>Silhouette à suivre et déclenchement automatique</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.sourceRow} onPress={pickFromLibrary}>
@@ -332,6 +328,16 @@ export default function MeasurementFlow() {
           </View>
         </TouchableOpacity>
       </BottomSheet>
+
+      <GuidedCapture
+        visible={captureTarget !== null}
+        target={captureTarget ?? "front"}
+        onCancel={() => setCaptureTarget(null)}
+        onCaptured={(file) => {
+          if (captureTarget) setForTarget(captureTarget, file);
+          setCaptureTarget(null);
+        }}
+      />
     </Screen>
   );
 }

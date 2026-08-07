@@ -7,11 +7,13 @@ import { Button } from "../../src/components/Button";
 import { MeasurementRow } from "../../src/components/DomainCards";
 import { EmptyState, Header, Spinner } from "../../src/components/Misc";
 import { Screen } from "../../src/components/Screen";
+import { useI18n } from "../../src/i18n/I18nProvider";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { fonts } from "../../src/theme/tokens";
 
 export default function MyMeasurements() {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const router = useRouter();
   const [measurements, setMeasurements] = useState<Measurement[] | null>(null);
 
@@ -35,10 +37,10 @@ export default function MyMeasurements() {
         ) : (
           <>
             <Text style={{ fontSize: 12, color: colors.textSecondary, fontFamily: fonts.body, marginBottom: 10 }}>
-              Version {latest.version} · source : {latest.source === "ai" ? "IA" : latest.source === "manual" ? "manuelle" : "mixte"}
+              {t("measurement.version")} {latest.version} · {t("measurement.source")} :{" "}
+              {t(`measurement.source.${latest.source}`)}
             </Text>
             {Object.entries(latest.data)
-              .filter(([k]) => k !== "height_total")
               .map(([key, value]) => (
                 <MeasurementRow key={key} measureKey={key} value={value} />
               ))}
