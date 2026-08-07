@@ -33,12 +33,13 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 MODELS_DIR = Path(__file__).resolve().parents[1] / "ml" / "models"
-# v2 : entraîné avec augmentation de bruit, donc bien plus tolérant aux
-# imprécisions de MediaPipe/SAM. Mesuré sur photo réelle (session du 06/08,
-# homme 185 cm / 84,8 kg) : erreur moyenne 6,64 cm contre 9,68 cm en v1, et
-# l'erreur imputable à l'extraction tombe sous le centimètre sur la taille et
-# les hanches (contre +11 cm en v1).
-MODEL_VERSION = "v2"
+# v3 : un modèle par cible, et un socle géométrique (périmètre d'ellipse) pour
+# la poitrine, la taille et les hanches — le modèle n'y apprend que le résidu.
+# Motivation mesurée : v2 atteint 1,38 cm sur ANSUR bruité mais 5,2 cm sur
+# 13 sujets camerounais relevés au mètre ruban. L'écart vient du transfert de
+# population, pas d'un manque de capacité ; la géométrie, elle, ne dépend
+# d'aucune population.
+MODEL_VERSION = "v3"
 
 # Bornes de garde : au-delà, on considère l'entrée aberrante et on refuse de
 # prédire plutôt que de renvoyer une mensuration fantaisiste.
@@ -115,17 +116,22 @@ def _load(sex: str) -> Any | None:
 
     try:
         bundle = joblib.load(path)
-        required = {"model", "feature_names", "target_labels"}
+        # V1/V2 portent un estimateur unique sous `model` ; V3 porte un
+        # dictionnaire d'estimateurs, un par cible, sous `models`.
+        required = {"feature_names", "target_labels"}
         missing = required - set(bundle)
+        if not (bundle.get("model") is not None or bundle.get("models")):
+            missing = missing | {"model ou models"}
         if missing:
             logger.error("Artefact %s incomplet, clés manquantes: %s", path.name, missing)
             _cache[sex] = None
             return None
+        metrics = bundle.get("metrics", {})
         logger.info(
             "Modèle chargé: %s (variante %s, MAE moy. %.2f cm)",
             path.name,
             bundle.get("variant", "?"),
-            bundle.get("metrics", {}).get("mae_cm_mean", float("nan")),
+            metrics.get("mae_cm_mean_noisy", metrics.get("mae_cm_mean", float("nan"))),
         )
         _cache[sex] = bundle
     except Exception:  # artefact corrompu ou incompatible
@@ -161,6 +167,67 @@ def _validate(features: dict[str, float]) -> str | None:
     return None
 
 
+def _predict_v3(bundle: dict, features: dict[str, float]) -> dict[str, float] | None:
+    """
+    Inférence V3 : un modèle par cible, socle physique pour le tronc.
+
+    Pour la poitrine, la taille et les hanches, la circonférence de base vient
+    du périmètre d'ellipse calculé sur la largeur et la profondeur mesurées ;
+    le modèle n'ajoute que le résidu (creux lombaire, omoplates, tissus mous).
+    C'est ce qui rend la prédiction bien moins dépendante de la population
+    d'entraînement : la géométrie ne connaît pas ANSUR.
+
+    L'ordre des colonnes vient de `matrix_names`, produit à l'entraînement.
+    Toute divergence ici donnerait des prédictions fausses sans lever d'erreur
+    — le modèle recevrait des nombres du bon type, dans le bon ordre, faux.
+    """
+    import numpy as np
+
+    base_names: list[str] = bundle["feature_names"]
+    ellipse_targets: dict[str, list[str]] = bundle.get("ellipse_targets", {})
+    out: dict[str, float] = {}
+
+    try:
+        vals = {n: float(features[n]) for n in base_names}
+        h = vals["stature_m"]
+        derives = [
+            vals["weight_kg"] / (h / 100.0) ** 2,          # bmi
+            vals["waistbreadth"] / vals["hipbreadth"],      # waist_to_hip
+            vals["chestbreadth"] / vals["waistbreadth"],    # chest_to_waist
+            vals["sittingheight"] / h,                      # torso_ratio
+        ]
+    except (KeyError, ZeroDivisionError, ValueError):
+        logger.exception("Construction des variables V3 impossible")
+        return None
+
+    for target, label in zip(bundle["target_names"], bundle["target_labels"]):
+        model = bundle["models"].get(target)
+
+        if target in ellipse_targets:
+            # Socle géométrique. `model` vaut None tant qu'aucun résidu n'a été
+            # appris sur la population cible : la prédiction est alors le
+            # périmètre d'ellipse nu. Voir train_v3.py pour la mesure qui
+            # motive ce choix — un résidu appris sur ANSUR dégrade le résultat.
+            kb, kd = ellipse_targets[target]
+            base = _ellipse_perimeter(vals[kb], vals[kd])
+            if model is None:
+                pred = base
+            else:
+                colonnes = list(derives) + [vals[kd] / vals[kb]]
+                facteur = float(model.predict(np.array([colonnes], dtype=float))[0])
+                pred = base * (1.0 + facteur)
+        else:
+            if model is None:
+                logger.error("Modèle manquant pour la cible %s", target)
+                return None
+            colonnes = [vals[n] for n in base_names] + list(derives)
+            pred = float(model.predict(np.array([colonnes], dtype=float))[0])
+
+        out[label] = round(pred, 1)
+
+    return out
+
+
 def predict_circumferences(sex: str, features: dict[str, float]) -> dict[str, float] | None:
     """
     Prédit les 8 tours à partir des entrées MediaPipe/SAM.
@@ -185,6 +252,11 @@ def predict_circumferences(sex: str, features: dict[str, float]) -> dict[str, fl
     if missing:
         logger.warning("Entrées manquantes pour le modèle %s: %s", bundle.get("variant"), missing)
         return None
+
+    # V3 : un modèle par cible, et un socle géométrique pour les trois tours de
+    # tronc — voir _predict_v3.
+    if bundle.get("models"):
+        return _predict_v3(bundle, features)
 
     # Un artefact `engineered` consomme les 22 colonnes dérivées, pas les 12
     # de base : c'est son propre contrat (`engineered_names`) qui fixe la liste
