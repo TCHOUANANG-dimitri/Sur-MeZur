@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { Camera, CheckCircle2, ImageUp, X } from "lucide-react-native";
 import React, { useState } from "react";
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ApiError, userMessage } from "../../src/api/client";
 import { MeasurementsApi } from "../../src/api/endpoints";
 import type { PickedFile } from "../../src/api/endpoints";
 import { BottomSheet } from "../../src/components/BottomSheet";
@@ -142,7 +143,7 @@ export default function MeasurementFlow() {
         current = await MeasurementsApi.getSession(session.id);
       }
       if (current.status !== "ready" || !current.measurement_id) {
-        throw new Error(current.error_message || t("measurement.err.failed"));
+        throw new ApiError(0, current.error_message || t("measurement.err.failed"));
       }
       const list = await MeasurementsApi.list();
       const measurement = list.find((m) => m.id === current.measurement_id) || list[0];
@@ -150,7 +151,7 @@ export default function MeasurementFlow() {
       setMeasurementId(measurement.id);
       setStep("review");
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(userMessage(e));
       setStep("capture");
     }
   };

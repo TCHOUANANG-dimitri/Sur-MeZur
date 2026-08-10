@@ -1,15 +1,19 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronDown } from "lucide-react-native";
 import React, { useState } from "react";
-import { Image, StyleSheet, Switch, Text, View } from "react-native";
-import { ApiError } from "../src/api/client";
+import { Image, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { userMessage, ApiError } from "../src/api/client";
 import { AuthApi } from "../src/api/endpoints";
 import { Button } from "../src/components/Button";
-import { ErrorBanner, Field, Input } from "../src/components/Misc";
+import { BottomSheet } from "../src/components/BottomSheet";
+import { ErrorBanner, Field, Input, PasswordInput } from "../src/components/Misc";
 import { Screen } from "../src/components/Screen";
+import { COUNTRIES, type Country } from "../src/constants/countries";
 import { useI18n } from "../src/i18n/I18nProvider";
 import { useAuth } from "../src/state/AuthContext";
 import { useTheme, useThemedStyles } from "../src/theme/ThemeProvider";
-import { fonts, type ThemeColors } from "../src/theme/tokens";
+import { fonts, radii, type ThemeColors } from "../src/theme/tokens";
+import { isValidPassword } from "../src/validate/password";
 
 export default function Register() {
   const { colors } = useTheme();
@@ -20,7 +24,9 @@ export default function Register() {
   const { register } = useAuth();
   const router = useRouter();
 
-  const [phone, setPhone] = useState("+237");
+  const [country, setCountry] = useState<Country>(COUNTRIES[0]);
+  const [localNumber, setLocalNumber] = useState("");
+  const [countryPickerOpen, setCountryPickerOpen] = useState(false);
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [consent, setConsent] = useState(true);
@@ -30,10 +36,12 @@ export default function Register() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const phone = `${country.dial}${localNumber}`;
+
   const requestOtp = async () => {
     setError("");
-    if (!phone || !fullName || password.length < 4) {
-      setError("Complétez tous les champs (mot de passe ≥ 4 caractères).");
+    if (!localNumber || !fullName || !isValidPassword(password)) {
+      setError("Complétez tous les champs. Le mot de passe doit contenir 6 caractères exactement (au moins un chiffre et une lettre).");
       return;
     }
     setBusy(true);
@@ -42,7 +50,7 @@ export default function Register() {
       setDevCode(res.dev_code);
       setStep("otp");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(userMessage(e));
     } finally {
       setBusy(false);
     }
@@ -56,15 +64,16 @@ export default function Register() {
       await register({ role, phone, full_name: fullName, password, language: lang, photo_consent: consent });
       router.replace(role === "tailor" ? "/tailor/verification" : "/client/(tabs)/home");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(userMessage(e));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Screen padded>
-      <Image source={require("../assets/logo-full.jpeg")} style={styles.logo} resizeMode="contain" />
+    <>
+      <Screen padded>
+      <Image source={require("../assets/logo-transparent.png")} style={styles.logo} resizeMode="contain" />
       <Text style={styles.title}>
         {t("auth.register")} — {t(`role.${role}`)}
       </Text>
@@ -76,10 +85,24 @@ export default function Register() {
             <Input value={fullName} onChangeText={setFullName} />
           </Field>
           <Field label={t("auth.phone")}>
-            <Input value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            <View style={styles.phoneRow}>
+              <TouchableOpacity style={styles.countryButton} onPress={() => setCountryPickerOpen(true)} activeOpacity={0.7}>
+                <Text style={styles.countryFlag}>{country.flag}</Text>
+                <Text style={styles.countryDial}>{country.dial}</Text>
+                <ChevronDown size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+              <Input
+                value={localNumber}
+                onChangeText={(v) => setLocalNumber(v.replace(/[^0-9]/g, ""))}
+                keyboardType="phone-pad"
+                placeholder="6 00 00 00 00"
+                style={styles.phoneInput}
+                maxLength={12}
+              />
+            </View>
           </Field>
           <Field label={t("auth.password")}>
-            <Input value={password} onChangeText={setPassword} secureTextEntry />
+            <PasswordInput value={password} onChangeText={setPassword} maxLength={6} />
           </Field>
           <View style={styles.consentRow}>
             <Switch value={consent} onValueChange={setConsent} trackColor={{ true: colors.violetPrimary }} />
@@ -105,7 +128,26 @@ export default function Register() {
           </Button>
         </>
       )}
-    </Screen>
+      </Screen>
+
+    <BottomSheet visible={countryPickerOpen} onClose={() => setCountryPickerOpen(false)} title="Pays / indicatif">
+      {COUNTRIES.map((c) => (
+        <TouchableOpacity
+          key={c.code}
+          style={styles.countryRow}
+          activeOpacity={0.7}
+          onPress={() => {
+            setCountry(c);
+            setCountryPickerOpen(false);
+          }}
+        >
+          <Text style={styles.countryFlag}>{c.flag}</Text>
+          <Text style={styles.countryName}>{c.name}</Text>
+          <Text style={styles.countryRowDial}>{c.dial}</Text>
+        </TouchableOpacity>
+      ))}
+    </BottomSheet>
+    </>
   );
 }
 
@@ -130,4 +172,29 @@ const makeStyles = (colors: ThemeColors) =>
     textAlign: "center",
     color: colors.violetPrimary,
   },
+  phoneRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  countryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.button,
+    backgroundColor: colors.surface,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  countryFlag: { fontSize: 18 },
+  countryDial: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.indigoText },
+  phoneInput: { flex: 1 },
+  countryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  countryName: { flex: 1, fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.indigoText },
+  countryRowDial: { fontFamily: fonts.body, fontSize: 13, color: colors.textSecondary },
 });

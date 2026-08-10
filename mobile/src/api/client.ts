@@ -43,10 +43,68 @@ export async function setToken(token: string | null) {
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** Détail technique d'origine : conservé pour le journal, jamais affiché.
+   *  `message` porte, lui, un texte destiné à l'utilisateur. */
+  technicalDetail?: string;
+  constructor(status: number, message: string, technicalDetail?: string) {
     super(message);
     this.status = status;
+    this.technicalDetail = technicalDetail;
   }
+}
+
+/** Traduction des messages d'erreur.
+ *
+ *  Ce module n'est pas un composant et ne peut pas utiliser le hook de langue.
+ *  `I18nProvider` enregistre ici sa fonction de traduction, ce qui évite de
+ *  figer les messages d'erreur en français alors que le reste de l'interface
+ *  suit la langue choisie. Sans traducteur enregistré, on retombe sur la clé,
+ *  ce qui reste visible en développement plutôt que silencieux. */
+type Translator = (key: string) => string;
+let translate: Translator = (key) => key;
+export function setErrorTranslator(fn: Translator) {
+  translate = fn;
+}
+
+/**
+ * Message destiné à l'utilisateur pour une réponse d'erreur du serveur.
+ *
+ * Le `detail` du serveur n'est réutilisé que si c'est une CHAÎNE et que le
+ * statut est une erreur client (4xx) : ces messages-là sont écrits à
+ * l'intention du client (consignes de reprise de photo, « aucun compte avec ce
+ * numéro »…). Tout le reste est remplacé :
+ *
+ *   - un 5xx signale une panne serveur, que l'utilisateur ne peut pas corriger
+ *     et dont le détail ne lui apprendrait rien ;
+ *   - une erreur de validation FastAPI renvoie un `detail` qui est un TABLEAU
+ *     d'objets — affiché tel quel, l'utilisateur lisait « [object Object] ».
+ */
+function userFacingMessage(status: number, detail: unknown): string {
+  if (status >= 400 && status < 500 && typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+  if (status === 404) return translate("error.notFound");
+  if (status === 409) return translate("error.conflict");
+  if (status >= 400 && status < 500) return translate("error.request");
+  return translate("error.server");
+}
+
+/**
+ * Message affichable pour n'importe quelle exception.
+ *
+ * À utiliser partout où une erreur atterrit à l'écran, plutôt que
+ * `String(e)` : une exception qui n'est pas une `ApiError` (bug JavaScript,
+ * réponse malformée) livrerait sinon une trace technique au client. Les
+ * `ApiError` portent déjà, elles, un message écrit pour lui.
+ */
+export function userMessage(e: unknown): string {
+  // `ApiError` porte par contrat un message destiné au client. Un écran qui
+  // veut afficher un texte qu'il maîtrise doit donc lever une `ApiError`, pas
+  // une `Error` nue — voir l'écran de prise de mesures, qui relaie ainsi la
+  // consigne de reprise rédigée par le serveur.
+  if (e instanceof ApiError) return e.message;
+  console.warn("[app] erreur non-API", e);
+  return translate("error.unexpected");
 }
 
 /** Lets AuthContext drop the user back to the login screen when the session is
@@ -126,12 +184,14 @@ async function request<T>(
       signal: controller.signal,
     });
   } catch (e) {
+    // L'adresse du serveur et l'état du backend ne regardent pas l'utilisateur :
+    // il ne peut agir que sur sa propre connexion. L'URL reste dans
+    // `technicalDetail`, pour le journal.
     const aborted = e instanceof Error && e.name === "AbortError";
     throw new ApiError(
       0,
-      aborted
-        ? `Le serveur n'a pas répondu après ${Math.round(timeoutMs / 1000)} s (${API_BASE_URL}).`
-        : `Impossible de joindre le serveur (${API_BASE_URL}). Vérifiez que le backend est démarré et que le téléphone est sur le même réseau.`
+      translate(aborted ? "error.timeout" : "error.offline"),
+      `${aborted ? "timeout" : "network"} ${Math.round(timeoutMs / 1000)}s ${API_BASE_URL}${path}`
     );
   } finally {
     clearTimeout(timer);
@@ -143,18 +203,24 @@ async function request<T>(
     if (renewed) return request<T>(path, options, true);
     await setTokens(null, null);
     onAuthFailure?.();
-    throw new ApiError(401, "Session expirée. Veuillez vous reconnecter.");
+    throw new ApiError(401, translate("error.sessionExpired"));
   }
 
   if (!res.ok) {
-    let message = res.statusText;
+    let detail: unknown;
     try {
-      const data = await res.json();
-      message = data.detail || message;
+      detail = (await res.json())?.detail;
     } catch {
-      /* ignore */
+      /* réponse non JSON : on s'en tient au statut */
     }
-    throw new ApiError(res.status, message);
+    if (res.status >= 500) {
+      console.warn(`[api] ${res.status} ${path}`, detail ?? res.statusText);
+    }
+    throw new ApiError(
+      res.status,
+      userFacingMessage(res.status, detail),
+      typeof detail === "string" ? detail : JSON.stringify(detail ?? res.statusText)
+    );
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;

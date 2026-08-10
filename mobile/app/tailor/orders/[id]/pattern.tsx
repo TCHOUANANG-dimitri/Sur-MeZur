@@ -2,7 +2,7 @@ import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SvgUri } from "react-native-svg";
-import { ApiError, fileUrl } from "../../../../src/api/client";
+import { userMessage, ApiError, fileUrl } from "../../../../src/api/client";
 import { OrdersApi } from "../../../../src/api/endpoints";
 import type { Pattern } from "../../../../src/api/types";
 import { ErrorBanner, Header, Spinner } from "../../../../src/components/Misc";
@@ -20,7 +20,7 @@ export default function PatternView() {
     if (!id) return;
     OrdersApi.pattern(id)
       .then(setPattern)
-      .catch((e) => setError(e instanceof ApiError ? e.message : String(e)));
+      .catch((e) => setError(userMessage(e)));
   }, [id]);
 
   return (

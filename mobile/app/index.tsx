@@ -28,7 +28,7 @@ export default function Splash() {
 
   return (
     <View style={styles.wrap}>
-      <Image source={require("../assets/logo-full.jpeg")} style={styles.logo} resizeMode="contain" />
+      <Image source={require("../assets/logo-transparent.png")} style={styles.logo} resizeMode="contain" />
     </View>
   );
 }

@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { CheckCircle2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { ApiError } from "../../../../src/api/client";
+import { userMessage, ApiError } from "../../../../src/api/client";
 import { OrdersApi, PaymentsApi } from "../../../../src/api/endpoints";
 import type { Quote } from "../../../../src/api/types";
 import { Button } from "../../../../src/components/Button";
@@ -45,7 +45,7 @@ export default function Payment() {
       }
       setStatus(paid ? "paid" : "error");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(userMessage(e));
       setStatus("error");
     }
   };

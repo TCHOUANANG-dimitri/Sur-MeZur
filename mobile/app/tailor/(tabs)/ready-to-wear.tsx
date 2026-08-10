@@ -3,7 +3,7 @@ import * as ImagePicker from "expo-image-picker";
 import { ImagePlus, Plus, Trash2, X } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ApiError, fileUrl } from "../../../src/api/client";
+import { userMessage, ApiError, fileUrl } from "../../../src/api/client";
 import { CatalogApi } from "../../../src/api/endpoints";
 import type { PickedFile } from "../../../src/api/endpoints";
 import type { ReadyToWear as RTW } from "../../../src/api/types";
@@ -90,7 +90,7 @@ export default function ReadyToWear() {
       resetForm();
       load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(userMessage(e));
     } finally {
       setBusy(false);
     }

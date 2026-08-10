@@ -2,7 +2,7 @@ import { useFocusEffect } from "expo-router";
 import { Ban, CheckCircle2, Scissors, Search, ShieldCheck, User as UserIcon } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ApiError } from "../../../src/api/client";
+import { userMessage, ApiError } from "../../../src/api/client";
 import { AdminApi } from "../../../src/api/endpoints";
 import type { User } from "../../../src/api/types";
 import { Card } from "../../../src/components/Card";
@@ -62,7 +62,7 @@ export default function AdminUsers() {
               const updated = await AdminApi.setUserActive(u.id, !u.is_active);
               setUsers((prev) => prev?.map((x) => (x.id === updated.id ? updated : x)) ?? null);
             } catch (e) {
-              Alert.alert("Action impossible", e instanceof ApiError ? e.message : String(e));
+              Alert.alert("Action impossible", userMessage(e));
             } finally {
               setBusyId(null);
             }

@@ -1,13 +1,14 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { ApiError } from "../src/api/client";
+import { userMessage, ApiError } from "../src/api/client";
 import { AuthApi } from "../src/api/endpoints";
 import { Button } from "../src/components/Button";
-import { ErrorBanner, Field, Header, Input } from "../src/components/Misc";
+import { ErrorBanner, Field, Header, Input, PasswordInput } from "../src/components/Misc";
 import { Screen } from "../src/components/Screen";
 import { useThemedStyles } from "../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../src/theme/tokens";
+import { isValidPassword } from "../src/validate/password";
 
 export default function ForgotPassword() {
   const styles = useThemedStyles(makeStyles);
@@ -32,7 +33,7 @@ export default function ForgotPassword() {
       setDevCode(res.dev_code);
       setStep("reset");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(userMessage(e));
     } finally {
       setBusy(false);
     }
@@ -40,8 +41,8 @@ export default function ForgotPassword() {
 
   const confirmReset = async () => {
     setError("");
-    if (newPassword.length < 4) {
-      setError("Le mot de passe doit contenir au moins 4 caractères.");
+    if (!isValidPassword(newPassword)) {
+      setError("Le mot de passe doit contenir 6 caractères exactement (au moins un chiffre et une lettre).");
       return;
     }
     setBusy(true);
@@ -49,7 +50,7 @@ export default function ForgotPassword() {
       await AuthApi.passwordResetConfirm(phone, code, newPassword);
       setStep("done");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(userMessage(e));
     } finally {
       setBusy(false);
     }
@@ -77,7 +78,7 @@ export default function ForgotPassword() {
 
         {step === "reset" && (
           <>
-            <Text style={styles.body}>Code de vérification (mode démo, affiché directement) :</Text>
+            <Text style={styles.body}>Votre code de vérification (affiché directement, pas d'envoi SMS) :</Text>
             <View style={styles.devCode}>
               <Text style={styles.devCodeText}>{devCode}</Text>
             </View>
@@ -85,7 +86,7 @@ export default function ForgotPassword() {
               <Input value={code} onChangeText={setCode} maxLength={6} keyboardType="number-pad" />
             </Field>
             <Field label="Nouveau mot de passe">
-              <Input value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+              <PasswordInput value={newPassword} onChangeText={setNewPassword} maxLength={6} />
             </Field>
             <Button fullWidth loading={busy} onPress={confirmReset}>
               Réinitialiser le mot de passe

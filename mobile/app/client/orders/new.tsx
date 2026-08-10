@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { ApiError } from "../../../src/api/client";
+import { userMessage, ApiError } from "../../../src/api/client";
 import { CatalogApi, OrdersApi, TailorsApi } from "../../../src/api/endpoints";
 import type { Accessory, Fabric, GarmentModel, TailorProfile } from "../../../src/api/types";
 import { Button } from "../../../src/components/Button";
@@ -75,7 +75,7 @@ export default function OrderCreate() {
       });
       router.replace(`/client/orders/${order.id}`);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(userMessage(e));
     } finally {
       setBusy(false);
     }

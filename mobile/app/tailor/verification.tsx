@@ -1,3 +1,4 @@
+import { userMessage } from "../../src/api/client";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
@@ -65,7 +66,7 @@ export default function Verification() {
       );
       setProfile(result);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(userMessage(e));
     } finally {
       setBusy(false);
     }

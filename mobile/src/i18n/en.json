@@ -25,7 +25,7 @@
   "auth.password": "Password",
   "auth.fullName": "Full name",
   "auth.otp.title": "Phone verification",
-  "auth.otp.subtitle": "Code sent (demo mode, shown below)",
+  "auth.otp.subtitle": "Code sent (shown below, no SMS dispatch)",
   "nav.home": "Home",
   "nav.search": "Search",
   "nav.tryon": "Try-on",
@@ -159,5 +159,13 @@
   "measurement.err.weightRange": "Weight must be between 20 and 400 kg.",
   "measurement.err.libraryPerm": "Allow photo access in settings to import one.",
   "measurement.err.failed": "Analysis failed",
-  "capture.distance": "Phone 2.5–3 m away, at chest height"
+  "capture.distance": "Phone 2.5–3 m away, at chest height",
+  "error.timeout": "The server is taking too long to respond. Try again in a moment.",
+  "error.offline": "Cannot connect. Check your internet connection.",
+  "error.server": "The service is having trouble. Try again in a few minutes.",
+  "error.request": "This request could not be completed. Check the details you entered.",
+  "error.notFound": "This item could not be found.",
+  "error.conflict": "This action has already been recorded.",
+  "error.sessionExpired": "Your session has expired. Please sign in again.",
+  "error.unexpected": "Something went wrong. Please try again."
 }

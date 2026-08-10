@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
-import { ChevronLeft, Inbox } from "lucide-react-native";
-import React from "react";
+import { ChevronLeft, Eye, EyeOff, Inbox } from "lucide-react-native";
+import React, { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TextInput, TextInputProps, TouchableOpacity, View } from "react-native";
 import { useI18n } from "../i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../theme/ThemeProvider";
@@ -58,6 +58,29 @@ export function Input(props: TextInputProps) {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   return <TextInput placeholderTextColor={colors.textSecondary} {...props} style={[styles.input, props.style]} />;
+}
+
+export function PasswordInput(props: Omit<TextInputProps, "secureTextEntry">) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const [hidden, setHidden] = useState(true);
+  return (
+    <View style={styles.passwordRow}>
+      <TextInput
+        placeholderTextColor={colors.textSecondary}
+        {...props}
+        secureTextEntry={hidden}
+        style={[styles.input, styles.passwordInput, props.style]}
+      />
+      <TouchableOpacity onPress={() => setHidden((h) => !h)} hitSlop={10} style={styles.passwordToggle}>
+        {hidden ? (
+          <EyeOff size={20} color={colors.textSecondary} />
+        ) : (
+          <Eye size={20} color={colors.violetPrimary} />
+        )}
+      </TouchableOpacity>
+    </View>
+  );
 }
 
 export function ErrorBanner({ message }: { message: string }) {
@@ -135,6 +158,20 @@ const makeStyles = (colors: ThemeColors) =>
       fontFamily: fonts.body,
       color: colors.indigoText,
       backgroundColor: colors.surface,
+    },
+    passwordRow: {
+      position: "relative",
+    },
+    passwordInput: {
+      paddingRight: 44,
+    },
+    passwordToggle: {
+      position: "absolute",
+      right: 6,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+      paddingHorizontal: 8,
     },
     errorBanner: {
       backgroundColor: colors.errorBg,

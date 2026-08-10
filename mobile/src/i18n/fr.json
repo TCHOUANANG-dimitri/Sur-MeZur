@@ -25,7 +25,7 @@
   "auth.password": "Mot de passe",
   "auth.fullName": "Nom complet",
   "auth.otp.title": "Vérification du téléphone",
-  "auth.otp.subtitle": "Code envoyé (mode démo, affiché ci-dessous)",
+  "auth.otp.subtitle": "Code envoyé (affiché ci-dessous, pas d'envoi SMS)",
   "nav.home": "Accueil",
   "nav.search": "Recherche",
   "nav.tryon": "Essayage",
@@ -159,5 +159,13 @@
   "measurement.err.weightRange": "Le poids doit être compris entre 20 et 400 kg.",
   "measurement.err.libraryPerm": "Autorisez l'accès à vos photos dans les réglages pour en importer une.",
   "measurement.err.failed": "Échec de l'analyse",
-  "capture.distance": "Téléphone à 2,5–3 m, posé à hauteur de poitrine"
+  "capture.distance": "Téléphone à 2,5–3 m, posé à hauteur de poitrine",
+  "error.timeout": "Le serveur met trop de temps à répondre. Réessayez dans un instant.",
+  "error.offline": "Connexion impossible. Vérifiez votre connexion Internet.",
+  "error.server": "Le service rencontre un problème. Réessayez dans quelques minutes.",
+  "error.request": "Cette demande n'a pas pu aboutir. Vérifiez les informations saisies.",
+  "error.notFound": "Cet élément est introuvable.",
+  "error.conflict": "Cette action est déjà enregistrée.",
+  "error.sessionExpired": "Votre session a expiré. Reconnectez-vous.",
+  "error.unexpected": "Une erreur inattendue est survenue. Réessayez."
 }

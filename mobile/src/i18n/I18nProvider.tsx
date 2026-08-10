@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { setErrorTranslator } from "../api/client";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import en from "./en.json";
 import fr from "./fr.json";
@@ -37,6 +38,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     }),
     [lang]
   );
+
+  // Le client d'API produit des messages d'erreur mais n'est pas un composant :
+  // il ne peut pas lire la langue par un hook. On lui fournit le traducteur ici,
+  // à chaque changement de langue, pour que ses messages suivent l'interface.
+  useEffect(() => {
+    setErrorTranslator((key) => dictionaries[lang][key] ?? key);
+  }, [lang]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

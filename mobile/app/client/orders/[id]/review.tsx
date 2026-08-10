@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { ApiError } from "../../../../src/api/client";
+import { userMessage, ApiError } from "../../../../src/api/client";
 import { OrdersApi } from "../../../../src/api/endpoints";
 import { Button } from "../../../../src/components/Button";
 import { ErrorBanner, Field, Header, Input } from "../../../../src/components/Misc";
@@ -26,7 +26,7 @@ export default function Review() {
       await OrdersApi.review(id, { stars, comment });
       router.replace(`/client/orders/${id}`);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(userMessage(e));
     } finally {
       setBusy(false);
     }
