@@ -42,10 +42,24 @@ class Landmark:
 
 
 @dataclass(frozen=True)
+class WorldPoint:
+    """Point en mètres, origine au milieu des hanches, hors projection caméra."""
+
+    x: float
+    y: float
+    z: float
+
+
+@dataclass(frozen=True)
 class PoseResult:
     landmarks: list[Landmark]
     image_width: int
     image_height: int
+    # Les mêmes 33 points, mais dans un repère métrique 3D reconstruit par
+    # MediaPipe au lieu du plan image. Une distance lue sur `landmarks` est une
+    # PROJECTION : elle raccourcit dès que le segment n'est pas parallèle au
+    # capteur. `world` ne subit pas ce raccourcissement — voir `distance_3d`.
+    world: list[WorldPoint] | None = None
 
     def point(self, index: int) -> Landmark:
         return self.landmarks[index]
@@ -65,6 +79,48 @@ class PoseResult:
     def path_length(self, *indices: int) -> float:
         """Longueur d'une chaîne de segments, ex. épaule -> coude -> poignet."""
         return sum(self.distance(indices[i], indices[i + 1]) for i in range(len(indices) - 1))
+
+    def distance_3d(self, a: int, b: int) -> float | None:
+        """Distance en mètres dans le repère `world`, ou None s'il est absent."""
+        if self.world is None:
+            return None
+        pa, pb = self.world[a], self.world[b]
+        return ((pa.x - pb.x) ** 2 + (pa.y - pb.y) ** 2 + (pa.z - pb.z) ** 2) ** 0.5
+
+    def path_length_3d(self, *indices: int) -> float | None:
+        """Chaîne de segments dans le repère `world`, en mètres."""
+        if self.world is None:
+            return None
+        total = 0.0
+        for i in range(len(indices) - 1):
+            d = self.distance_3d(indices[i], indices[i + 1])
+            if d is None:
+                return None
+            total += d
+        return total
+
+    def world_scale(self, cm_per_pixel: float) -> float | None:
+        """
+        Facteur mètres -> centimètres propre à ce sujet.
+
+        Le repère `world` de MediaPipe est censé être métrique, mais son échelle
+        dérive : mesurée sur 13 sujets, elle vaut 111 ± 5,5 cm/m au lieu de 100.
+        On la recale donc sur l'image, en comparant l'étendue verticale nez ->
+        cheville dans les deux repères. L'axe vertical est choisi parce que
+        c'est celui qu'une rotation du sujet autour de son axe altère le moins.
+
+        Renvoie None si le repère 3D est absent ou l'étendue dégénérée.
+        """
+        if self.world is None or cm_per_pixel <= 0:
+            return None
+        ankle = LEFT_ANKLE if self.point(LEFT_ANKLE).visibility >= self.point(RIGHT_ANKLE).visibility else RIGHT_ANKLE
+        span_3d = abs((self.world[LEFT_ANKLE].y + self.world[RIGHT_ANKLE].y) / 2 - self.world[NOSE].y)
+        if span_3d < 0.01:
+            return None
+        span_cm = abs(self.point(ankle).y - self.point(NOSE).y) * cm_per_pixel
+        if span_cm <= 0:
+            return None
+        return span_cm / span_3d
 
 
 def is_available() -> bool:
@@ -109,7 +165,18 @@ def _process_rgb_array(rgb, width: int, height: int, min_detection_confidence: f
     ]
     if len(landmarks) != LANDMARK_COUNT:
         return None
-    return PoseResult(landmarks=landmarks, image_width=width, image_height=height)
+
+    # `pose_world_landmarks` est fourni par le même appel : le récupérer ne
+    # coûte rien de plus. Il peut manquer sur certaines versions ou entrées, et
+    # dans ce cas la chaîne se contente des points projetés.
+    world = None
+    raw_world = getattr(result, "pose_world_landmarks", None)
+    if raw_world is not None and len(raw_world.landmark) == LANDMARK_COUNT:
+        world = [WorldPoint(x=lm.x, y=lm.y, z=lm.z) for lm in raw_world.landmark]
+
+    return PoseResult(
+        landmarks=landmarks, image_width=width, image_height=height, world=world
+    )
 
 
 def warm_up() -> bool:

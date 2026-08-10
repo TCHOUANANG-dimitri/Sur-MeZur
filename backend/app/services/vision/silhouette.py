@@ -21,6 +21,7 @@ Installation :
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,12 +46,35 @@ _load_attempted = False
 
 
 @dataclass(frozen=True)
+class TorsoLevels:
+    """Hauteurs des trois lignes de mesure, en fraction du torse.
+
+    0 = ligne des épaules, 1 = ligne des hanches. Peut dépasser 1 : le tour de
+    hanches se prend sous les articulations (voir `_HIP_SEARCH`).
+    """
+
+    chest: float
+    waist: float
+    hip: float
+
+
+@dataclass(frozen=True)
 class SilhouetteWidths:
     """Largeurs (photo de face) ou profondeurs (photo de profil), en pixels."""
 
     chest_px: float
     waist_px: float
     hip_px: float
+    # Niveaux réellement employés. Détectés sur la photo de face, puis imposés
+    # à la photo de profil : mesurer la profondeur à une autre hauteur que la
+    # largeur donnerait une ellipse dont les deux axes ne décrivent pas la même
+    # section du corps.
+    levels: TorsoLevels | None = None
+    # Largeur du torse sur toute sa hauteur, échantillonnée régulièrement entre
+    # les épaules et les hanches. Sert au calcul du volume — voir
+    # `resolve_clothing_thickness`.
+    profile_px: tuple[float, ...] = ()
+    torso_px: float = 0.0
 
 
 def _sam_module_name() -> str:
@@ -275,25 +299,126 @@ def _row_width_px(mask, y: float, center_x: float) -> float:
 # et encaisse un pli de vêtement ou un artefact ponctuel du masque.
 # Résultats sur les mêmes 13 sujets : largeur de poitrine ramenée à 31,1 cm
 # pour le pire cas, et 12 sujets sur 13 aboutissent.
-_CHEST_BAND = (0.26, 0.34)
-_CHEST_BAND_STEPS = 5
+_CHEST_BAND = (0.20, 0.38)
+_CHEST_BAND_STEPS = 10
 
-# Ligne des hanches, en fraction du torse.
+# --- Recherche anatomique de la taille et des hanches ------------------------
+# Les hauteurs étaient fixées à 0,62 et 0,90 du torse. Un ratio fixe suppose
+# que la taille et les fessiers tombent au même endroit chez tout le monde, ce
+# que les 13 sujets démentent : le plus étroit du tronc est trouvé entre 0,45
+# et 0,76, le plus fort des fessiers entre 0,93 et 1,25.
 #
-# Les points de hanche de MediaPipe sont placés aux articulations, donc au
-# niveau du bassin osseux. Le tour de hanches d'un tailleur se prend plus bas,
-# à l'endroit le plus fort des fessiers. Mesurer à hauteur des articulations
-# (fraction 1,00) coupait donc au-dessus de ce point.
+# On cherche donc les extrémums de largeur, comme un tailleur cherche le creux
+# de la taille et la saillie des fessiers plutôt que de mesurer à hauteur fixe.
 #
-# Balayage sur les 13 sujets, largeur comparée à celle qu'implique le tour
-# mesuré au mètre : 1,00 donne 2,77 cm d'erreur, 0,90 en donne 2,34.
-# Le minimum est net et la courbe remonte de part et d'autre (0,80 : 3,87 ;
-# 1,00 : 2,77), ce qui écarte un simple effet de bruit.
-_HIP_LINE = 0.90
+# Mesuré sur les 13 sujets : la détection SEULE ne rapporte presque rien
+# (7,92 -> 7,91 cm), parce qu'un vêtement ample comble le creux de la taille et
+# noie les repères. Combinée au retrait de l'épaisseur de vêtement, elle porte
+# l'erreur du tronc de 5,38 à 4,87 cm et le nombre de mesures sous 3 cm de
+# 17 à 20 sur 39. Les deux corrections ne valent que prises ensemble.
+_WAIST_SEARCH = (0.45, 0.80)
+_HIP_SEARCH = (0.85, 1.25)
+_SEARCH_STEPS = 24
+
+# Sous l'entrejambe, le masque se scinde en deux jambes : `_row_width_px` ne
+# retient qu'un segment contigu, donc une seule jambe, dont la largeur est
+# faible. La recherche du maximum ne peut donc pas dériver dans les cuisses —
+# elle est bornée par l'anatomie, pas seulement par `_HIP_SEARCH`.
+
+# Nombre de tranches horizontales du profil vertical du torse.
+_PROFILE_STEPS = 50
+
+
+# --- Retrait de l'épaisseur de vêtement --------------------------------------
+# La silhouette segmentée est celle du corps HABILLÉ. Sur un périmètre, une
+# épaisseur e de tissu ajoute environ 2*pi*e : 1,5 cm de pull font 9 cm de tour
+# de taille. Mesuré sur les 13 sujets, la chaîne surestime le tronc de +6,67 cm
+# en moyenne (poitrine +9,74, taille +7,36, hanches +2,91).
+#
+# Le poids saisi donne le volume réel du corps. On cherche donc l'épaisseur qui
+# réconcilie le volume apparent de la silhouette avec ce volume réel : une
+# inconnue, une contrainte, système déterminé. Rien n'est appris sur une
+# population — e est résolu individuellement pour chaque sujet, à partir de son
+# propre poids et de sa propre silhouette.
+#
+# C'est ce qui distingue cette correction d'un décalage calibré : le jour où la
+# capture guidée imposera une tenue ajustée, elle trouvera e proche de zéro
+# d'elle-même, là où un décalage appris sur des photos en vêtements libres
+# resterait faux dans le mauvais sens.
+#
+# Mesuré : erreur du tronc 8,60 -> 6,18 cm à lignes fixes, 4,87 cm combiné à la
+# détection anatomique. Épaisseurs résolues de -0,79 à +2,58 cm.
+_BODY_DENSITY_KG_PER_L = 1.01
+# Part du volume corporel attribuée au tronc (épaules -> hanches). Seule
+# hypothèse de population de cette correction ; la régler par sexe a été testé
+# et ne rapporte rien (5,08 contre 4,87 cm).
+_TRUNK_VOLUME_FRACTION = 0.50
+_THICKNESS_BOUNDS_CM = (-4.0, 8.0)
+
+
+def resolve_clothing_thickness(
+    front: SilhouetteWidths,
+    side: SilhouetteWidths,
+    front_cm_per_pixel: float,
+    side_cm_per_pixel: float,
+    weight_kg: float,
+) -> float | None:
+    """
+    Épaisseur de vêtement, en cm, résolue par contrainte de volume.
+
+    Renvoie None si l'une des deux silhouettes est trop incomplète pour que le
+    volume ait un sens — l'appelant mesure alors sans correction plutôt que
+    d'appliquer une épaisseur calculée sur du vide.
+    """
+    if front_cm_per_pixel <= 0 or side_cm_per_pixel <= 0 or weight_kg <= 0:
+        return None
+    if not front.profile_px or not side.profile_px or front.torso_px <= 0:
+        return None
+
+    slices = [
+        (w * front_cm_per_pixel, d * side_cm_per_pixel)
+        for w, d in zip(front.profile_px, side.profile_px)
+        if w > 0 and d > 0
+    ]
+    if len(slices) < _PROFILE_STEPS // 2:
+        logger.info("Profil du torse trop lacunaire (%d tranches) — pas de correction de vêtement", len(slices))
+        return None
+
+    torso_cm = front.torso_px * front_cm_per_pixel
+    dh = torso_cm / (_PROFILE_STEPS - 1)
+
+    def volume_litres(thickness: float) -> float:
+        """Volume du torse, tranches elliptiques, silhouette rétrécie de e."""
+        total = 0.0
+        for w, d in slices:
+            a = max(w - 2 * thickness, 1.0) / 2.0
+            b = max(d - 2 * thickness, 1.0) / 2.0
+            total += math.pi * a * b * dh
+        return total / 1000.0
+
+    target = weight_kg / _BODY_DENSITY_KG_PER_L * _TRUNK_VOLUME_FRACTION
+    lo, hi = _THICKNESS_BOUNDS_CM
+    # Le volume décroît strictement avec l'épaisseur : dichotomie simple.
+    for _ in range(60):
+        mid = (lo + hi) / 2.0
+        if volume_litres(mid) > target:
+            lo = mid
+        else:
+            hi = mid
+    thickness = (lo + hi) / 2.0
+
+    logger.info(
+        "Épaisseur de vêtement résolue : %.2f cm (volume apparent %.1f L, attendu %.1f L)",
+        thickness, volume_litres(0.0), target,
+    )
+    return thickness
 
 
 def measure_widths(
-    image_path: str | Path, pose: PoseResult, orientation: str = "front"
+    image_path: str | Path,
+    pose: PoseResult,
+    orientation: str = "front",
+    levels: TorsoLevels | None = None,
 ) -> SilhouetteWidths | None:
     """
     Mesure la largeur du corps à trois hauteurs anatomiques.
@@ -303,6 +428,12 @@ def measure_widths(
     `orientation` ("front" | "side") détermine l'épaisseur de la bande
     d'exclusion des bras, qui ne peut pas être la même dans les deux cas —
     voir `_ARM_EXCLUSION_RATIO`.
+
+    `levels` impose les hauteurs au lieu de les chercher. L'appelant mesure la
+    face d'abord, récupère `levels` du résultat, puis le passe pour le profil :
+    largeur et profondeur décrivent alors la même section du corps. Sans cela,
+    chaque vue choisirait ses propres extrémums et les deux axes de l'ellipse
+    ne se rapporteraient plus au même endroit.
     """
     mask = _body_mask(image_path, pose)
     if mask is None:
@@ -316,34 +447,64 @@ def measure_widths(
     if torso <= 0:
         return None
 
-    def center_x_at(y: float) -> float:
+    def center_x_at(frac: float) -> float:
         """Le corps n'est pas parfaitement vertical : interpole le centre
         entre épaules et hanches selon la hauteur, pour amorcer la marche de
-        pixels au bon endroit même sur une posture légèrement penchée."""
-        t = max(0.0, min(1.0, (y - shoulder_y) / torso))
+        pixels au bon endroit même sur une posture légèrement penchée.
+
+        Au-delà du torse (frac > 1), l'axe est prolongé verticalement plutôt
+        qu'extrapolé : rien ne garantit que l'inclinaison observée entre
+        épaules et hanches se poursuive plus bas.
+        """
+        t = max(0.0, min(1.0, frac))
         return shoulder_mid[0] + t * (hip_mid[0] - shoulder_mid[0])
 
-    # Hauteurs exprimées en fraction du torse : robuste au cadrage et à la taille
-    # du sujet dans l'image.
-    waist_y = shoulder_y + 0.62 * torso   # ligne de taille naturelle
-    hip_row_y = shoulder_y + _HIP_LINE * torso   # sous les articulations, voir _HIP_LINE
+    def width_at(frac: float) -> float:
+        return _row_width_px(mask, shoulder_y + frac * torso, center_x_at(frac))
 
-    # Poitrine : minimum sur une bande, pas une ligne — voir _CHEST_BAND.
-    f0, f1 = _CHEST_BAND
-    chest_candidates = []
-    for k in range(_CHEST_BAND_STEPS):
-        frac = f0 + (f1 - f0) * k / (_CHEST_BAND_STEPS - 1)
-        y = shoulder_y + frac * torso
-        w = _row_width_px(mask, y, center_x_at(y))
-        if w > 0:
-            chest_candidates.append(w)
+    def extremum(bounds: tuple[float, float], want_max: bool) -> tuple[float, float]:
+        """Fraction et largeur de l'extrémum de largeur sur l'intervalle."""
+        f0, f1 = bounds
+        best_frac, best_w = (f0 + f1) / 2, 0.0
+        for k in range(_SEARCH_STEPS):
+            frac = f0 + (f1 - f0) * k / (_SEARCH_STEPS - 1)
+            w = width_at(frac)
+            if w <= 0:
+                continue
+            if best_w <= 0 or (w > best_w if want_max else w < best_w):
+                best_frac, best_w = frac, w
+        return best_frac, best_w
 
-    widths = SilhouetteWidths(
-        chest_px=min(chest_candidates) if chest_candidates else 0.0,
-        waist_px=_row_width_px(mask, waist_y, center_x_at(waist_y)),
-        hip_px=_row_width_px(mask, hip_row_y, center_x_at(hip_row_y)),
-    )
-    if min(widths.chest_px, widths.waist_px, widths.hip_px) <= 0:
+    if levels is None:
+        # Photo de face : on cherche les repères anatomiques.
+        chest_frac, chest_px = extremum(_CHEST_BAND, want_max=False)
+        waist_frac, waist_px = extremum(_WAIST_SEARCH, want_max=False)
+        hip_frac, hip_px = extremum(_HIP_SEARCH, want_max=True)
+        used = TorsoLevels(chest=chest_frac, waist=waist_frac, hip=hip_frac)
+    else:
+        # Photo de profil : on relit aux hauteurs déjà retenues.
+        used = levels
+        chest_px = width_at(used.chest)
+        waist_px = width_at(used.waist)
+        hip_px = width_at(used.hip)
+
+    if min(chest_px, waist_px, hip_px) <= 0:
         logger.info("Masque incomplet — largeurs inexploitables")
         return None
-    return widths
+
+    profile = tuple(
+        width_at(k / (_PROFILE_STEPS - 1)) for k in range(_PROFILE_STEPS)
+    )
+
+    logger.debug(
+        "Lignes %s : poitrine %.2f, taille %.2f, hanches %.2f (fractions du torse)",
+        orientation, used.chest, used.waist, used.hip,
+    )
+    return SilhouetteWidths(
+        chest_px=chest_px,
+        waist_px=waist_px,
+        hip_px=hip_px,
+        levels=used,
+        profile_px=profile,
+        torso_px=float(torso),
+    )

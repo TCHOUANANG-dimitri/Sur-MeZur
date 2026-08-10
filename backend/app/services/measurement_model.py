@@ -156,10 +156,15 @@ def _normalise_sex(sex: str | None) -> str:
 def _validate(features: dict[str, float]) -> str | None:
     """Renvoie un message d'erreur si une entrée est hors bornes, sinon None."""
     for name, value in features.items():
+        # Les variantes « corps nu » (suffixe _body) sont les mêmes grandeurs,
+        # l'épaisseur de vêtement retirée : mêmes bornes anatomiques. Sans ce
+        # repli elles échapperaient au contrôle, et une épaisseur aberrante
+        # produirait une dimension absurde sans que rien ne l'arrête.
+        base_name = name[: -len("_body")] if name.endswith("_body") else name
         if name == "weight_kg":
             lo, hi = WEIGHT_BOUNDS_KG
-        elif name in INPUT_BOUNDS_CM:
-            lo, hi = INPUT_BOUNDS_CM[name]
+        elif base_name in INPUT_BOUNDS_CM:
+            lo, hi = INPUT_BOUNDS_CM[base_name]
         else:
             continue
         if value is None or not (lo <= float(value) <= hi):
@@ -209,11 +214,25 @@ def _predict_v3(bundle: dict, features: dict[str, float]) -> dict[str, float] | 
             # périmètre d'ellipse nu. Voir train_v3.py pour la mesure qui
             # motive ce choix — un résidu appris sur ANSUR dégrade le résultat.
             kb, kd = ellipse_targets[target]
-            base = _ellipse_perimeter(vals[kb], vals[kd])
+            # Dimensions corps nu si la chaîne a pu résoudre l'épaisseur de
+            # vêtement, dimensions habillées sinon. La silhouette segmentée
+            # inclut le tissu, et 1 cm de tissu ajoute ~6 cm de tour : c'est
+            # la première source d'erreur du tronc, mesurée à +6,67 cm de biais.
+            # Voir vision/features.CLOTHED_TO_BODY.
+            base = _ellipse_perimeter(
+                float(features.get(kb + "_body", vals[kb])),
+                float(features.get(kd + "_body", vals[kd])),
+            )
             if model is None:
                 pred = base
             else:
-                colonnes = list(derives) + [vals[kd] / vals[kb]]
+                # Le rapport profondeur/largeur doit décrire la même section que
+                # le socle : s'il restait sur les dimensions habillées alors que
+                # la base passe au corps nu, le résidu s'appliquerait à une
+                # géométrie qui n'est pas celle qu'il a apprise.
+                b = float(features.get(kb + "_body", vals[kb]))
+                d = float(features.get(kd + "_body", vals[kd]))
+                colonnes = list(derives) + [d / b]
                 facteur = float(model.predict(np.array([colonnes], dtype=float))[0])
                 pred = base * (1.0 + facteur)
         else:

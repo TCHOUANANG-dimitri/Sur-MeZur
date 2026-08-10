@@ -169,24 +169,48 @@ def main() -> int:
     print(f"\n{BAR}\n4. SILHOUETTE (SAM)\n{BAR}")
     fw = silhouette_mod.measure_widths(args.front, front, orientation="front")
     sw = None
+    side_scale = None
     if args.side and args.side.exists():
         side_pose = pose_mod.extract_pose(args.side)
         if side_pose is not None:
-            sw = silhouette_mod.measure_widths(args.side, side_pose, orientation="side")
+            # Mêmes hauteurs que la face, comme en production : les deux axes de
+            # l'ellipse doivent décrire la même section du corps.
+            sw = silhouette_mod.measure_widths(
+                args.side, side_pose, orientation="side",
+                levels=fw.levels if fw else None,
+            )
+            side_scale = estimate_scale(side_pose, args.height)
         else:
             print("  photo de profil : aucune pose détectée")
     if fw:
         print(f"  face   : poitrine {fw.chest_px*scale:5.1f} cm | taille {fw.waist_px*scale:5.1f} cm"
               f" | hanches {fw.hip_px*scale:5.1f} cm")
+        if fw.levels:
+            print(f"  lignes : poitrine {fw.levels.chest:.2f} | taille {fw.levels.waist:.2f}"
+                  f" | hanches {fw.levels.hip:.2f}  (fractions du torse, détectées)")
     if sw:
         print(f"  profil : poitrine {sw.chest_px*scale:5.1f} cm | taille {sw.waist_px*scale:5.1f} cm"
               f" | fessier {sw.hip_px*scale:5.1f} cm")
     if not fw and not sw:
         print("  indisponible — largeurs estimées depuis le squelette (moins précis)")
 
+    thickness = None
+    if fw and sw and side_scale:
+        thickness = silhouette_mod.resolve_clothing_thickness(
+            front=fw, side=sw, front_cm_per_pixel=scale,
+            side_cm_per_pixel=side_scale, weight_kg=args.weight,
+        )
+    if thickness is not None:
+        print(f"  vêtement : {thickness:+.2f} cm d'épaisseur, retirée du tronc "
+              f"(résolue par le poids saisi, voir resolve_clothing_thickness)")
+    else:
+        print("  vêtement : épaisseur non résolue — tronc mesuré habillé")
+
     # --- Variables ---
     print(f"\n{BAR}\n5. VARIABLES ENVOYEES AU MODELE\n{BAR}")
-    feats = build_model_features(front, scale, args.height, args.weight, fw, sw)
+    feats = build_model_features(front, scale, args.height, args.weight, fw, sw,
+                                 side_cm_per_pixel=side_scale,
+                                 clothing_thickness_cm=thickness)
     if feats is None:
         print("  ECHEC de construction des variables.")
         return 1
@@ -218,7 +242,7 @@ def main() -> int:
     # --- Prédictions ---
     print(f"\n{BAR}\n6. MENSURATIONS\n{BAR}")
     circ = measurement_model.predict_circumferences(args.sexe, feats)
-    geo = build_geometric_measurements(front, scale)
+    geo = build_geometric_measurements(front, scale, args.sexe)
 
     reel = json.loads(args.reel.read_text(encoding="utf-8")) if args.reel and args.reel.exists() else {}
 

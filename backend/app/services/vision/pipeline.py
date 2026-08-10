@@ -238,8 +238,20 @@ def analyze_debug(
     side_widths = None
     pose_side = pose_mod.extract_pose(side_photo, settings.pose_min_detection_confidence) if side_photo else None
     if pose_side is not None:
-        side_widths = silhouette_mod.measure_widths(side_photo, pose_side, orientation="side")
+        side_widths = silhouette_mod.measure_widths(
+            side_photo, pose_side, orientation="side",
+            levels=front_widths.levels if front_widths else None,
+        )
     side_cm_per_pixel = estimate_scale(pose_side, height_cm) if pose_side is not None else None
+
+    clothing_thickness = None
+    if front_widths is not None and side_widths is not None and side_cm_per_pixel:
+        clothing_thickness = silhouette_mod.resolve_clothing_thickness(
+            front=front_widths, side=side_widths,
+            front_cm_per_pixel=cm_per_pixel, side_cm_per_pixel=side_cm_per_pixel,
+            weight_kg=weight_kg,
+        )
+
     out["steps"]["silhouette"] = {
         "ok": front_widths is not None or side_widths is not None,
         "reason": silhouette_mod.unavailable_reason(),
@@ -247,13 +259,15 @@ def analyze_debug(
         "side_px": vars(side_widths) if side_widths else None,
         "side_pose_detected": pose_side is not None,
         "side_cm_per_pixel": round(side_cm_per_pixel, 4) if side_cm_per_pixel else None,
+        "levels": vars(front_widths.levels) if front_widths and front_widths.levels else None,
+        "clothing_thickness_cm": round(clothing_thickness, 2) if clothing_thickness is not None else None,
     }
 
     # 4. Variables du modèle
     features = build_model_features(
         pose_front=pose_front, cm_per_pixel=cm_per_pixel, height_cm=height_cm,
         weight_kg=weight_kg, front_widths=front_widths, side_widths=side_widths,
-        side_cm_per_pixel=side_cm_per_pixel,
+        side_cm_per_pixel=side_cm_per_pixel, clothing_thickness_cm=clothing_thickness,
     )
     out["steps"]["features"] = {"ok": features is not None, "values_cm": features}
     if features is None:
@@ -269,7 +283,10 @@ def analyze_debug(
     }
 
     # 6. Géométrie
-    out["steps"]["geometric"] = {"ok": True, "values_cm": build_geometric_measurements(pose_front, cm_per_pixel)}
+    out["steps"]["geometric"] = {
+        "ok": True,
+        "values_cm": build_geometric_measurements(pose_front, cm_per_pixel, gender),
+    }
 
     if circumferences:
         out["final"] = {
@@ -325,7 +342,12 @@ def run(
     if side_photo:
         pose_side = pose_mod.extract_pose(side_photo, settings.pose_min_detection_confidence)
         if pose_side is not None:
-            side_widths = silhouette_mod.measure_widths(side_photo, pose_side, orientation="side")
+            # Les hauteurs de mesure sont celles détectées sur la face : les
+            # deux axes de l'ellipse doivent décrire la même section du corps.
+            side_widths = silhouette_mod.measure_widths(
+                side_photo, pose_side, orientation="side",
+                levels=front_widths.levels if front_widths else None,
+            )
             # Échelle propre à la photo de profil : le sujet n'y occupe pas
             # forcément la même place que de face.
             side_cm_per_pixel = estimate_scale(pose_side, height_cm)
@@ -338,6 +360,18 @@ def run(
     if not used_sam:
         notes.append("silhouette indisponible : largeurs estimées depuis le squelette")
 
+    # 3bis. Épaisseur de vêtement, résolue par contrainte de volume. Demande
+    #       les deux silhouettes : c'est un volume, pas une largeur.
+    clothing_thickness = None
+    if front_widths is not None and side_widths is not None and side_cm_per_pixel:
+        clothing_thickness = silhouette_mod.resolve_clothing_thickness(
+            front=front_widths, side=side_widths,
+            front_cm_per_pixel=cm_per_pixel, side_cm_per_pixel=side_cm_per_pixel,
+            weight_kg=weight_kg,
+        )
+    if clothing_thickness is None:
+        notes.append("épaisseur de vêtement non résolue : tronc mesuré habillé")
+
     # 4. Variables du modèle.
     features = build_model_features(
         pose_front=pose_front,
@@ -347,6 +381,7 @@ def run(
         front_widths=front_widths,
         side_widths=side_widths,
         side_cm_per_pixel=side_cm_per_pixel,
+        clothing_thickness_cm=clothing_thickness,
     )
     if features is None:
         return None
@@ -366,7 +401,7 @@ def run(
         return None
 
     # 6. Les 4 longueurs géométriques.
-    geometric = build_geometric_measurements(pose_front, cm_per_pixel)
+    geometric = build_geometric_measurements(pose_front, cm_per_pixel, gender)
 
     data: dict[str, float] = {**circumferences, **geometric, "height_total": round(height_cm, 1)}
 

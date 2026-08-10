@@ -83,6 +83,44 @@ DEPTH_FROM_BREADTH = {
     "buttockdepth": 0.71,  # 24,6 / 34,6
 }
 
+# Variables dont on produit aussi une version « corps nu », l'épaisseur de
+# vêtement retirée. Elles alimentent UNIQUEMENT le socle géométrique des trois
+# tours de tronc.
+#
+# Les entrées du régresseur restent volontairement inchangées : la correction
+# n'a été mesurée que sur les tours de tronc, et rien ne dit ce qu'elle ferait
+# aux cinq autres cibles. On ne déplace pas une variable dont l'effet n'a pas
+# été mesuré là où elle irait.
+BODY_SUFFIX = "_body"
+CLOTHED_TO_BODY = (
+    "chestbreadth", "chestdepth",
+    "waistbreadth", "waistdepth",
+    "hipbreadth", "buttockdepth",
+)
+# Planchers de sécurité après soustraction, en cm : une épaisseur aberrante ne
+# doit pas produire une dimension nulle ou négative.
+_MIN_BREADTH_CM = 5.0
+_MIN_DEPTH_CM = 3.0
+
+# --- Longueur de dos : correction par sexe -----------------------------------
+# La longueur de dos est lue comme la corde milieu des épaules -> milieu des
+# hanches. Le rapport entre cette corde et la mesure du tailleur n'est pas le
+# même selon le sexe : mesuré sur 13 sujets, il vaut 1,003 ± 0,21 chez l'homme
+# et 0,919 ± 0,02 chez la femme.
+#
+# Chez l'homme l'écart n'est pas significatif (+0,16 cm pour un écart-type de
+# 2,14) : appliquer une correction y ajouterait du bruit, et le test l'a
+# confirmé (1,54 -> 1,80 cm). Chez la femme il l'est nettement (-4,02 cm pour
+# un écart-type de 0,98), et la correction ramène l'erreur de 4,02 à 1,05 cm.
+#
+# Un facteur plutôt qu'un décalage : il suit la taille du sujet, là où un
+# décalage constant supposerait le même écart à 1,50 m et à 1,80 m. Les deux
+# se valent sur cet échantillon (1,53 contre 1,51 cm) ; le facteur se défend
+# mieux hors échantillon.
+#
+# Calibré sur 5 femmes. C'est peu : à revoir dès que l'échantillon grandit.
+BACK_LENGTH_BY_SEX = {"male": 1.0, "female": 0.919}
+
 
 def build_model_features(
     pose_front: PoseResult,
@@ -92,6 +130,7 @@ def build_model_features(
     front_widths: SilhouetteWidths | None = None,
     side_widths: SilhouetteWidths | None = None,
     side_cm_per_pixel: float | None = None,
+    clothing_thickness_cm: float | None = None,
 ) -> dict[str, float] | None:
     """
     Construit les 12 entrées attendues par le modèle, en centimètres
@@ -100,6 +139,10 @@ def build_model_features(
     `front_widths` / `side_widths` viennent de SAM. En leur absence, les
     variables de silhouette sont dérivées du squelette : moins précis, mais le
     modèle reste utilisable.
+
+    `clothing_thickness_cm`, quand il est fourni, ajoute six variables
+    suffixées `_body` : les mêmes largeurs et profondeurs, l'épaisseur de
+    vêtement retirée. Voir `CLOTHED_TO_BODY`.
     """
     if cm_per_pixel <= 0:
         return None
@@ -181,24 +224,72 @@ def build_model_features(
         features["waistdepth"] = round(features["waistbreadth"] * DEPTH_FROM_BREADTH["waistdepth"], 1)
         features["buttockdepth"] = round(features["hipbreadth"] * DEPTH_FROM_BREADTH["buttockdepth"], 1)
 
+    # --- Dimensions corps nu, pour le socle géométrique du tronc ------------
+    # L'épaisseur se retire de chaque côté : une largeur perd 2e, pas e.
+    if clothing_thickness_cm is not None:
+        for name in CLOTHED_TO_BODY:
+            floor = _MIN_DEPTH_CM if name.endswith("depth") else _MIN_BREADTH_CM
+            features[name + BODY_SUFFIX] = round(
+                max(features[name] - 2 * clothing_thickness_cm, floor), 1
+            )
+
     return features
 
 
-def build_geometric_measurements(pose: PoseResult, cm_per_pixel: float) -> dict[str, float]:
+def _sleeve_length_cm(pose: PoseResult, cm_per_pixel: float) -> float:
+    """
+    Longueur de manche, en centimètres, mesurée en 3D quand c'est possible.
+
+    Lue sur les points projetés, la manche est systématiquement raccourcie :
+    un bras qui s'écarte du plan du capteur — ce que fait n'importe quel bras
+    légèrement en avant — se projette plus court qu'il n'est. C'est la seule
+    des quatre longueurs dont le tracé quitte franchement le plan frontal, et
+    c'est la seule que le repère 3D améliore.
+    #
+    Mesuré sur 13 sujets : 3,66 -> 2,93 cm, et ce sont les pires cas qui se
+    corrigent (7,6 -> 4,4 et 5,0 -> 2,2 cm). Les trois autres longueurs se
+    dégradent en 3D — la profondeur reconstruite y est trop bruitée — et
+    restent donc en 2D.
+    """
+    left_px = pose.path_length(LEFT_SHOULDER, LEFT_ELBOW, LEFT_WRIST)
+    right_px = pose.path_length(RIGHT_SHOULDER, RIGHT_ELBOW, RIGHT_WRIST)
+    projected = px_to_cm(max(left_px, right_px), cm_per_pixel)
+
+    scale = pose.world_scale(cm_per_pixel)
+    if scale is None:
+        return projected
+
+    left_m = pose.path_length_3d(LEFT_SHOULDER, LEFT_ELBOW, LEFT_WRIST)
+    right_m = pose.path_length_3d(RIGHT_SHOULDER, RIGHT_ELBOW, RIGHT_WRIST)
+    if left_m is None or right_m is None:
+        return projected
+
+    spatial = max(left_m, right_m) * scale
+    # La projection est une borne inférieure de la longueur réelle : une valeur
+    # 3D plus courte signale un repère 3D incohérent, pas un bras plus court.
+    if spatial < projected:
+        logger.debug("Manche 3D (%.1f cm) sous la projection (%.1f cm) — 2D conservée",
+                     spatial, projected)
+        return projected
+    return spatial
+
+
+def build_geometric_measurements(
+    pose: PoseResult, cm_per_pixel: float, gender: str | None = None
+) -> dict[str, float]:
     """
     Les 4 mesures lues directement sur l'image, sans modèle.
 
     Elles complètent les 8 tours prédits pour atteindre les 12 mesures livrées
     au client.
+
+    `gender` ne sert qu'à la longueur de dos — voir `BACK_LENGTH_BY_SEX`.
     """
 
     def cm(px: float) -> float:
         return px_to_cm(px, cm_per_pixel)
 
-    # Manche : épaule -> coude -> poignet, côté le mieux visible.
-    left_sleeve = pose.path_length(LEFT_SHOULDER, LEFT_ELBOW, LEFT_WRIST)
-    right_sleeve = pose.path_length(RIGHT_SHOULDER, RIGHT_ELBOW, RIGHT_WRIST)
-    sleeve_px = max(left_sleeve, right_sleeve)
+    sleeve_cm = _sleeve_length_cm(pose, cm_per_pixel)
 
     # Entrejambe : milieu des hanches -> cheville.
     hip_mid = pose.midpoint(LEFT_HIP, RIGHT_HIP)
@@ -230,7 +321,11 @@ def build_geometric_measurements(pose: PoseResult, cm_per_pixel: float) -> dict[
         # au mètre, en validation croisée (chacun évalué avec un facteur calculé
         # sans lui) : erreur ramenée de 6,7 à 1,6 cm.
         "shoulder": round(cm(pose.distance(LEFT_SHOULDER, RIGHT_SHOULDER)) * JOINT_TO_SHOULDER_WIDTH, 1),
-        "sleeve_length": cm(sleeve_px),
+        "sleeve_length": round(sleeve_cm, 1),
         "inseam": cm(inseam_px),
-        "back_length": cm(back_px),
+        # Correction par sexe : neutre chez l'homme, franche chez la femme.
+        # Voir BACK_LENGTH_BY_SEX.
+        "back_length": round(
+            cm(back_px) * BACK_LENGTH_BY_SEX.get((gender or "").lower(), 1.0), 1
+        ),
     }
