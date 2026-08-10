@@ -57,10 +57,12 @@ def search_tailors(
     lat: float | None = None,
     lng: float | None = None,
     sort: str = "rating",
-    category: str | None = None,
     q: str | None = None,
     db: Session = Depends(get_db),
 ):
+    # Verrou de place de marché : seuls les profils approuvés sont visibles par
+    # les clients. Enlever ce filtre exposerait les tailleurs en attente ou
+    # rejetés et viderait la vérification de son rôle de barrière.
     query = db.query(TailorProfile).filter(
         TailorProfile.verification_status == VerificationStatus.approved
     )
@@ -92,6 +94,9 @@ def get_my_tailor_profile(
 @router.get("/{tailor_id}", response_model=TailorProfileOut)
 def get_tailor(tailor_id: str, db: Session = Depends(get_db)):
     tailor = db.get(TailorProfile, tailor_id)
-    if not tailor:
+    # Même verrou que la recherche : un profil non approuvé n'est pas
+    # accessible publiquement par identifiant (le tailleur consulte le sien via
+    # /tailors/me, l'admin via /admin/verifications).
+    if not tailor or tailor.verification_status != VerificationStatus.approved:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor not found")
     return tailor

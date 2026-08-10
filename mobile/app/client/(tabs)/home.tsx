@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CatalogApi, NotificationsApi, TailorsApi } from "../../../src/api/endpoints";
 import type { GarmentCategory, GarmentModel, Notification, TailorProfile } from "../../../src/api/types";
-import { NotifBell, VerifiedBadge } from "../../../src/components/Badges";
+import { NotifBell, VerificationBadge } from "../../../src/components/Badges";
 import { Card } from "../../../src/components/Card";
 import { Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
@@ -117,7 +117,7 @@ export default function Home() {
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={styles.tailorName}>{tl.shop_name}</Text>
-                    {tl.verification_status === "approved" && <VerifiedBadge />}
+                    <VerificationBadge status={tl.verification_status} />
                   </View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
                     <Stars value={tl.rating_avg} />

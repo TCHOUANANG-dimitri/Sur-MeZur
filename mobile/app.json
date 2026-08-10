@@ -2,6 +2,7 @@
   "expo": {
     "name": "Sur-MeZur",
     "slug": "sur-mezur",
+    "owner": "dim39",
     "scheme": "surmezur",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -32,6 +33,12 @@
       "expo-router",
       "expo-font",
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "964b5e19-4335-42ca-a5e3-ffa922508492"
+      }
+    }
   }
 }

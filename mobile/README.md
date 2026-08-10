@@ -64,12 +64,12 @@ npx expo start          # scan the QR code in Expo Go, or press a/i for an emula
 npm run typecheck       # tsc --noEmit
 ```
 
-### Demo accounts
+### Accounts
 
 Same as the backend seed data — see the root `README.md`. Quickest path:
-language screen → onboarding → "Connexion" → phone `+237600000001` /
-password `password123` (pre-filled as the login screen's default) for the
-client account.
+language screen → onboarding → "Connexion" → admin phone `+237696982953` /
+password `password123`. Clients register their own account from the app
+(the password must be exactly 6 characters, including a digit and a letter).
 
 ## Verification performed
 

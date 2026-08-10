@@ -63,6 +63,15 @@ export interface TailorProfile {
   distance_km?: number | null;
 }
 
+export interface VerificationDocument {
+  id: string;
+  user_id: string;
+  type: "id_card" | "portfolio" | "atelier_photo";
+  file_url: string;
+  status: VerificationStatus;
+  reviewed_by: string | null;
+}
+
 export interface MeasurementSession {
   id: string;
   status: JobStatus;

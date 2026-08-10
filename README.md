@@ -83,14 +83,14 @@ npm run dev                    # http://localhost:5173, proxies /api to :8000
 
 Open http://localhost:5173.
 
-### Demo accounts (created by `app/seed.py`, password `password123` for all)
+### Accounts (created by `app/seed.py`, password `password123`)
 
 | Role | Phone | Notes |
 |---|---|---|
-| Client | `+237600000001` | |
-| Tailor | `+237600000002` | Pre-verified (`Chez Fatou Couture`) |
-| Tailor | `+237600000003` | Pending verification, to test the admin approval flow |
-| Admin | `+237600000000` | |
+| Admin | `+237696982953` | Platform administrator |
+| Tailor (market seed) | `+237600000002` | Pre-verified (`Chez Fatou Couture`) — powers the catalog |
+
+Clients register their own accounts from the app; no demo client is created.
 
 ### Automated verification
 

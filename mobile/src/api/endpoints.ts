@@ -23,6 +23,7 @@ import type {
   TokenResponse,
   TryonSession,
   User,
+  VerificationDocument,
 } from "./types";
 
 export interface PickedFile {
@@ -257,6 +258,8 @@ export const AdminApi = {
   allOrders: (status_filter?: string) =>
     api.get<Order[]>(`/admin/orders${status_filter ? `?status_filter=${status_filter}` : ""}`),
   pendingVerifications: () => api.get<TailorProfile[]>("/admin/verifications"),
+  verificationDocuments: (tailorId: string) =>
+    api.get<VerificationDocument[]>(`/admin/verifications/${tailorId}/documents`),
   decideVerification: (tailorId: string, status: "approved" | "rejected") =>
     api.post<TailorProfile>(`/admin/verifications/${tailorId}/decide`, { status }),
   disputes: () => api.get<Order[]>("/admin/disputes"),

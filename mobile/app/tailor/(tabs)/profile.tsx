@@ -16,7 +16,7 @@ import React, { useCallback, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { OrdersApi, TailorsApi } from "../../../src/api/endpoints";
 import type { Order, Review, TailorProfile } from "../../../src/api/types";
-import { VerifiedBadge } from "../../../src/components/Badges";
+import { VerificationBadge } from "../../../src/components/Badges";
 import { Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { Segmented } from "../../../src/components/Segmented";
@@ -60,7 +60,7 @@ export default function TailorProfilePage() {
         </View>
         <View style={styles.nameRow}>
           <Text style={styles.heroName}>{profile.shop_name}</Text>
-          {profile.verification_status === "approved" && <VerifiedBadge />}
+          {profile.verification_status === "approved" && <VerificationBadge status={profile.verification_status} />}
         </View>
         <Text style={styles.heroSub}>{user?.phone}</Text>
         {profile.city ? <Text style={styles.heroSub}>{profile.city}</Text> : null}

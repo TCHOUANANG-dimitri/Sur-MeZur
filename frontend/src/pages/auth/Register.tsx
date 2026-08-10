@@ -27,8 +27,8 @@ export default function Register() {
 
   const requestOtp = async () => {
     setError("");
-    if (!phone || !fullName || password.length < 4) {
-      setError("Complétez tous les champs (mot de passe ≥ 4 caractères).");
+    if (!phone || !fullName || !/^[a-zA-Z0-9]{6}$/.test(password) || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError("Complétez tous les champs. Le mot de passe doit contenir 6 caractères exactement (au moins un chiffre et une lettre).");
       return;
     }
     setBusy(true);
@@ -74,7 +74,7 @@ export default function Register() {
             <input style={inputStyle} value={phone} onChange={(e) => setPhone(e.target.value)} />
           </Field>
           <Field label={t("auth.password")}>
-            <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input type="password" style={inputStyle} value={password} maxLength={6} onChange={(e) => setPassword(e.target.value)} />
           </Field>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: colors.textSecondary, marginBottom: 18 }}>
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />

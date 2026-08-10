@@ -1,0 +1,26 @@
+{
+  "cli": {
+    "version": ">= 21.5.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_API_URL": "https://sur-mezur.onrender.com" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_API_URL": "https://sur-mezur.onrender.com" }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": { "EXPO_PUBLIC_API_URL": "https://sur-mezur.onrender.com" }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

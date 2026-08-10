@@ -11,8 +11,8 @@ export default function Login() {
   const { t } = useI18n();
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [phone, setPhone] = useState("+237600000001");
-  const [password, setPassword] = useState("password123");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -43,9 +43,6 @@ export default function Login() {
       <Button fullWidth disabled={busy} onClick={submit}>
         {t("auth.login")}
       </Button>
-      <p style={{ textAlign: "center", fontSize: 12, color: colors.textSecondary, marginTop: 16 }}>
-        Comptes de démo — client: +237600000001, tailleur: +237600000002, admin: +237600000000 (mot de passe: password123)
-      </p>
       <p style={{ textAlign: "center", fontSize: 13, marginTop: 8 }}>
         <a onClick={() => navigate("/role")} style={{ cursor: "pointer" }}>
           {t("auth.register")}

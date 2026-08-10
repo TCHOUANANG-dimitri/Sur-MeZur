@@ -1,18 +1,26 @@
-import { Bell, BadgeCheck, Heart } from "lucide-react-native";
+import { BadgeCheck, Bell, Heart, ShieldAlert } from "lucide-react-native";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import type { VerificationStatus } from "../api/types";
 import { useI18n } from "../i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../theme/ThemeProvider";
 import { fonts, radii, type ThemeColors } from "../theme/tokens";
 
-export function VerifiedBadge() {
+export function VerificationBadge({ status }: { status: VerificationStatus }) {
   const { t } = useI18n();
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
+  const verified = status === "approved";
   return (
-    <View style={styles.verifiedBadge}>
-      <BadgeCheck size={13} color={colors.violetPrimary} />
-      <Text style={styles.verifiedText}>{t("verified.badge")}</Text>
+    <View style={[styles.verifWrap, verified ? styles.verifVerified : styles.verifUnverified]}>
+      {verified ? (
+        <BadgeCheck size={13} color={colors.violetPrimary} />
+      ) : (
+        <ShieldAlert size={13} color={colors.pending} />
+      )}
+      <Text style={[styles.verifText, verified ? styles.verifTextVerified : styles.verifTextUnverified]}>
+        {verified ? t("verified.badge") : t("verified.unverifiedBadge")}
+      </Text>
     </View>
   );
 }
@@ -24,8 +32,8 @@ export function NotifBell({ count, onPress }: { count: number; onPress?: () => v
     <TouchableOpacity onPress={onPress} style={styles.bellWrap}>
       <Bell size={18} color={colors.indigoText} />
       {count > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{count > 9 ? "9+" : count}</Text>
+        <View style={styles.countWrap}>
+          <Text style={styles.countText}>{count > 9 ? "9+" : count}</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -55,19 +63,29 @@ export function LikeButton({
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    verifiedBadge: {
+    verifWrap: {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
-      backgroundColor: colors.violetTint,
       borderRadius: radii.chip,
       paddingVertical: 3,
       paddingHorizontal: 9,
     },
-    verifiedText: {
-      color: colors.violetPrimary,
+    verifVerified: {
+      backgroundColor: colors.violetTint,
+    },
+    verifUnverified: {
+      backgroundColor: colors.pendingBg,
+    },
+    verifText: {
       fontSize: 11,
       fontFamily: fonts.bodyBold,
+    },
+    verifTextVerified: {
+      color: colors.violetPrimary,
+    },
+    verifTextUnverified: {
+      color: colors.pending,
     },
     bellWrap: {
       backgroundColor: colors.backgroundAlt,
@@ -77,7 +95,7 @@ const makeStyles = (colors: ThemeColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    badge: {
+    countWrap: {
       position: "absolute",
       top: -2,
       right: -2,
@@ -89,7 +107,7 @@ const makeStyles = (colors: ThemeColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    badgeText: {
+    countText: {
       color: colors.white,
       fontSize: 9,
       fontFamily: fonts.bodyBold,

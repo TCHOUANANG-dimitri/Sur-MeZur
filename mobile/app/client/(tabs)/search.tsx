@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CatalogApi, TailorsApi } from "../../../src/api/endpoints";
 import type { GarmentCategory, GarmentModel, TailorProfile } from "../../../src/api/types";
-import { LikeButton, VerifiedBadge } from "../../../src/components/Badges";
+import { LikeButton, VerificationBadge } from "../../../src/components/Badges";
 import { Card } from "../../../src/components/Card";
 import { Chip } from "../../../src/components/Chip";
 import { Header, Input, Spinner } from "../../../src/components/Misc";
@@ -86,7 +86,7 @@ export default function Search() {
                   <View>
                     <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
                       <Text style={styles.tailorName}>{tl.shop_name}</Text>
-                      {tl.verification_status === "approved" && <VerifiedBadge />}
+                      <VerificationBadge status={tl.verification_status} />
                     </View>
                     <Stars value={tl.rating_avg} />
                   </View>

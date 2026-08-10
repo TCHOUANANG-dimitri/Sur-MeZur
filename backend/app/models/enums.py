@@ -19,6 +19,10 @@ class VerificationStatus(str, enum.Enum):
 
 
 class MeasurementSource(str, enum.Enum):
+    # Chaîne de vision réelle : MediaPipe (+ SAM) + régression ANSUR sur les
+    # photos. Il n'existe pas de valeur « estimée » : quand la vision échoue,
+    # la session est marquée `failed` et le client reprend ses photos plutôt
+    # que de recevoir des chiffres déduits de sa seule taille.
     ai = "ai"
     manual = "manual"
     mixed = "mixed"

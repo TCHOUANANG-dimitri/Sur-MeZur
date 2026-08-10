@@ -314,7 +314,7 @@ def patch_measurement(
     measurement.data = merged
     if payload.height_cm is not None:
         measurement.height_cm = payload.height_cm
-    if measurement.source == MeasurementSource.ai:
+    if measurement.source in (MeasurementSource.ai, MeasurementSource.estimated):
         measurement.source = MeasurementSource.mixed
     db.commit()
     db.refresh(measurement)

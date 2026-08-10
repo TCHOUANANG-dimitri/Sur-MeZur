@@ -25,7 +25,7 @@
   "auth.password": "Password",
   "auth.fullName": "Full name",
   "auth.otp.title": "Phone verification",
-  "auth.otp.subtitle": "Code sent (demo mode, shown below)",
+  "auth.otp.subtitle": "Code sent (shown below, no SMS dispatch)",
   "nav.home": "Home",
   "nav.search": "Search",
   "nav.tryon": "Try-on",

@@ -1,7 +1,24 @@
-from pydantic import BaseModel
+import re
+
+from pydantic import BaseModel, field_validator
 
 from app.models.enums import Language, UserRole
 from app.schemas.common import ORMModel
+
+PASSWORD_MIN_LENGTH = 6
+PASSWORD_MAX_LENGTH = 6
+
+
+def validate_password(value: str) -> str:
+    if len(value) != PASSWORD_MIN_LENGTH:
+        raise ValueError(
+            f"Le mot de passe doit contenir {PASSWORD_MIN_LENGTH} caractères exactement"
+        )
+    if not re.search(r"[a-zA-Z]", value):
+        raise ValueError("Le mot de passe doit contenir au moins une lettre")
+    if not re.search(r"[0-9]", value):
+        raise ValueError("Le mot de passe doit contenir au moins un chiffre")
+    return value
 
 
 class RegisterIn(BaseModel):
@@ -12,6 +29,11 @@ class RegisterIn(BaseModel):
     language: Language = Language.fr
     email: str | None = None
     photo_consent: bool = False
+
+    @field_validator("password")
+    @classmethod
+    def _valid_password(cls, v: str) -> str:
+        return validate_password(v)
 
 
 class LoginIn(BaseModel):
@@ -57,3 +79,8 @@ class PasswordResetConfirmIn(BaseModel):
     phone: str
     code: str
     new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def _valid_new_password(cls, v: str) -> str:
+        return validate_password(v)

@@ -2,6 +2,11 @@
 # GitHub hard-rejects files over 100MB; keep it local-only.
 backend/ml/weights/sam_vit_b_01ec64.pth
 
+# Segmentation multiclasse MediaPipe (16MB) : testée contre MobileSAM sur les
+# 13 sujets, elle donne 4,9 cm d'erreur de largeur contre 4,3 — piste écartée.
+# Le fichier reste en local pour qui voudrait refaire la mesure.
+backend/ml/weights/selfie_multiclass_256x256.tflite
+
 # Common junk that shouldn't be tracked.
 __pycache__/
 *.pyc

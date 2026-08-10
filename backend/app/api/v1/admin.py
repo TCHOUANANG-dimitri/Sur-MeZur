@@ -149,12 +149,24 @@ def list_verification_documents(tailor_id: str, db: Session = Depends(get_db)):
 
 @router.post("/verifications/{tailor_id}/decide", response_model=TailorProfileOut)
 def decide_verification(
-    tailor_id: str, payload: VerificationDecideIn, db: Session = Depends(get_db)
+    tailor_id: str,
+    payload: VerificationDecideIn,
+    db: Session = Depends(get_db),
+    reviewer: User = Depends(require_roles("admin")),
 ):
     tailor = db.get(TailorProfile, tailor_id)
     if not tailor:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor not found")
     tailor.verification_status = payload.status
+    # Les documents joints suivent la décision et tracent qui a statué :
+    # sans cela ils restaient "pending" indéfiniment.
+    for doc in (
+        db.query(VerificationDocument)
+        .filter(VerificationDocument.user_id == tailor.user_id)
+        .all()
+    ):
+        doc.status = payload.status
+        doc.reviewed_by = reviewer.id
     notify(db, tailor.user_id, "verification_decided", {"status": payload.status.value})
     db.commit()
     db.refresh(tailor)

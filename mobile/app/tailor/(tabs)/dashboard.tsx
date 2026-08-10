@@ -4,7 +4,7 @@ import React, { useCallback, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { NotificationsApi, OrdersApi, TailorsApi } from "../../../src/api/endpoints";
 import type { Notification, Order, Review, TailorProfile } from "../../../src/api/types";
-import { NotifBell } from "../../../src/components/Badges";
+import { NotifBell, VerificationBadge } from "../../../src/components/Badges";
 import { Card } from "../../../src/components/Card";
 import { StatusChip } from "../../../src/components/Chip";
 import { Header, Spinner } from "../../../src/components/Misc";

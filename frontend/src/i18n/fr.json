@@ -25,7 +25,7 @@
   "auth.password": "Mot de passe",
   "auth.fullName": "Nom complet",
   "auth.otp.title": "Vérification du téléphone",
-  "auth.otp.subtitle": "Code envoyé (mode démo, affiché ci-dessous)",
+  "auth.otp.subtitle": "Code envoyé (affiché ci-dessous, pas d'envoi SMS)",
   "nav.home": "Accueil",
   "nav.search": "Recherche",
   "nav.tryon": "Essayage",

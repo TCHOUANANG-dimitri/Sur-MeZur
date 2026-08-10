@@ -11,7 +11,7 @@ import { Chip } from "../../../src/components/Chip";
 import { Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { Stars } from "../../../src/components/Stars";
-import { VerifiedBadge } from "../../../src/components/Badges";
+import { VerificationBadge } from "../../../src/components/Badges";
 import { formatFcfa, useI18n } from "../../../src/i18n/I18nProvider";
 import { useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, gradientColors, radii, type ThemeColors } from "../../../src/theme/tokens";
@@ -46,7 +46,7 @@ export default function TailorProfilePage() {
         <View style={{ alignItems: "center", marginTop: 8 }}>
           <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
             <Text style={styles.name}>{tailor.shop_name}</Text>
-            {tailor.verification_status === "approved" && <VerifiedBadge />}
+            <VerificationBadge status={tailor.verification_status} />
           </View>
           <View style={{ flexDirection: "row", gap: 6, marginTop: 4, alignItems: "center" }}>
             <Stars value={tailor.rating_avg} />

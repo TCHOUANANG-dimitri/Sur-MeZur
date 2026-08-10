@@ -14,10 +14,18 @@ from app.models.enums import (
     UserRole,
     VerificationStatus,
 )
-from app.models.users import ClientProfile, TailorProfile, User
+from app.models.users import TailorProfile, User
 from app.services.commission import seed_commission_tiers
 
 DOUALA_LAT, DOUALA_LNG = 4.0511, 9.7679
+
+# Numéro du compte administrateur de la plateforme (le mot de passe reste
+# "password123" : hors politique stricte, réservé à l'exploitation).
+ADMIN_PHONE = "+237696982953"
+
+# Tailleur "vitrine" qui alimente le catalogue du marché. Aucun compte client
+# démo n'est créé : les clients s'inscrivent.
+MARKET_TAILOR_PHONE = "+237600000002"
 
 
 def get_or_create_user(db, phone, role, full_name, password="password123"):
@@ -44,16 +52,24 @@ def run() -> None:
     try:
         seed_commission_tiers(db)
 
-        # --- Demo accounts -------------------------------------------------
-        client_user = get_or_create_user(db, "+237600000001", UserRole.client, "Awa Client")
-        if not db.query(ClientProfile).filter(ClientProfile.user_id == client_user.id).first():
-            db.add(ClientProfile(user_id=client_user.id))
+        # --- Compte administrateur -----------------------------------------
+        get_or_create_user(db, ADMIN_PHONE, UserRole.admin, "Admin Sur-MeZur")
+        db.commit()
 
-        tailor_user = get_or_create_user(db, "+237600000002", UserRole.tailor, "Chez Fatou Couture")
-        tailor_profile = db.query(TailorProfile).filter(TailorProfile.user_id == tailor_user.id).first()
+        # --- Marché "vitrine" ----------------------------------------------
+        # Un seul tailleur alimente le catalogue : il faut un profil tailleur
+        # pour que modèles, tissus et prêt-à-porter aient un vendeur.
+        market_tailor_user = get_or_create_user(
+            db, MARKET_TAILOR_PHONE, UserRole.tailor, "Chez Fatou Couture"
+        )
+        tailor_profile = (
+            db.query(TailorProfile)
+            .filter(TailorProfile.user_id == market_tailor_user.id)
+            .first()
+        )
         if not tailor_profile:
             tailor_profile = TailorProfile(
-                user_id=tailor_user.id,
+                user_id=market_tailor_user.id,
                 tailor_type=TailorType.atelier,
                 shop_name="Chez Fatou Couture",
                 bio="Atelier spécialisé prêt-à-porter et sur-mesure, Akwa, Douala.",
@@ -66,29 +82,36 @@ def run() -> None:
                 avg_response_minutes=45,
             )
             db.add(tailor_profile)
+            db.flush()
 
+        # --- Tailleur en attente de vérification -----------------------------
+        # Pour que l'onglet admin « Vérifications » ait un dossier à traiter
+        # dès le premier seed (aucun profil pending n'existe autrement).
         pending_tailor_user = get_or_create_user(
             db, "+237600000003", UserRole.tailor, "Atelier Ngozi (en attente)"
         )
-        if not db.query(TailorProfile).filter(TailorProfile.user_id == pending_tailor_user.id).first():
+        if (
+            not db.query(TailorProfile)
+            .filter(TailorProfile.user_id == pending_tailor_user.id)
+            .first()
+        ):
             db.add(
                 TailorProfile(
                     user_id=pending_tailor_user.id,
                     tailor_type=TailorType.individual,
                     shop_name="Atelier Ngozi",
-                    bio="Nouveau sur la plateforme.",
+                    bio="Nouveau sur la plateforme, documentation en cours de vérification.",
                     lat=DOUALA_LAT + 0.05,
                     lng=DOUALA_LNG + 0.02,
                     city="Douala",
                     verification_status=VerificationStatus.pending,
                 )
             )
-
-        admin_user = get_or_create_user(db, "+237600000000", UserRole.admin, "Admin Sur-MeZur")
+            db.flush()
 
         db.commit()
 
-        # --- Catalog ---------------------------------------------------------
+        # --- Catalogue -------------------------------------------------------
         if db.query(GarmentModel).count() == 0:
             models = [
                 ("Chemise ajustée", GarmentCategory.top, "#7C3AED", ["classique", "bureau"]),
@@ -132,7 +155,10 @@ def run() -> None:
 
         db.commit()
 
-        if db.query(ReadyToWear).filter(ReadyToWear.tailor_id == tailor_profile.id).count() == 0:
+        if (
+            db.query(ReadyToWear).filter(ReadyToWear.tailor_id == tailor_profile.id).count()
+            == 0
+        ):
             db.add(
                 ReadyToWear(
                     tailor_id=tailor_profile.id,
@@ -147,10 +173,9 @@ def run() -> None:
         db.commit()
 
         print("Seed complete.")
-        print("Demo client   : +237600000001 / password123")
-        print("Demo tailor   : +237600000002 / password123 (verified)")
-        print("Pending tailor: +237600000003 / password123 (pending verification)")
-        print("Demo admin    : +237600000000 / password123")
+        print(f"Admin    : {ADMIN_PHONE} / password123")
+        print(f"Market   : {MARKET_TAILOR_PHONE} / password123 (verified)")
+        print("Pending  : +237600000003 / password123 (awaiting verification)")
     finally:
         db.close()
 
