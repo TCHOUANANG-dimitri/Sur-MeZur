@@ -4,7 +4,7 @@ import { ImagePlus, Plus, Trash2, X } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { userMessage, ApiError, fileUrl } from "../../../src/api/client";
-import { CatalogApi } from "../../../src/api/endpoints";
+import { CatalogApi, TailorsApi } from "../../../src/api/endpoints";
 import type { PickedFile } from "../../../src/api/endpoints";
 import type { ReadyToWear as RTW } from "../../../src/api/types";
 import { BottomSheet } from "../../../src/components/BottomSheet";
@@ -22,6 +22,7 @@ export default function ReadyToWear() {
   const styles = useThemedStyles(makeStyles);
 
   const [items, setItems] = useState<RTW[] | null>(null);
+  const [tailorProfile, setTailorProfile] = useState<{ verification_status: string } | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -34,10 +35,20 @@ export default function ReadyToWear() {
     setItems(await CatalogApi.myReadyToWear());
   }, []);
 
+  const loadProfile = useCallback(async () => {
+    try {
+      const profile = await TailorsApi.me();
+      setTailorProfile(profile);
+    } catch {}
+  }, []);
+
+  const isVerified = tailorProfile?.verification_status === "approved";
+
   useFocusEffect(
     useCallback(() => {
       load().catch(() => setItems([]));
-    }, [load])
+      loadProfile();
+    }, [load, loadProfile])
   );
 
   const pickImages = async () => {
@@ -127,6 +138,13 @@ export default function ReadyToWear() {
         }
       />
       <View style={{ padding: 18 }}>
+        {!isVerified && tailorProfile !== null && (
+          <Card style={{ marginBottom: 14, backgroundColor: colors.pendingBg }}>
+            <Text style={{ fontSize: 13, color: colors.pending, fontWeight: "600" }}>
+              {t("tailor.verification.pending")} — {t("tailor.rtw.verificationRequired")}
+            </Text>
+          </Card>
+        )}
         {items.length === 0 ? (
           <EmptyState
             text="Aucun article publié. Ajoutez vos pièces en stock avec leurs photos."

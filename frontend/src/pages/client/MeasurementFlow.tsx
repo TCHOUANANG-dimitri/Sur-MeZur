@@ -30,7 +30,7 @@ export default function MeasurementFlow() {
 
   const submitPhotos = async () => {
     if (!front || !side) {
-      setError("Ajoutez les deux photos (face et profil).");
+      setError(t("measurement.err.photos"));
       return;
     }
     setError("");
@@ -43,8 +43,8 @@ export default function MeasurementFlow() {
       });
       const updated = await MeasurementsApi.uploadPhotos(session.id, front, side);
       let current = updated;
-      for (let i = 0; i < 12 && current.status === "processing"; i++) {
-        await new Promise((r) => setTimeout(r, 1000));
+      for (let i = 0; i < 60 && current.status === "processing"; i++) {
+        await new Promise((r) => setTimeout(r, 1500));
         current = await MeasurementsApi.getSession(session.id);
       }
       if (current.status !== "ready" || !current.measurement_id) {
@@ -79,9 +79,9 @@ export default function MeasurementFlow() {
           <>
             <p style={{ fontSize: 13, color: colors.textSecondary }}>{t("measurement.intro.body")}</p>
             <ul style={{ fontSize: 13, color: colors.indigoText, paddingLeft: 18 }}>
-              <li>Tenue ajustée</li>
-              <li>Fond dégagé</li>
-              <li>Bras écartés à ~45°</li>
+              <li>{t("capture.fit")}</li>
+              <li>{t("capture.front.face")}</li>
+              <li>{t("capture.front.arms")}</li>
             </ul>
             <Button fullWidth onClick={() => setStep("form")}>
               {t("common.next")}
@@ -96,8 +96,8 @@ export default function MeasurementFlow() {
             </Field>
             <Field label={t("measurement.gender")}>
               <select style={inputStyle} value={gender} onChange={(e) => setGender(e.target.value)}>
-                <option value="female">Femme</option>
-                <option value="male">Homme</option>
+                <option value="female">{t("measurement.gender.female")}</option>
+                <option value="male">{t("measurement.gender.male")}</option>
               </select>
             </Field>
             <Field label={t("measurement.weight")}>
@@ -141,9 +141,7 @@ export default function MeasurementFlow() {
           <>
             <h4 style={{ margin: "0 0 4px", color: colors.indigoText }}>{t("measurement.review.title")}</h4>
             <p style={{ fontSize: 11, color: colors.textSecondary, marginTop: 0 }}>{t("measurement.review.note")}</p>
-            {Object.entries(data)
-              .filter(([k]) => k !== "height_total")
-              .map(([key, value]) => (
+            {Object.entries(data).map(([key, value]) => (
                 <MeasurementRow
                   key={key}
                   measureKey={key}

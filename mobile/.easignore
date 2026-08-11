@@ -1,0 +1,64 @@
+# Ce que EAS Build N'ENVOIE PAS vers le cloud.
+#
+# Quand ce fichier existe, EAS l'utilise A LA PLACE de .gitignore. Il en
+# reprend donc tout le contenu, avec une exception decisive : /android est
+# volontairement ABSENT de cette liste.
+#
+# Pourquoi. Le backend api.gitingeniering.com n'a pas encore de certificat
+# HTTPS ; l'application lui parle en HTTP, qu'Android bloque par defaut.
+# L'exception est declaree dans
+# android/app/src/main/res/xml/network_security_config.xml et limitee a ce
+# seul domaine. Or /android est ignore par git : sans ce fichier, EAS ne le
+# recevrait pas, regenererait le projet natif depuis app.json, et l'APK
+# compilee ne pourrait joindre aucun backend en clair — l'application
+# afficherait des echecs reseau sur toutes ses requetes.
+#
+# La solution large (expo-build-properties + usesCleartextTraffic) autoriserait
+# le trafic en clair vers N'IMPORTE QUEL domaine. Envoyer le dossier natif
+# preserve la restriction a un seul.
+#
+# A SUPPRIMER en meme temps que network_security_config.xml, des que le
+# certificat est en place.
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders — /android est volontairement conserve, voir en-tete
+/ios
+
+# artefacts de build natifs : lourds et regeneres par EAS
+/android/build/
+/android/app/build/
+/android/.gradle/

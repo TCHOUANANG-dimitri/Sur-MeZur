@@ -19,6 +19,8 @@ from __future__ import annotations
 import logging
 import tempfile
 import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -31,6 +33,25 @@ from .features import build_geometric_measurements, build_model_features
 from .scale import estimate_scale
 
 logger = logging.getLogger(__name__)
+
+# Timeout maximum par étape du pipeline (secondes).
+# Évite qu'un appel bloquant (MediaPipe/SAM) ne coince le thread indefiniment.
+_STEP_TIMEOUT_S = 30
+
+_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="vision-step")
+
+
+def _with_timeout(fn, timeout_s: float = _STEP_TIMEOUT_S):
+    """Exécute `fn()` dans un thread avec un timeout. Retourne le résultat ou None si timeout."""
+    try:
+        future = _EXECUTOR.submit(fn)
+        return future.result(timeout=timeout_s)
+    except FuturesTimeout:
+        logger.warning("Étape timeout après %.1fs", timeout_s)
+        return None
+    except Exception:
+        logger.exception("Étape en erreur")
+        return None
 
 
 @dataclass
@@ -317,7 +338,7 @@ def run(
         side_photo = _downscaled(side_photo)
 
     # 1. Points de repère sur la photo de face — étape indispensable.
-    pose_front = pose_mod.extract_pose(front_photo, settings.pose_min_detection_confidence)
+    pose_front = _with_timeout(lambda: pose_mod.extract_pose(front_photo, settings.pose_min_detection_confidence))
     if pose_front is None:
         logger.info("Pose non détectée sur la photo de face — repli heuristique")
         return None
@@ -329,27 +350,16 @@ def run(
         return None
 
     # 3. Silhouette (optionnelle) : c'est elle qui fait la précision V2.
-    #
-    # Les deux photos sont envoyées à SAM (MobileSAM, léger : ce calcul
-    # coûtait ~35-40 s de trop par image avec le SAM classique, d'où le choix
-    # précédent de sauter la photo de profil — n'a plus lieu d'être ici).
-    #
-    # `side_widths` alimente désormais les profondeurs (voir features.py) : le
-    # bras fantôme qui faussait ces mesures est corrigé.
-    front_widths = silhouette_mod.measure_widths(front_photo, pose_front, orientation="front")
+    front_widths = _with_timeout(lambda: silhouette_mod.measure_widths(front_photo, pose_front, orientation="front"))
     side_widths = None
     side_cm_per_pixel = None
     if side_photo:
-        pose_side = pose_mod.extract_pose(side_photo, settings.pose_min_detection_confidence)
+        pose_side = _with_timeout(lambda: pose_mod.extract_pose(side_photo, settings.pose_min_detection_confidence))
         if pose_side is not None:
-            # Les hauteurs de mesure sont celles détectées sur la face : les
-            # deux axes de l'ellipse doivent décrire la même section du corps.
-            side_widths = silhouette_mod.measure_widths(
+            side_widths = _with_timeout(lambda: silhouette_mod.measure_widths(
                 side_photo, pose_side, orientation="side",
                 levels=front_widths.levels if front_widths else None,
-            )
-            # Échelle propre à la photo de profil : le sujet n'y occupe pas
-            # forcément la même place que de face.
+            ))
             side_cm_per_pixel = estimate_scale(pose_side, height_cm)
             if side_cm_per_pixel is None and side_widths is not None:
                 notes.append("échelle du profil non calculable : profondeurs estimées par ratio")

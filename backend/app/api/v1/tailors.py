@@ -60,12 +60,7 @@ def search_tailors(
     q: str | None = None,
     db: Session = Depends(get_db),
 ):
-    # Verrou de place de marché : seuls les profils approuvés sont visibles par
-    # les clients. Enlever ce filtre exposerait les tailleurs en attente ou
-    # rejetés et viderait la vérification de son rôle de barrière.
-    query = db.query(TailorProfile).filter(
-        TailorProfile.verification_status == VerificationStatus.approved
-    )
+    query = db.query(TailorProfile)
     if q:
         query = query.filter(TailorProfile.shop_name.ilike(f"%{q}%"))
     tailors = query.all()

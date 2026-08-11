@@ -75,7 +75,7 @@ export default function Register() {
       <Screen padded>
       <Image source={require("../assets/logo-transparent.png")} style={styles.logo} resizeMode="contain" />
       <Text style={styles.title}>
-        {t("auth.register")} — {t(`role.${role}`)}
+        {t("auth.register")}
       </Text>
       {error ? <ErrorBanner message={error} /> : null}
 
@@ -102,12 +102,12 @@ export default function Register() {
             </View>
           </Field>
           <Field label={t("auth.password")}>
-            <PasswordInput value={password} onChangeText={setPassword} maxLength={6} />
+            <PasswordInput value={password} onChangeText={setPassword} maxLength={6} placeholder={t("auth.password.placeholder")} />
           </Field>
           <View style={styles.consentRow}>
             <Switch value={consent} onValueChange={setConsent} trackColor={{ true: colors.violetPrimary }} />
             <Text style={styles.consentText}>
-              Je consens au traitement de mes photos corporelles pour la prise de mesures.
+              {t("auth.consent")}
             </Text>
           </View>
           <Button fullWidth loading={busy} onPress={requestOtp}>

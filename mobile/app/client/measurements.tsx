@@ -174,15 +174,14 @@ export default function MeasurementFlow() {
           <>
             <Text style={styles.body}>{t("measurement.intro.body")}</Text>
             <View style={{ marginVertical: 12, gap: 4 }}>
-              <Text style={styles.bullet}>• Tenue ajustée</Text>
-              <Text style={styles.bullet}>• Fond dégagé, bonne lumière</Text>
+              <Text style={styles.bullet}>• {t("capture.fit")}</Text>
+              <Text style={styles.bullet}>• {t("capture.distance")}</Text>
             </View>
-            <Text style={styles.poseTitle}>Photo de face</Text>
-            <Text style={styles.bullet}>• Bras légèrement écartés du corps, à ~45°</Text>
-            <Text style={styles.poseTitle}>Photo de profil</Text>
+            <Text style={styles.poseTitle}>{t("capture.front.title")}</Text>
+            <Text style={styles.bullet}>• {t("capture.front.arms")}</Text>
+            <Text style={styles.poseTitle}>{t("capture.side.title")}</Text>
             <Text style={styles.bullet}>
-              • Mains derrière la tête, coudes vers l'arrière — pas les bras le long du
-              corps : cela cache la silhouette et fausse la mesure de profondeur.
+              • {t("capture.side.hands")}
             </Text>
             <Button fullWidth onPress={() => setStep("form")} style={{ marginTop: 12 }}>
               {t("common.next")}
@@ -193,7 +192,7 @@ export default function MeasurementFlow() {
         {step === "form" && (
           <>
             {error ? <ErrorBanner message={error} /> : null}
-            <Text style={styles.required}>Ces trois informations sont obligatoires.</Text>
+            <Text style={styles.required}>{t("measurement.form.required")}</Text>
 
             <Field label={`${t("measurement.height")} *`}>
               <Input

@@ -19,9 +19,9 @@ from app.services.commission import seed_commission_tiers
 
 DOUALA_LAT, DOUALA_LNG = 4.0511, 9.7679
 
-# Numéro du compte administrateur de la plateforme (le mot de passe reste
-# "password123" : hors politique stricte, réservé à l'exploitation).
+# Numéro du compte administrateur de la plateforme.
 ADMIN_PHONE = "+237696982953"
+ADMIN_PASSWORD = "dimi11"
 
 # Tailleur "vitrine" qui alimente le catalogue du marché. Aucun compte client
 # démo n'est créé : les clients s'inscrivent.
@@ -53,7 +53,7 @@ def run() -> None:
         seed_commission_tiers(db)
 
         # --- Compte administrateur -----------------------------------------
-        get_or_create_user(db, ADMIN_PHONE, UserRole.admin, "Admin Sur-MeZur")
+        get_or_create_user(db, ADMIN_PHONE, UserRole.admin, "Admin Sur-MeZur", password=ADMIN_PASSWORD)
         db.commit()
 
         # --- Marché "vitrine" ----------------------------------------------
@@ -173,7 +173,7 @@ def run() -> None:
         db.commit()
 
         print("Seed complete.")
-        print(f"Admin    : {ADMIN_PHONE} / password123")
+        print(f"Admin    : {ADMIN_PHONE} / {ADMIN_PASSWORD}")
         print(f"Market   : {MARKET_TAILOR_PHONE} / password123 (verified)")
         print("Pending  : +237600000003 / password123 (awaiting verification)")
     finally:

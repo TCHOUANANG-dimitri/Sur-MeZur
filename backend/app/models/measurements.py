@@ -37,6 +37,7 @@ class Measurement(Base, IDMixin, TimestampMixin):
     gender: Mapped[str | None] = mapped_column(String(16), nullable=True)
     data: Mapped[dict] = mapped_column(JSON, default=dict)
     confidence: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    features: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 

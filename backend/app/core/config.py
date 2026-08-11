@@ -48,6 +48,16 @@ class Settings(BaseSettings):
     pose_min_visibility: float = 0.5
     pose_min_detection_confidence: float = 0.5
 
+    # --- Modélisation 3D (avatar via Blender + MPFB2) -----------------------
+    # Blender tourne en subprocess (--background --python) : pas de dépendance
+    # pip, mais le binaire doit être présent sur la machine.
+    blender_path: str = ""
+    avatar_output_dir: str = "./uploads/avatars"
+    # Timeout en secondes pour le subprocess Blender. Une génération typique
+    # prend 5-15 s sur CPU ; 60 s laisse une marge confortable sur un
+    # hébergement contraint.
+    avatar_blender_timeout: int = 120
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -55,3 +65,4 @@ class Settings(BaseSettings):
 
 settings = Settings()
 os.makedirs(settings.upload_dir, exist_ok=True)
+os.makedirs(settings.avatar_output_dir, exist_ok=True)

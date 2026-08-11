@@ -56,7 +56,12 @@ export default function AvatarPage() {
     <div>
       <Header title={t("avatar.title")} onBack />
       <div style={{ padding: 18 }}>
-        <Viewer3D skinToneHex={skinTone} measurements={measurement.data} height={300} />
+        <Viewer3D
+          glbUrl={avatar?.status === "ready" ? avatar.gltf_url : null}
+          skinToneHex={skinTone}
+          measurements={measurement.data}
+          height={300}
+        />
 
         <p style={{ fontSize: 12, fontWeight: 600, margin: "16px 0 8px" }}>{t("avatar.skinTone")}</p>
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>

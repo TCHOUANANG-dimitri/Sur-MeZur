@@ -56,7 +56,13 @@ export default function Search() {
                   <div>
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <strong style={{ fontSize: 13 }}>{tl.shop_name}</strong>
-                      {tl.verification_status === "approved" && <VerifiedBadge />}
+                      {tl.verification_status === "approved" ? (
+                        <VerifiedBadge />
+                      ) : (
+                        <span style={{ fontSize: 10, color: "#9CA3AF", fontStyle: "italic" }}>
+                          {t("tailor.unverified")}
+                        </span>
+                      )}
                     </div>
                     <Stars value={tl.rating_avg} />
                   </div>

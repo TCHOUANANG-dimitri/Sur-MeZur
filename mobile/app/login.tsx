@@ -50,7 +50,7 @@ export default function Login() {
         {t("auth.login")}
       </Button>
       <TouchableOpacity onPress={() => router.push("/forgot-password")} style={{ marginTop: 14 }}>
-        <Text style={styles.link}>Mot de passe oublié ?</Text>
+        <Text style={styles.link}>{t("auth.forgotPassword")}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => router.push("/role")} style={{ marginTop: 8 }}>
         <Text style={styles.link}>{t("auth.register")}</Text>

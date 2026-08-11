@@ -118,14 +118,14 @@ app.include_router(api_router, prefix="/api")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
 
-    # Le préchauffage MediaPipe/SAM n'est volontairement PAS déclenché ici : il
-    # part à la connexion d'un utilisateur (voir auth.py et
-    # vision.warm_up_async). Charger ~40 Mo de poids pendant le démarrage entre
-    # en concurrence avec l'ouverture du port et retarde les toutes premières
-    # réponses — sur un hébergement contraint, au-delà du budget d'attente du
-    # mobile, qui abandonne alors avant d'avoir obtenu quoi que ce soit.
-    # Déclenché à la connexion, le chargement a lieu pendant que l'utilisateur
-    # navigue, largement avant qu'il n'atteigne l'écran de prise de mesure.
+    # Préchauffage MediaPipe/SAM au démarrage, en tâche de fond.
+    # Chargé en parallèle avec l'ouverture du port : pas de blocage.
+    # warm_up_async() est idempotent (un seul thread de lancé au total).
+    try:
+        from app.services import vision
+        vision.warm_up_async()
+    except Exception:
+        pass
 
 
 @app.get("/api/health")

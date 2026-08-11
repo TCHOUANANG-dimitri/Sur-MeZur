@@ -1,6 +1,6 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { X } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -17,33 +17,14 @@ import { Button } from "./Button";
 
 export type CaptureTarget = "front" | "side";
 
-/** Le compte à rebours court à partir du moment où l'utilisateur a lancé la
- *  prise : le téléphone est déjà posé, il ne reste qu'à rejoindre la zone. */
 const COUNTDOWN_SECONDS = 5;
-
-/** La silhouette occupe cette fraction de la hauteur d'écran. Le sujet doit
- *  remplir ~70 % du cadre : c'est le taux observé sur les photos dont la mise à
- *  l'échelle est correcte. Trop petit, la silhouette est bruitée ; trop grand,
- *  les pieds ou la tête sortent du cadre. */
 const SILHOUETTE_HEIGHT_RATIO = 0.78;
 
-/** La tenue conditionne directement la précision : la silhouette mesure le
- *  contour visible, donc le tissu. Sur 13 sujets testés, un vêtement ample a
- *  produit jusqu'à 24 cm d'écart sur la largeur de poitrine — plus que tout
- *  autre facteur. D'où la consigne en tête de liste. */
 const CONSIGNES: Record<CaptureTarget, string[]> = {
   front: ["capture.fit", "capture.distance", "capture.front.arms", "capture.front.legs", "capture.front.face"],
   side: ["capture.fit", "capture.distance", "capture.side.hands", "capture.side.profile", "capture.side.back"],
 };
 
-/** Contour de corps, de face, bras écartés à ~45°.
- *
- *  Un contour fermé plutôt qu'un bonhomme-bâton : l'utilisateur doit voir une
- *  forme dans laquelle *entrer*, pas un squelette à imiter. La zone intérieure
- *  est légèrement teintée pour matérialiser ce volume à remplir.
- *
- *  Repère 100 x 260, proportions anthropométriques : tête ≈ 1/8 de la hauteur,
- *  entrejambe à mi-hauteur, épaules à ~1/5. */
 function SilhouetteFace({ color }: { color: string }) {
   const CORPS =
     "M50 8 C57 8 62 14 62 22 C62 28 60 32 57 35 L57 41" +
@@ -57,7 +38,6 @@ function SilhouetteFace({ color }: { color: string }) {
     <Svg viewBox="0 0 100 260" width="100%" height="100%">
       <Path d={CORPS} stroke={color} strokeWidth={2.4} fill={color} fillOpacity={0.12}
             strokeLinejoin="round" />
-      {/* niveaux réellement mesurés par la chaîne : poitrine puis taille */}
       <Line x1="26" y1="88" x2="74" y2="88" stroke={color} strokeWidth={1}
             strokeDasharray="4 4" opacity={0.5} />
       <Line x1="27" y1="122" x2="73" y2="122" stroke={color} strokeWidth={1}
@@ -66,11 +46,6 @@ function SilhouetteFace({ color }: { color: string }) {
   );
 }
 
-/** Contour de profil, mains derrière la tête et coudes en arrière.
- *
- *  C'est cette pose qui dégage le torse : bras le long du corps, la silhouette
- *  de profil confond le bras et le buste, et les profondeurs deviennent
- *  inexploitables. */
 function SilhouetteProfil({ color }: { color: string }) {
   const CORPS =
     "M56 8 C64 8 69 14 69 22 C69 27 67 31 64 34 L64 40" +
@@ -96,6 +71,12 @@ function SilhouetteProfil({ color }: { color: string }) {
   );
 }
 
+/** Couleurs de la silhouette selon l'état de détection */
+const COLORS = {
+  idle: "#FFFFFF",       // Blanc par défaut
+  detected: "#7CF5A0",   // Vert = visage détecté
+};
+
 export function GuidedCapture({
   visible,
   target,
@@ -114,8 +95,6 @@ export function GuidedCapture({
   const cameraRef = useRef<CameraView>(null);
   const { height } = useWindowDimensions();
 
-  // Un compte à rebours lancé puis l'écran fermé continuerait à tourner et
-  // déclencherait une prise de vue sur une caméra démontée.
   useEffect(() => {
     if (!visible) {
       setCountdown(null);
@@ -154,6 +133,7 @@ export function GuidedCapture({
 
   const silhouetteHeight = height * SILHOUETTE_HEIGHT_RATIO;
   const enCours = countdown !== null;
+  const silhouetteColor = enCours ? COLORS.detected : COLORS.idle;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onCancel}>
@@ -170,14 +150,18 @@ export function GuidedCapture({
           </View>
         ) : (
           <>
-            <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+            <CameraView
+              ref={cameraRef}
+              style={StyleSheet.absoluteFill}
+              facing="back"
+            />
 
             <View pointerEvents="none" style={styles.overlay}>
               <View style={{ height: silhouetteHeight, aspectRatio: 100 / 260 }}>
                 {target === "front" ? (
-                  <SilhouetteFace color={enCours ? "#7CF5A0" : "#FFFFFF"} />
+                  <SilhouetteFace color={silhouetteColor} />
                 ) : (
-                  <SilhouetteProfil color={enCours ? "#7CF5A0" : "#FFFFFF"} />
+                  <SilhouetteProfil color={silhouetteColor} />
                 )}
               </View>
             </View>
@@ -196,7 +180,9 @@ export function GuidedCapture({
 
             {enCours ? (
               <View pointerEvents="none" style={styles.compteur}>
-                <Text style={styles.compteurTexte}>{countdown}</Text>
+                <Text style={styles.compteurTexte}>
+                  {countdown}
+                </Text>
                 <Text style={styles.compteurAide}>{t("capture.getReady")}</Text>
               </View>
             ) : null}
@@ -208,7 +194,9 @@ export function GuidedCapture({
               {busy ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Button onPress={() => setCountdown(enCours ? null : COUNTDOWN_SECONDS)}>
+                <Button
+                  onPress={() => setCountdown(enCours ? null : COUNTDOWN_SECONDS)}
+                >
                   {enCours ? t("capture.cancelCountdown") : t("capture.start").replace("{s}", String(COUNTDOWN_SECONDS))}
                 </Button>
               )}

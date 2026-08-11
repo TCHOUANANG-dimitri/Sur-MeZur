@@ -6,11 +6,13 @@ import { AuthApi } from "../src/api/endpoints";
 import { Button } from "../src/components/Button";
 import { ErrorBanner, Field, Header, Input, PasswordInput } from "../src/components/Misc";
 import { Screen } from "../src/components/Screen";
+import { useI18n } from "../src/i18n/I18nProvider";
 import { useThemedStyles } from "../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../src/theme/tokens";
 import { isValidPassword } from "../src/validate/password";
 
 export default function ForgotPassword() {
+  const { t } = useI18n();
   const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const [phone, setPhone] = useState("+237");
@@ -58,47 +60,47 @@ export default function ForgotPassword() {
 
   return (
     <Screen>
-      <Header title="Mot de passe oublié" showBack />
+      <Header title={t("auth.forgotPassword")} showBack />
       <View style={{ padding: 24 }}>
         {error ? <ErrorBanner message={error} /> : null}
 
         {step === "phone" && (
           <>
             <Text style={styles.body}>
-              Entrez le numéro de téléphone associé à votre compte. Un code de vérification vous sera fourni.
+              {t("auth.forgotPassword.body")}
             </Text>
-            <Field label="Téléphone">
-              <Input value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            <Field label={t("auth.phone")}>
+              <Input value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder={t("auth.phone.placeholder")} />
             </Field>
             <Button fullWidth loading={busy} onPress={requestCode}>
-              Envoyer le code
+              {t("auth.forgotPassword.sendCode")}
             </Button>
           </>
         )}
 
         {step === "reset" && (
           <>
-            <Text style={styles.body}>Votre code de vérification (affiché directement, pas d'envoi SMS) :</Text>
+            <Text style={styles.body}>{t("auth.forgotPassword.devCode")}</Text>
             <View style={styles.devCode}>
               <Text style={styles.devCodeText}>{devCode}</Text>
             </View>
-            <Field label="Code reçu">
+            <Field label={t("auth.forgotPassword.codeLabel")}>
               <Input value={code} onChangeText={setCode} maxLength={6} keyboardType="number-pad" />
             </Field>
-            <Field label="Nouveau mot de passe">
-              <PasswordInput value={newPassword} onChangeText={setNewPassword} maxLength={6} />
+            <Field label={t("auth.password")}>
+              <PasswordInput value={newPassword} onChangeText={setNewPassword} maxLength={6} placeholder={t("auth.password.placeholder")} />
             </Field>
             <Button fullWidth loading={busy} onPress={confirmReset}>
-              Réinitialiser le mot de passe
+              {t("auth.forgotPassword.reset")}
             </Button>
           </>
         )}
 
         {step === "done" && (
           <>
-            <Text style={styles.success}>Mot de passe réinitialisé avec succès.</Text>
+            <Text style={styles.success}>{t("auth.forgotPassword.success")}</Text>
             <Button fullWidth onPress={() => router.replace("/login")}>
-              Se connecter
+              {t("auth.login")}
             </Button>
           </>
         )}

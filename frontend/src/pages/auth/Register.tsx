@@ -61,7 +61,7 @@ export default function Register() {
   return (
     <div className="app-shell" style={{ padding: 24 }}>
       <h2 style={{ fontFamily: "'Playfair Display', serif", color: colors.indigoText }}>
-        {t("auth.register")} — {t(`role.${role}`)}
+        {t("auth.register")}
       </h2>
       {error && <ErrorBanner message={error} />}
 
@@ -71,14 +71,14 @@ export default function Register() {
             <input style={inputStyle} value={fullName} onChange={(e) => setFullName(e.target.value)} />
           </Field>
           <Field label={t("auth.phone")}>
-            <input style={inputStyle} value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <input style={inputStyle} value={phone} placeholder={t("auth.phone.placeholder")} onChange={(e) => setPhone(e.target.value)} />
           </Field>
           <Field label={t("auth.password")}>
-            <input type="password" style={inputStyle} value={password} maxLength={6} onChange={(e) => setPassword(e.target.value)} />
+            <input type="password" style={inputStyle} value={password} placeholder={t("auth.password.placeholder")} maxLength={6} onChange={(e) => setPassword(e.target.value)} />
           </Field>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: colors.textSecondary, marginBottom: 18 }}>
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-            Je consens au traitement de mes photos corporelles pour la prise de mesures.
+            {t("auth.consent")}
           </label>
           <Button fullWidth disabled={busy} onClick={requestOtp}>
             {t("common.next")}

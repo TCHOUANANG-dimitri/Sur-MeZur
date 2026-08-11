@@ -154,7 +154,7 @@ def _measure(session_row: MeasurementSession) -> tuple[dict, dict, MeasurementSo
         result.source,
         f" — {'; '.join(result.notes)}" if result.notes else "",
     )
-    return result.data, result.confidence, MeasurementSource.ai
+    return result.data, result.confidence, getattr(result, 'features', None), MeasurementSource.ai
 
 
 def _run_measurement_job(session_id: str) -> None:
@@ -164,7 +164,7 @@ def _run_measurement_job(session_id: str) -> None:
         if not session_row:
             return
         try:
-            data, confidence, source = _measure(session_row)
+            data, confidence, features, source = _measure(session_row)
             measurement = Measurement(
                 client_id=session_row.client_id,
                 source=source,
@@ -174,6 +174,7 @@ def _run_measurement_job(session_id: str) -> None:
                 gender=session_row.gender,
                 data=data,
                 confidence=confidence,
+                features=features,
             )
             db.add(measurement)
             db.flush()

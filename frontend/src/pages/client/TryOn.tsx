@@ -102,6 +102,7 @@ export default function TryOn() {
       <Header title={t("tryon.title")} onBack />
       <div style={{ padding: 18, paddingBottom: 140 }}>
         <Viewer3D
+          glbUrl={avatar?.status === "ready" ? avatar.gltf_url : null}
           skinToneHex={avatar.skin_tone_hex}
           garmentColorHex={selectedFabric?.color_hex}
           measurements={measurement?.data}

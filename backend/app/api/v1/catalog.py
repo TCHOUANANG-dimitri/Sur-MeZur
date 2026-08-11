@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user_optional, get_db, require_roles
 from app.services.storage import save_upload
 from app.models.catalog import Accessory, Fabric, GarmentModel, GarmentModelLike, ReadyToWear
-from app.models.enums import GarmentCategory
+from app.models.enums import GarmentCategory, VerificationStatus
 from app.models.measurements import Measurement
 from app.models.users import ClientProfile, TailorProfile, User
 from app.schemas.catalog import (
@@ -170,6 +170,11 @@ def create_ready_to_wear(
     tailor = db.query(TailorProfile).filter(TailorProfile.user_id == user.id).first()
     if not tailor:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor profile not found")
+    if tailor.verification_status != VerificationStatus.approved:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Seuls les tailleurs vérifiés peuvent publier du prêt-à-porter.",
+        )
     item = ReadyToWear(tailor_id=tailor.id, **payload.model_dump())
     db.add(item)
     db.commit()
