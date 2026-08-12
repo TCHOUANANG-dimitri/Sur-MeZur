@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { BackHandler, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { AvatarsApi, CatalogApi, MeasurementsApi, TryonApi } from "../../../src/api/endpoints";
 import type { Accessory, Avatar, Fabric, GarmentModel, Measurement, TryonSession } from "../../../src/api/types";
-import { fileUrl } from "../../../src/api/client";
+import { avatarMeshUrl, fileUrl } from "../../../src/api/client";
 import { BottomSheet } from "../../../src/components/BottomSheet";
 import { Button } from "../../../src/components/Button";
 import { EmptyState, Header, Spinner } from "../../../src/components/Misc";
@@ -193,6 +193,7 @@ export default function TryOn() {
           ) : (
             <>
               <Viewer3D
+                glbUrl={avatarMeshUrl(detailAvatar.gltf_url)}
                 skinToneHex={detailAvatar.skin_tone_hex}
                 garmentColorHex={fabric?.color_hex}
                 measurements={detailMeasurement?.data}
@@ -242,6 +243,7 @@ export default function TryOn() {
         <Header title={t("tryon.title")} showBack onBack={backToList} />
         <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 24 }}>
           <Viewer3D
+            glbUrl={avatarMeshUrl(avatar.gltf_url)}
             skinToneHex={avatar.skin_tone_hex}
             garmentColorHex={selectedFabric?.color_hex}
             measurements={measurement?.data}

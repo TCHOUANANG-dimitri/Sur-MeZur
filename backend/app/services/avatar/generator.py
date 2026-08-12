@@ -1,365 +1,318 @@
 """
 Script Blender exécuté en subprocess pour générer un avatar 3D.
 
-Ce script est appelé par blender_runner.py via :
-    blender.exe --background --python generator.py -- <params.json> <output.glb>
+Appelé par blender_runner.py :
+    blender --background --python generator.py -- <params.json> <output.glb>
 
-Il crée un humain MPFB, applique les morphologies issues des mensurations,
-ajoute le matériau peau, et exporte en GLB.
+--- Pourquoi cette version diffère radicalement de la précédente -------------
+
+La première version cherchait des shape keys dont le nom contenait "chest",
+"waist", "hip"... Or MPFB2 n'en crée que **onze** à la création d'un humain,
+toutes macroscopiques ($md-<ethnie>-<sexe>-<âge>, corpulence universelle,
+bonnet). Aucune ne porte de nom de partie du corps : toutes les boucles de
+recherche échouaient silencieusement, et chaque avatar sortait identique au
+précédent — vérifié, trois fichiers produits partageaient le même MD5.
+
+Le vrai levier est ailleurs. MPFB2 installe 1258 cibles MakeHuman sur disque,
+dont **20 cibles `measure-*`** qui correspondent une à une à nos mensurations.
+Elles ne sont pas chargées par défaut : il faut les demander via
+`bpy.ops.mpfb.load_target`, qui les ajoute alors comme shape keys pilotables.
+
+Mesuré : charger `measure-waist-circ-incr` à poids 1,0 déplace 1265 sommets
+sur 13380, d'une amplitude maximale de 3,6 cm. Le mécanisme fonctionne.
+
+--- Convention des cibles ---------------------------------------------------
+
+Chaque mesure existe en deux fichiers, `-decr` et `-incr`. Notre paramètre est
+un z-score signé dans [-1, +1] : le signe choisit le fichier, la valeur
+absolue devient le poids. Un z de -0,4 sur la taille charge donc
+`measure-waist-circ-decr` à 0,4.
 """
 
-import bpy
 import json
 import math
 import os
 import sys
+from pathlib import Path
+
+import bpy
 
 
 # ---------------------------------------------------------------------------
-# Utilitaires
+# Localisation des cibles MakeHuman
 # ---------------------------------------------------------------------------
 
-def _find_arg(after_separator: str, name: str) -> str | None:
-    """Cherche un argument dans sys.argv après le '--' de Blender."""
-    args = sys.argv
+def _targets_dir() -> Path | None:
+    """
+    Dossier des cibles installées par MPFB2.
+
+    On part du module `mpfb` lui-même : il est importable puisque ce script
+    tourne à l'intérieur de Blender, et son emplacement suit l'installation
+    de l'extension quelle que soit la version de Blender ou la plateforme.
+    """
     try:
-        sep_idx = args.index(after_separator)
-    except ValueError:
-        return None
-    for i, a in enumerate(args[sep_idx + 1:], start=sep_idx + 1):
-        if a == name and i + 1 < len(args):
-            return args[i + 1]
+        import mpfb
+        d = Path(mpfb.__file__).resolve().parent / "data" / "targets"
+        if d.is_dir():
+            return d
+    except Exception:
+        pass
+
+    # Repli : chemins de configuration Blender usuels.
+    for base in (Path(bpy.utils.resource_path("USER")),
+                 Path(bpy.utils.resource_path("LOCAL"))):
+        for motif in ("extensions/blender_org/mpfb/data/targets",
+                      "scripts/addons/mpfb/data/targets"):
+            d = base / motif
+            if d.is_dir():
+                return d
     return None
 
 
-def _get_positional(after_separator: str, index: int) -> str | None:
-    """Récupère un argument positionnel après '--'."""
-    args = sys.argv
-    try:
-        sep_idx = args.index(after_separator)
-    except ValueError:
-        return None
-    pos = sep_idx + 1 + index
-    if pos < len(args):
-        return args[pos]
-    return None
+# Correspondance entre nos paramètres et les cibles MakeHuman.
+#   param -> (sous-dossier, racine du nom de cible)
+# Les 12 mensurations livrées au client sont toutes couvertes.
+MEASURE_TARGETS = {
+    # --- tronc ---
+    "chest_scale":    ("torso", "measure-bust-circ"),
+    "waist_scale":    ("torso", "measure-waist-circ"),
+    "hip_scale":      ("torso", "measure-hips-circ"),
+    "shoulder_width": ("torso", "measure-shoulder-dist"),
+    "back_factor":    ("torso", "measure-napetowaist-dist"),
+    # --- membres ---
+    "neck_scale":     ("neck",  "measure-neck-circ"),
+    "biceps_scale":   ("arms",  "measure-upperarm-circ"),
+    "wrist_scale":    ("hands", "measure-wrist-circ"),
+    "thigh_scale":    ("legs",  "measure-thigh-circ"),
+    "ankle_scale":    ("feet",  "measure-ankle-circ"),
+    "sleeve_factor":  ("arms",  "measure-upperarm-length"),
+    "leg_ratio":      ("legs",  "measure-upperleg-height"),
+}
+
+# Cibles de forme (non métriques) pilotées par des paramètres dérivés.
+SHAPE_TARGETS = {
+    "buttock_scale": ("buttocks", "buttocks-volume"),
+}
+
+# Largeurs et profondeurs issues de la silhouette SAM. Elles décrivent la même
+# section que les circonférences ci-dessus : les appliquer sur les mêmes cibles
+# écraserait la circonférence. On les dirige donc vers les cibles d'échelle
+# horizontale / en profondeur, qui sont des axes indépendants.
+BREADTH_DEPTH_TARGETS = {
+    "hip_breadth_scale":   ("hip", "hip-scale-horiz"),
+    "buttock_depth_scale": ("hip", "hip-scale-depth"),
+}
+
+BASE_HEIGHT_CM = 165.94  # hauteur du maillage MPFB par défaut, mesurée
 
 
 def _clamp(v, lo=-1.0, hi=1.0):
     return max(lo, min(hi, v))
 
 
+def _get_positional(index: int) -> str | None:
+    """Argument positionnel après le séparateur '--' de Blender."""
+    try:
+        sep = sys.argv.index("--")
+    except ValueError:
+        return None
+    pos = sep + 1 + index
+    return sys.argv[pos] if pos < len(sys.argv) else None
+
+
 # ---------------------------------------------------------------------------
-# Application des cibles morphologiques
+# Construction du corps
 # ---------------------------------------------------------------------------
-
-# Mapping de nos paramètres vers les noms de shape keys MPFB.
-# Les shape keys MPFB utilisent une nomenclature codée :
-#   $md-$ca-$ma-$yn  = macrodetails-caucasian-male-young
-#   $md-universal-$fe-$yn-$av$mu-$av$wg = macrodetails universal female young
-#
-# On applique les shape keys par leur nom exact, avec des valeurs
-# proportionnelles à l'écart mesuré.
-
-SHAPE_KEY_MAP = {
-    # (param_name, shape_key_fragment, direction)
-    # direction: +1 = la clé augmente quand le paramètre augmente
-    "chest_scale": [
-        ("$md-universal-$fe-$yn-$av$mu-$av$wg", +1),    # femme : volume poitrine
-        ("$md-universal-$ma-$yn-$av$mu-$av$wg", +1),    # homme : torse
-    ],
-    "waist_scale": [
-        ("$md-universal-$fe-$yn-$av$mu-$av$wg", -1),    # taille étroite = clé négative
-        ("$md-universal-$ma-$yn-$av$mu-$av$wg", -1),
-    ],
-    "hip_scale": [
-        ("$md-universal-$fe-$yn-$av$mu-$av$wg", +1),    # hanches larges
-        ("$md-universal-$ma-$yn-$av$mu-$av$wg", +1),
-    ],
-}
-
 
 def _clear_scene():
-    """Supprime tous les objets mesh de la scène."""
-    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
 
 
 def _create_human():
-    """Crée un humain MPFB de base."""
+    """Crée le corps de base et le rend actif.
+
+    Les opérateurs MPFB agissent sur l'objet actif : sans cette sélection,
+    `load_target` n'a aucune cible et échoue sans rien dire.
+    """
     bpy.ops.mpfb.create_human()
-    # Trouver l'objet Human créé
-    for obj in bpy.data.objects:
-        if obj.type == 'MESH' and 'uman' in obj.name.lower():
-            return obj
-    # Fallback : prendre le plus gros mesh
-    meshes = [o for o in bpy.data.objects if o.type == 'MESH']
-    return max(meshes, key=lambda o: len(o.data.vertices)) if meshes else None
+    human = next((o for o in bpy.data.objects
+                  if o.type == "MESH" and o.get("MhObjectType") == "Basemesh"), None)
+    if human is None:
+        meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+        human = max(meshes, key=lambda o: len(o.data.vertices)) if meshes else None
+    if human is not None:
+        bpy.ops.object.select_all(action="DESELECT")
+        human.select_set(True)
+        bpy.context.view_layer.objects.active = human
+    return human
 
 
-def _apply_body_shape(human_obj, params):
-    """
-    Applique les ajustements morphologiques via shape keys.
-
-    Stratégie :
-    1. Ajuster les shape keys macrodetails (hauteur, poids, musculature)
-    2. Ajuster les shape keys spécifiques (circonférences)
-    3. Ajuster les proportions (torse, jambes, épaules, manches, dos)
-    4. Ajuster les largeurs/profondeurs du torse (depuis SAM)
-    """
-    me = human_obj.data
-    if not me.shape_keys:
-        return
-
-    sk = me.shape_keys.key_blocks
-
-    gender = params.get("gender", 0.0)
-    is_female = gender > 0.5
-
-    # --- Macro-details : poids / musculature ---
-    weight_factor = params.get("weight_factor", 0.0)
-    muscle_factor = params.get("muscle_factor", 0.0)
-
-    base_key_name = None
-    for key_name in sk.keys():
-        if is_female and "$fe-$yn" in key_name and "universal" in key_name:
-            base_key_name = key_name
-            break
-        elif not is_female and "$ma-$yn" in key_name and "universal" in key_name:
-            base_key_name = key_name
-            break
-
-    if base_key_name:
-        sk[base_key_name].value = _clamp(weight_factor * 0.8)
-
-    # --- Circonférences (8 tours) ---
-    _apply_circumference_targets(human_obj, params, is_female)
-
-    # --- Proportions relatives (nouveau) ---
-    _apply_proportions(human_obj, params)
-
-    # --- Largeurs / profondeurs du torse (depuis SAM, nouveau) ---
-    _apply_torso_shape(human_obj, params, is_female)
-
-
-def _apply_circumference_targets(human_obj, params, is_female):
-    """
-    Applique les cibles spécifiques aux parties du corps.
-
-    MPFB organise ses targets par catégorie (hip, breast, chest, etc.).
-    On mappe nos paramètres vers ces catégories.
-    """
-    me = human_obj.data
-    if not me.shape_keys:
-        return
-
-    sk = me.shape_keys.key_blocks
-
-    # Mapping direct : param_name -> (substring de shape key, facteur)
-    # On cherche les shape keys qui contiennent le substring et on ajuste
-    direct_map = {
-        "chest_scale": [
-            ("chest", +1.0),
-            ("breast", +0.6 if is_female else 0.2),
-        ],
-        "waist_scale": [
-            ("waist", +1.0),
-        ],
-        "hip_scale": [
-            ("hip", +1.0),
-        ],
-        "buttock_scale": [
-            ("buttock", +1.0),
-            ("hip", +0.3),
-        ],
-        "breast_size": [
-            ("breast", +1.0),
-        ],
-        "biceps_scale": [
-            ("arm", +1.0),
-            ("bicep", +0.8),
-        ],
-        "thigh_scale": [
-            ("thigh", +1.0),
-            ("leg", +0.5),
-        ],
-        "neck_scale": [
-            ("neck", +1.0),
-        ],
-        "wrist_scale": [
-            ("wrist", +1.0),
-        ],
-        "ankle_scale": [
-            ("ankle", +1.0),
-            ("foot", +0.3),
-        ],
-    }
-
-    for param_name, mappings in direct_map.items():
-        param_value = params.get(param_name, 0.0)
-        if abs(param_value) < 0.01:
-            continue
-
-        for substring, factor in mappings:
-            for key_name in sk.keys():
-                if substring.lower() in key_name.lower() and key_name.startswith("$"):
-                    sk[key_name].value = _clamp(param_value * factor)
-                    break  # une seule clé par substring
-
-
-def _apply_proportions(human_obj, params):
-    """Ajuste les proportions relatives (torse, jambes, épaules, manche, dos)."""
-    me = human_obj.data
-    if not me.shape_keys:
-        return
-    sk = me.shape_keys.key_blocks
-
-    proportion_map = {
-        "torso_ratio": ["torso", "sitting", "spine"],
-        "leg_ratio": ["leg", "lower", "crotch"],
-        "shoulder_width": ["shoulder", "acromial", "biacromial"],
-        "sleeve_factor": ["sleeve", "arm", "upper"],
-        "back_factor": ["back", "trunk"],
-    }
-    for param_name, substrings in proportion_map.items():
-        value = params.get(param_name, 0.0)
-        if abs(value) < 0.01:
-            continue
-        for key_name in sk.keys():
-            kl = key_name.lower()
-            if key_name.startswith("$") and any(s in kl for s in substrings):
-                sk[key_name].value = _clamp(value)
-                break
-
-
-def _apply_torso_shape(human_obj, params, is_female):
-    """Ajuste les largeurs et profondeurs du torse (depuis SAM)."""
-    me = human_obj.data
-    if not me.shape_keys:
-        return
-    sk = me.shape_keys.key_blocks
-
-    torso_map = {
-        "chest_breadth_scale": [("chest", +1.0)],
-        "chest_depth_scale": [("chest", +0.7), ("breast", +0.3 if is_female else 0.1)],
-        "waist_breadth_scale": [("waist", +1.0)],
-        "waist_depth_scale": [("waist", +0.8)],
-        "hip_breadth_scale": [("hip", +1.0)],
-        "buttock_depth_scale": [("buttock", +0.8), ("hip", +0.2)],
-    }
-    for param_name, mappings in torso_map.items():
-        value = params.get(param_name, 0.0)
-        if abs(value) < 0.01:
-            continue
-        for substring, factor in mappings:
-            for key_name in sk.keys():
-                kl = key_name.lower()
-                if key_name.startswith("$") and substring in kl:
-                    sk[key_name].value = _clamp(value * factor)
-                    break
-
-
-def _apply_height(human_obj, height_cm):
-    """
-    Applique la hauteur en ajustant l'échelle du mesh.
-
-    MPFB crée un mesh à une taille de base (~1.75m). On ajuste via
-    l'échelle de l'objet pour atteindre la taille cible.
-    """
-    # Hauteur de base MPFB (mesurée après create_human)
-    # Le mesh fait environ 1.75m de haut (175 cm)
-    BASE_HEIGHT_CM = 175.0
-
-    scale = height_cm / BASE_HEIGHT_CM
-    human_obj.scale = (scale, scale, scale)
-    # Appliquer l'échelle pour que l'export GLB soit à la bonne taille
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-
-
-def _apply_skin_material(human_obj, skin_tone_hex):
-    """
-    Applique un matériau de peau avec la couleur demandée.
-    """
-    # Convertir hex en RGB [0,1]
-    hex_clean = skin_tone_hex.lstrip('#')
-    r = int(hex_clean[0:2], 16) / 255.0
-    g = int(hex_clean[2:4], 16) / 255.0
-    b = int(hex_clean[4:6], 16) / 255.0
-
-    # Tenter d'utiliser le matériau de skin MPFB
+def _load_fichier(targets_dir: Path, sous_dossier: str, nom_fichier: str,
+                  poids: float) -> str | None:
+    """Charge un fichier de cible précis, à un poids donné dans [0, 1]."""
+    dossier = targets_dir / sous_dossier
+    if not (dossier / nom_fichier).exists():
+        print(f"  cible absente : {sous_dossier}/{nom_fichier}")
+        return None
     try:
-        bpy.ops.mpfb.create_makeskin_material()
-    except Exception:
-        pass
+        bpy.ops.mpfb.load_target(
+            directory=str(dossier) + os.sep,
+            files=[{"name": nom_fichier}],
+            weight=max(0.0, min(poids, 1.0)),
+        )
+    except Exception as exc:
+        print(f"  echec load_target {nom_fichier} : {type(exc).__name__} {exc}")
+        return None
+    print(f"  {nom_fichier[:-10]} @ {poids:.2f}")
+    return nom_fichier
 
-    # Créer un matériau PBR avec la couleur de peau
-    mat_name = "SurMezur_Skin"
-    mat = bpy.data.materials.get(mat_name)
-    if mat is None:
-        mat = bpy.data.materials.new(name=mat_name)
+
+def _load_target(targets_dir: Path, sous_dossier: str, racine: str, valeur: float) -> str | None:
+    """
+    Charge une cible MakeHuman pondérée par `valeur` (z-score signé).
+
+    Le signe choisit le fichier (-decr / -incr), la valeur absolue donne le
+    poids. Renvoie le nom du fichier chargé, ou None si la cible est absente
+    ou le poids négligeable.
+    """
+    if abs(valeur) < 0.02:
+        return None
+    sens = "incr" if valeur > 0 else "decr"
+    return _load_fichier(targets_dir, sous_dossier, f"{racine}-{sens}.target.gz",
+                         min(abs(valeur), 1.0))
+
+
+def _apply_morphology(human, params):
+    """Applique toutes les mensurations sous forme de cibles MakeHuman."""
+    targets_dir = _targets_dir()
+    if targets_dir is None:
+        print("ATTENTION : dossier des cibles MakeHuman introuvable — "
+              "l'avatar restera au gabarit moyen")
+        return 0
+
+    print(f"Cibles MakeHuman : {targets_dir}")
+    appliquees = 0
+
+    for table in (MEASURE_TARGETS, SHAPE_TARGETS, BREADTH_DEPTH_TARGETS):
+        for param, (sous, racine) in table.items():
+            valeur = float(params.get(param, 0.0) or 0.0)
+            if _load_target(targets_dir, sous, racine, valeur):
+                appliquees += 1
+
+    # Volume mammaire : cible dédiée, uniquement pertinente au féminin.
+    # Elle ne suit pas la convention decr/incr — MakeHuman nomme ses deux
+    # sens `-down` et `-up` ici — d'où le chargement direct.
+    if params.get("gender", 0.0) > 0.5:
+        sein = float(params.get("breast_size", 0.0) or 0.0)
+        if abs(sein) >= 0.02:
+            sens = "up" if sein > 0 else "down"
+            if _load_fichier(targets_dir, "breast", f"breast-volume-vert-{sens}.target.gz",
+                             min(abs(sein), 1.0)):
+                appliquees += 1
+
+    # Corpulence globale : les cibles de graisse des membres suivent le BMI.
+    poids_corps = float(params.get("weight_factor", 0.0) or 0.0)
+    if abs(poids_corps) >= 0.02:
+        for sous, racine in (("arms", "l-upperarm-fat"), ("arms", "r-upperarm-fat"),
+                             ("legs", "l-upperleg-fat"), ("legs", "r-upperleg-fat"),
+                             ("stomach", "stomach-pregnant")):
+            if _load_target(targets_dir, sous, racine, poids_corps * 0.6):
+                appliquees += 1
+
+    return appliquees
+
+
+def _hauteur_reelle_m(human) -> float:
+    """Hauteur du maillage ÉVALUÉ, cibles morphologiques comprises.
+
+    `evaluated_get` est indispensable : le maillage de base ignore les shape
+    keys, et le mesurer donnerait la hauteur du gabarit moyen quelles que
+    soient les cibles chargées.
+    """
+    deps = bpy.context.evaluated_depsgraph_get()
+    ev = human.evaluated_get(deps)
+    me = ev.to_mesh()
+    zs = [v.co.z for v in me.vertices]
+    ev.to_mesh_clear()
+    return (max(zs) - min(zs)) if zs else 0.0
+
+
+def _apply_height(human, height_cm):
+    """
+    Met le corps à la taille demandée.
+
+    On agit sur l'échelle de l'objet, sans `transform_apply` : Blender refuse
+    d'appliquer une transformation à un maillage porteur de shape keys, et
+    c'est précisément notre cas depuis que les cibles sont chargées. L'export
+    glTF conserve de toute façon la transformation du nœud.
+
+    Le facteur se calcule sur la hauteur APRÈS morphologie, pas sur celle du
+    gabarit par défaut : les cibles de longueur de jambe et de dos changent
+    déjà la stature de plusieurs centimètres. Mesuré sur deux morphologies
+    opposées, la hauteur post-cibles allait de 1,61 à 1,73 m — partir d'une
+    constante donnait jusqu'à 7 cm d'erreur sur la taille finale.
+    """
+    if height_cm <= 0:
+        return
+    base_m = _hauteur_reelle_m(human)
+    if base_m <= 0.01:
+        base_m = BASE_HEIGHT_CM / 100.0
+    facteur = (height_cm / 100.0) / base_m
+    human.scale = (facteur, facteur, facteur)
+    print(f"Taille : {height_cm:.1f} cm (corps morphé {base_m * 100:.1f} cm, facteur {facteur:.3f})")
+
+
+def _apply_skin(human, skin_tone_hex):
+    """Matériau peau appliqué à TOUS les emplacements du corps.
+
+    MPFB crée plusieurs emplacements matériau ; n'en remplacer qu'un laissait
+    le reste du corps à la couleur par défaut.
+    """
+    h = (skin_tone_hex or "#C68863").lstrip("#")
+    if len(h) < 6:
+        h = "C68863"
+    r, g, b = (int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+
+    mat = bpy.data.materials.get("SurMezur_Skin") or bpy.data.materials.new("SurMezur_Skin")
     mat.use_nodes = True
-    tree = mat.node_tree
-
-    # Trouver ou créer le nœud Principled BSDF
-    bsdf = None
-    for node in tree.nodes:
-        if node.type == 'BSDF_PRINCIPLED':
-            bsdf = node
-            break
+    bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
     if bsdf is None:
-        bsdf = tree.nodes.new(type='ShaderNodeBsdfPrincipled')
+        bsdf = mat.node_tree.nodes.new("ShaderNodeBsdfPrincipled")
+    if "Base Color" in bsdf.inputs:
+        bsdf.inputs["Base Color"].default_value = (r, g, b, 1.0)
+    if "Roughness" in bsdf.inputs:
+        bsdf.inputs["Roughness"].default_value = 0.45
 
-    # Définir la couleur de base
-    if 'Base Color' in bsdf.inputs:
-        bsdf.inputs['Base Color'].default_value = (r, g, b, 1.0)
-    elif 'BaseColor' in bsdf.inputs:
-        bsdf.inputs['BaseColor'].default_value = (r, g, b, 1.0)
-
-    # Roughness réaliste pour la peau
-    if 'Roughness' in bsdf.inputs:
-        bsdf.inputs['Roughness'].default_value = 0.45
-    elif 'roughness' in bsdf.inputs:
-        bsdf.inputs['roughness'].default_value = 0.45
-
-    # Subsurface scattering pour la peau
-    if 'Subsurface' in bsdf.inputs:
-        bsdf.inputs['Subsurface'].default_value = 0.15
-    elif 'Subsurface Weight' in bsdf.inputs:
-        bsdf.inputs['Subsurface Weight'].default_value = 0.15
-
-    # Appliquer le matériau à l'objet
-    if human_obj.data.materials:
-        human_obj.data.materials[0] = mat
+    if human.data.materials:
+        for i in range(len(human.data.materials)):
+            human.data.materials[i] = mat
     else:
-        human_obj.data.materials.append(mat)
+        human.data.materials.append(mat)
+    print(f"Peau : {skin_tone_hex}")
 
 
-def _setup_scene():
-    """Configure la scène pour un export propre."""
-    # Supprimer les caméras et lights existantes
-    for obj in list(bpy.data.objects):
-        if obj.type in ('CAMERA', 'LIGHT'):
-            bpy.data.objects.remove(obj, do_unlink=True)
+def _export_glb(human, output_path):
+    """
+    Exporte le seul corps, cibles fondues dans la géométrie.
 
-    # Ajouter un éclairage simple
-    bpy.ops.object.light_add(type='SUN', location=(0, 0, 5))
-    sun = bpy.context.active_object
-    sun.data.energy = 3.0
+    `export_selection` limite l'export au corps : la scène contient aussi les
+    géométries d'aide de MPFB (cheveux, dents, yeux, jupe...) que l'avatar n'a
+    pas à embarquer. `export_morph=False` fond les shape keys dans le maillage
+    au lieu de les exporter comme morphs, ce qui divise le poids du fichier et
+    évite qu'un lecteur remette les influences à zéro.
+    """
+    bpy.ops.object.select_all(action="DESELECT")
+    human.select_set(True)
+    bpy.context.view_layer.objects.active = human
 
-    # Ajouter une caméra
-    bpy.ops.object.camera_add(location=(0, -3, 1.2))
-    cam = bpy.context.active_object
-    cam.rotation_euler = (math.radians(80), 0, 0)
-    bpy.context.scene.camera = cam
-
-
-def _export_glb(output_path):
-    """Exporte la scène en GLB."""
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     bpy.ops.export_scene.gltf(
         filepath=output_path,
-        export_format='GLB',
-        use_selection=False,
+        export_format="GLB",
+        use_selection=True,
         export_apply=True,
+        export_morph=False,
     )
 
 
@@ -368,56 +321,35 @@ def _export_glb(output_path):
 # ---------------------------------------------------------------------------
 
 def main():
-    # Lire les arguments
-    params_path = _get_positional("--", 0)
-    output_path = _get_positional("--", 1)
-
+    params_path = _get_positional(0)
+    output_path = _get_positional(1)
     if not params_path or not output_path:
         print(f"Usage: blender --background --python {__file__} -- <params.json> <output.glb>")
         sys.exit(1)
-
     if not os.path.exists(params_path):
         print(f"Fichier de paramètres introuvable : {params_path}")
         sys.exit(1)
 
-    with open(params_path, 'r', encoding='utf-8') as f:
+    with open(params_path, "r", encoding="utf-8") as f:
         params = json.load(f)
+    print(f"Paramètres : {json.dumps(params, ensure_ascii=False)}")
 
-    print(f"Paramètres chargés : {json.dumps(params, indent=2)}")
-
-    # 1. Nettoyer la scène
     _clear_scene()
 
-    # 2. Créer l'humain MPFB
     human = _create_human()
     if human is None:
-        print("Erreur : impossible de créer l'humain MPFB")
+        print("Erreur : impossible de créer le corps MPFB")
         sys.exit(1)
+    print(f"Corps créé : {human.name} ({len(human.data.vertices)} sommets)")
 
-    print(f"Humain créé : {human.name} ({len(human.data.vertices)} sommets)")
+    n = _apply_morphology(human, params)
+    print(f"{n} cible(s) morphologique(s) appliquée(s)")
 
-    # 3. Appliquer la morphologie
-    _apply_body_shape(human, params)
+    _apply_height(human, float(params.get("height_cm", BASE_HEIGHT_CM)))
+    _apply_skin(human, params.get("skin_tone_hex", "#C68863"))
 
-    # 4. Appliquer la hauteur
-    height = params.get("height_cm", 175.0)
-    _apply_height(human, height)
-    print(f"Hauteur appliquée : {height} cm")
-
-    # 5. Appliquer le matériau peau
-    skin_tone = params.get("skin_tone_hex", "#C68863")
-    _apply_skin_material(human, skin_tone)
-    print(f"Matériau peau appliqué : {skin_tone}")
-
-    # 6. Configurer la scène
-    _setup_scene()
-
-    # 7. Exporter en GLB
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    _export_glb(output_path)
-
-    file_size = os.path.getsize(output_path)
-    print(f"GLB exporté : {output_path} ({file_size} octets)")
+    _export_glb(human, output_path)
+    print(f"GLB exporté : {output_path} ({os.path.getsize(output_path)} octets)")
 
 
 if __name__ == "__main__":

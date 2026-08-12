@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { avatarMeshUrl } from "../../src/api/client";
 import { AvatarsApi, MeasurementsApi } from "../../src/api/endpoints";
 import type { Avatar as AvatarT, Measurement } from "../../src/api/types";
 import { Button } from "../../src/components/Button";
@@ -62,7 +63,12 @@ export default function AvatarPage() {
     <Screen>
       <Header title={t("avatar.title")} showBack />
       <View style={{ padding: 18 }}>
-        <Viewer3D skinToneHex={skinTone} measurements={measurement.data} height={300} />
+        <Viewer3D
+          glbUrl={avatarMeshUrl(avatar?.gltf_url)}
+          skinToneHex={skinTone}
+          measurements={measurement.data}
+          height={300}
+        />
 
         <Text style={styles.label}>{t("avatar.skinTone")}</Text>
         <View style={styles.swatchRow}>

@@ -244,3 +244,19 @@ export function fileUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined;
   return path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
 }
+
+/**
+ * URL absolue du maillage glTF d'un avatar, ou `null` s'il n'y en a pas.
+ *
+ * `gltf_url` prend deux formes selon l'issue de la génération : un chemin
+ * `/uploads/avatars/....glb` quand Blender a produit un vrai maillage, ou
+ * `mock-asset://avatar/<id>` quand la chaîne s'est repliée sur le mock
+ * (Blender absent, délai dépassé). Le second n'est pas une adresse : le passer
+ * à `fileUrl` fabriquerait `https://hoteMock-asset://...`, que le chargeur
+ * glTF tenterait puis échouerait à récupérer. On renvoie `null`, ce que le
+ * visualiseur interprète comme « affiche le corps procédural ».
+ */
+export function avatarMeshUrl(gltfUrl: string | null | undefined): string | null {
+  if (!gltfUrl || gltfUrl.startsWith("mock-asset://")) return null;
+  return fileUrl(gltfUrl) ?? null;
+}

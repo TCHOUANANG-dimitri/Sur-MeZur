@@ -16,63 +16,87 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
-# --- Références ANSUR II (moyennes et écarts-types, en cm) ------------------
+# --- Références de population (moyennes et écarts-types, en cm) -------------
+#
+# Ces valeurs centrent les z-scores : une mesure égale à la référence donne un
+# corps moyen, un écart de deux écarts-types sature la cible morphologique.
+#
+# La table précédente était saisie à la main et n'avait jamais été confrontée
+# aux données. Plusieurs entrées s'en écartaient assez pour saturer une cible
+# sur TOUS les sujets — la pire, `shoulder` à 45,6 cm, comparait une carrure
+# (~34 cm) à une largeur bidéltoïdienne : le z-score tombait à -2,5, borné à
+# -1,0, et chaque avatar recevait les épaules les plus étroites possibles.
+#
+# Tout ce qui suit est désormais calculé sur les CSV ANSUR II (4082 hommes,
+# 1986 femmes), à deux exceptions signalées ligne par ligne.
 ANSUR_MALE = {
-    "height": 175.6, "weight": 88.8,
-    # Circonférences (modèle Ridge)
-    "chest": 103.1, "waist": 93.8, "hips": 102.6,
-    "biceps": 35.8, "thigh": 60.6, "neck": 39.7,
-    "wrist": 17.5, "ankle": 25.3,
-    # Largeurs/profondeurs (SAM/squelette)
-    "chestbreadth": 38.3, "chestdepth": 25.4,
+    "height": 175.6, "weight": 85.5,
+    # Circonférences — colonnes ANSUR directes
+    "chest": 105.9, "waist": 94.1, "hips": 102.0,
+    "biceps": 35.8, "thigh": 62.5, "neck": 39.8,
+    "wrist": 17.6, "ankle": 22.9,
+    # Largeurs / profondeurs — colonnes ANSUR directes
+    "chestbreadth": 28.9, "chestdepth": 25.4,
     "waistbreadth": 32.6, "waistdepth": 23.8,
     "hipbreadth": 34.6, "buttockdepth": 24.6,
-    "biacromialbreadth": 41.6, "bideltoidbreadth": 48.0,
-    # Longueurs (géométrie)
-    "shoulder": 45.6, "sleeve_length": 64.5,
-    "inseam": 81.0, "back_length": 44.0,
-    # Proportions (squelette)
-    "sittingheight": 93.5, "crotchheight": 84.6,
+    "biacromialbreadth": 41.6, "bideltoidbreadth": 51.0,
+    # CARRURE : aucune colonne ANSUR ne la donne. Notre chaîne la produit en
+    # multipliant la distance biacromiale du squelette par 0,90, alors que la
+    # variable du modèle la multiplie par 1,09 — d'où la conversion
+    # 41,6 x 0,90/1,09. Voir vision/features.JOINT_TO_SHOULDER_WIDTH.
+    "shoulder": 34.3,
+    "sleeve_length": 59.3,          # ANSUR sleeveoutseam
+    # ENTREJAMBE : notre chaîne mesure hanche -> cheville sur l'image, soit la
+    # hauteur d'entrejambe ANSUR moins la hauteur de cheville (~7 cm).
+    "inseam": 77.6,
+    # LONGUEUR DE DOS : milieu des épaules -> milieu des hanches, sans
+    # équivalent ANSUR (waistbacklength part de la cervicale et s'arrête à la
+    # taille). Moyenne relevée au mètre sur 8 hommes — échantillon trop petit,
+    # à revoir dès qu'il grandit.
+    "back_length": 56.5,
+    "sittingheight": 91.8, "crotchheight": 84.6,
 }
 
 ANSUR_FEMALE = {
-    "height": 162.9, "weight": 77.2,
-    "chest": 96.6, "waist": 85.9, "hips": 102.1,
-    "biceps": 31.6, "thigh": 58.2, "neck": 34.5,
-    "wrist": 15.5, "ankle": 22.8,
-    "chestbreadth": 35.8, "chestdepth": 23.8,
-    "waistbreadth": 30.3, "waistdepth": 22.0,
-    "hipbreadth": 36.1, "buttockdepth": 23.6,
-    "biacromialbreadth": 37.2, "bideltoidbreadth": 43.0,
-    "shoulder": 40.3, "sleeve_length": 58.0,
-    "inseam": 75.0, "back_length": 40.5,
-    "sittingheight": 87.0, "crotchheight": 78.5,
+    "height": 162.8, "weight": 67.8,
+    "chest": 94.7, "waist": 86.1, "hips": 102.1,
+    "biceps": 30.6, "thigh": 61.6, "neck": 33.0,
+    "wrist": 15.5, "ankle": 21.6,
+    "chestbreadth": 26.9, "chestdepth": 24.7,
+    "waistbreadth": 30.0, "waistdepth": 21.3,
+    "hipbreadth": 35.4, "buttockdepth": 23.3,
+    "biacromialbreadth": 36.5, "bideltoidbreadth": 45.0,
+    "shoulder": 30.1,               # 36,5 x 0,90/1,09, voir ci-dessus
+    "sleeve_length": 54.4,
+    "inseam": 71.7,
+    "back_length": 45.4,            # relevé sur 5 femmes seulement
+    "sittingheight": 85.7, "crotchheight": 78.2,
 }
 
 ANSUR_STD_MALE = {
-    "chest": 9.2, "waist": 11.5, "hips": 7.8,
-    "biceps": 4.2, "thigh": 5.6, "neck": 3.3,
-    "wrist": 1.4, "ankle": 1.9,
-    "chestbreadth": 3.5, "chestdepth": 2.8,
-    "waistbreadth": 4.1, "waistdepth": 3.0,
-    "hipbreadth": 3.8, "buttockdepth": 2.9,
-    "biacromialbreadth": 2.8, "bideltoidbreadth": 3.2,
-    "shoulder": 2.5, "sleeve_length": 4.5,
-    "inseam": 5.5, "back_length": 3.5,
-    "sittingheight": 4.8, "crotchheight": 5.0,
+    "chest": 8.7, "waist": 11.2, "hips": 7.7,
+    "biceps": 3.5, "thigh": 5.8, "neck": 2.6,
+    "wrist": 0.9, "ankle": 1.5,
+    "chestbreadth": 1.8, "chestdepth": 2.6,
+    "waistbreadth": 3.5, "waistdepth": 3.5,
+    "hipbreadth": 2.4, "buttockdepth": 2.6,
+    "biacromialbreadth": 1.9, "bideltoidbreadth": 3.3,
+    "shoulder": 1.6, "sleeve_length": 3.1,
+    "inseam": 4.6, "back_length": 3.0,
+    "sittingheight": 3.6, "crotchheight": 4.6,
 }
 
 ANSUR_STD_FEMALE = {
-    "chest": 9.8, "waist": 11.2, "hips": 9.1,
-    "biceps": 4.0, "thigh": 6.1, "neck": 2.8,
-    "wrist": 1.3, "ankle": 1.7,
-    "chestbreadth": 3.2, "chestdepth": 2.6,
-    "waistbreadth": 3.8, "waistdepth": 2.8,
-    "hipbreadth": 4.2, "buttockdepth": 2.7,
-    "biacromialbreadth": 2.5, "bideltoidbreadth": 2.9,
-    "shoulder": 2.2, "sleeve_length": 4.0,
-    "inseam": 5.0, "back_length": 3.2,
-    "sittingheight": 4.5, "crotchheight": 4.8,
+    "chest": 8.3, "waist": 10.0, "hips": 7.6,
+    "biceps": 3.1, "thigh": 5.6, "neck": 1.9,
+    "wrist": 0.8, "ankle": 1.5,
+    "chestbreadth": 1.9, "chestdepth": 2.7,
+    "waistbreadth": 3.3, "waistdepth": 3.1,
+    "hipbreadth": 2.7, "buttockdepth": 2.4,
+    "biacromialbreadth": 1.8, "bideltoidbreadth": 2.9,
+    "shoulder": 1.5, "sleeve_length": 2.9,
+    "inseam": 4.5, "back_length": 2.5,
+    "sittingheight": 3.3, "crotchheight": 4.5,
 }
 
 
@@ -170,7 +194,11 @@ def measurements_to_avatar_params(
     weight = measurements.get("weight_kg", 0.0)
     if weight > 0 and height > 0:
         bmi = weight / ((height / 100.0) ** 2)
-        bmi_ref = 28.8 if not sex else 29.1
+        # IMC moyen de la population de référence, recalculé depuis les mêmes
+        # CSV que la table ci-dessus (85,5 kg / 1,756 m et 67,8 kg / 1,628 m).
+        # Les valeurs précédentes, 28,8 et 29,1, poussaient presque tous les
+        # utilisateurs vers un facteur de corpulence négatif.
+        bmi_ref = 27.7 if not sex else 25.6
         params.weight_factor = _clamp((bmi - bmi_ref) / 15.0)
         params.muscle_factor = _clamp(params.weight_factor * 0.6)
         notes.append(f"bmi={bmi:.1f} -> wf={params.weight_factor:.2f}")

@@ -38,12 +38,18 @@ def generate_avatar(
         ou None en cas d'échec.
     """
     # 1. Extraire les mensurations
-    measurements = measurement.data or {}
-    if not measurements:
+    #
+    # COPIE délibérée : `measurement.data` est la colonne JSON de l'ORM. La
+    # compléter en place inscrirait `height_total` et `weight_kg` dans la
+    # mesure enregistrée au prochain commit de la session — une modification
+    # de données que personne n'a demandée, à l'occasion d'une génération
+    # d'avatar.
+    if not measurement.data:
         logger.error("Measurement sans données (id=%s)", measurement.id)
         return None
+    measurements = dict(measurement.data)
 
-    # Ajouter les champs de niveau supérieur
+    # Champs stockés en colonnes plutôt que dans le JSON
     if measurement.height_cm:
         measurements["height_total"] = measurement.height_cm
     if measurement.weight_kg:
@@ -64,10 +70,8 @@ def generate_avatar(
     blender_params["skin_tone_hex"] = skin_tone_hex
     blender_params["request_id"] = request_id
 
-    # 4. Lancer Blender
-    output_name = f"avatar_{request_id}.glb"
-    output_path = Path(settings.avatar_output_dir) / output_name
-
+    # 4. Lancer Blender — c'est lui qui compose le nom et le chemin de sortie,
+    #    à partir du request_id transmis dans les paramètres.
     glb_path = run_blender(blender_params)
     if glb_path is None:
         logger.error("Échec de la génération Blender pour measurement %s", measurement.id)
@@ -75,12 +79,12 @@ def generate_avatar(
 
     # 5. Renvoyer le chemin relatif (pour servir via /uploads/)
     try:
-        avatar_dir = Path(settings.avatar_output_dir)
-        relative = Path(glb_path).relative_to(avatar_dir)
+        relative = Path(glb_path).relative_to(Path(settings.avatar_output_dir))
         return f"avatars/{relative}"
     except ValueError:
-        # Le chemin n'est pas relatif à avatar_output_dir — retourner le nom
-        return f"avatars/{output_name}"
+        # Chemin hors du dossier de sortie : on retombe sur le nom de fichier,
+        # que run_blender construit à l'identique depuis le request_id.
+        return f"avatars/avatar_{request_id}.glb"
 
 
 def avatar_capabilities() -> dict:
