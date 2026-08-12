@@ -2,6 +2,7 @@ import { GLView, ExpoWebGLRenderingContext } from "expo-gl";
 import React, { useEffect, useRef } from "react";
 import { PanResponder, StyleSheet, View } from "react-native";
 import * as THREE from "three";
+import { authHeaders } from "../api/client";
 import { useThemedStyles } from "../theme/ThemeProvider";
 import { radii, type ThemeColors } from "../theme/tokens";
 
@@ -106,26 +107,36 @@ export function Viewer3D({
 
     if (glbUrl) {
       // --- Chargement GLB via GLTFLoader ---
-      import("three/examples/jsm/loaders/GLTFLoader.js").then(({ GLTFLoader }) => {
+      // `glbUrl` pointe vers /api/avatars/{id}/glb, une route authentifiée
+      // (voir avatarMeshUrl dans api/client.ts) : sans l'en-tête Authorization,
+      // le serveur répond 401 et le modèle ne charge jamais. GLTFLoader fait
+      // sa propre requête réseau, hors du client `api.*` qui l'ajoute
+      // automatiquement ailleurs — il faut donc le faire ici explicitement.
+      Promise.all([
+        import("three/examples/jsm/loaders/GLTFLoader.js"),
+        authHeaders(),
+      ]).then(([{ GLTFLoader }, headers]) => {
         if (!mountedRef.current) return;
         const loader = new GLTFLoader();
+        loader.setRequestHeader(headers);
         loader.load(
           glbUrl,
           (gltf) => {
             const model = gltf.scene;
             const box = new THREE.Box3().setFromObject(model);
             const center = box.getCenter(new THREE.Vector3());
-            model.position.sub(center);
-            const size = box.getSize(new THREE.Vector3());
-            if (size.y > 0) {
-              const targetHeight = 1.8;
-              const s = targetHeight / size.y;
-              model.scale.setScalar(s);
-            }
+            // Recentre seulement horizontalement : le générateur Blender
+            // exporte l'avatar pieds au sol (y=0), et un précédent recentrage
+            // vertical + une mise à l'échelle fixe à 1,80 m écrasaient la
+            // taille réelle du sujet — un avatar de 1,55 m et un de 1,85 m
+            // rendaient identiques. Voir generator.py::_apply_height, qui
+            // calcule désormais cette hauteur au centimètre près.
+            model.position.x -= center.x;
+            model.position.z -= center.z;
             group.add(model);
-            const newBox = new THREE.Box3().setFromObject(model);
-            const newCenter = newBox.getCenter(new THREE.Vector3());
-            camera.lookAt(newCenter);
+            const size = box.getSize(new THREE.Vector3());
+            const focusY = Math.min(size.y, 1.8) * 0.55;
+            camera.lookAt(0, focusY, 0);
           },
           undefined,
           (error) => console.error("Erreur chargement GLB:", error)

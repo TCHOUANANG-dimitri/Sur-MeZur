@@ -50,9 +50,17 @@ class Settings(BaseSettings):
 
     # --- Modélisation 3D (avatar via Blender + MPFB2) -----------------------
     # Blender tourne en subprocess (--background --python) : pas de dépendance
-    # pip, mais le binaire doit être présent sur la machine.
+    # pip, mais le binaire doit être présent sur la machine. Local uniquement
+    # pour l'instant : un hébergement mutualisé (O2Switch, Passenger/WSGI) n'a
+    # ni root ni la place pour Blender — voir avatar_capabilities() pour le
+    # diagnostic exposé par /avatars/capabilities.
     blender_path: str = ""
-    avatar_output_dir: str = "./uploads/avatars"
+    # Volontairement HORS de `upload_dir` : ce dernier est monté en statique
+    # public (voir main.py, StaticFiles sur /uploads). Un avatar ne doit être
+    # accessible qu'via GET /avatars/{id}/glb, qui vérifie la propriété — le
+    # placer sous /uploads le rendrait accessible à quiconque connaît l'URL,
+    # sans passer par ce contrôle.
+    avatar_output_dir: str = "./avatar_store"
     # Timeout en secondes pour le subprocess Blender. Une génération typique
     # prend 5-15 s sur CPU ; 60 s laisse une marge confortable sur un
     # hébergement contraint.

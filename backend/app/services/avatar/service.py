@@ -34,8 +34,10 @@ def generate_avatar(
         skin_tone_hex: couleur de peau au format "#RRGGBB"
 
     Returns:
-        Chemin relatif vers le fichier GLB généré (ex: "avatars/avatar_xxx.glb"),
-        ou None en cas d'échec.
+        Le seul NOM DE FICHIER du GLB généré (ex: "avatar_xxx.glb"), à résoudre
+        contre `settings.avatar_output_dir` — jamais un chemin d'URL publique :
+        ce dossier n'est pas servi en statique (voir la note sur
+        `avatar_output_dir`). None en cas d'échec.
     """
     # 1. Extraire les mensurations
     #
@@ -77,14 +79,8 @@ def generate_avatar(
         logger.error("Échec de la génération Blender pour measurement %s", measurement.id)
         return None
 
-    # 5. Renvoyer le chemin relatif (pour servir via /uploads/)
-    try:
-        relative = Path(glb_path).relative_to(Path(settings.avatar_output_dir))
-        return f"avatars/{relative}"
-    except ValueError:
-        # Chemin hors du dossier de sortie : on retombe sur le nom de fichier,
-        # que run_blender construit à l'identique depuis le request_id.
-        return f"avatars/avatar_{request_id}.glb"
+    # 5. Renvoyer le seul nom de fichier — voir la docstring.
+    return Path(glb_path).name
 
 
 def avatar_capabilities() -> dict:

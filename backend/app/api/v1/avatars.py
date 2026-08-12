@@ -1,16 +1,15 @@
 import logging
-import os
-import time
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.deps import get_db, require_roles
 from app.db.base import SessionLocal
 from app.models.enums import JobStatus
-from app.models.measurements import Avatar, Measurement
+from app.models.measurements import Avatar, Measurement, TryonSession
 from app.models.users import ClientProfile, User
 from app.schemas.measurements import AvatarCreateIn, AvatarOut
 from app.services import avatar as avatar_service
@@ -19,6 +18,55 @@ from app.services.mock_ai import generate_avatar_reference
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/avatars", tags=["avatars"])
+
+
+def _avatar_file_path(gltf_url: str) -> Path:
+    """
+    Résout un `gltf_url` en chemin disque sous `avatar_output_dir`.
+
+    Prend le seul NOM DE FICHIER (`Path(...).name`), jamais le `gltf_url` tel
+    quel : ça absorbe sans branchement le format hérité `/uploads/avatars/xxx.glb`
+    des lignes créées avant que les avatars ne sortent du dossier public, en
+    plus du format actuel qui ne stocke déjà qu'un nom de fichier.
+    """
+    return Path(settings.avatar_output_dir) / Path(gltf_url).name
+
+
+def _cleanup_superseded_avatars(db: Session, client_id: str, measurement_id: str, keep_id: str) -> None:
+    """
+    Supprime les avatars devenus obsolètes pour la même mesure.
+
+    Chaque appel à `create_avatar` crée une nouvelle ligne plutôt que de
+    réutiliser l'existante (typiquement : le client change la teinte de peau
+    et régénère) — sans nettoyage, chaque essai laisse un fichier GLB de
+    ~600 Ko sur le disque, indéfiniment.
+    On ne touche jamais un avatar référencé par une session d'essayage
+    sauvegardée : le supprimer casserait l'affichage de cette session.
+    """
+    referenced = {
+        row[0]
+        for row in db.query(TryonSession.avatar_id)
+        .filter(TryonSession.avatar_id.isnot(None))
+        .all()
+    }
+    stale = (
+        db.query(Avatar)
+        .filter(
+            Avatar.client_id == client_id,
+            Avatar.measurement_id == measurement_id,
+            Avatar.id != keep_id,
+        )
+        .all()
+    )
+    for old in stale:
+        if old.id in referenced:
+            continue
+        if old.gltf_url and not old.gltf_url.startswith("mock-asset://"):
+            try:
+                _avatar_file_path(old.gltf_url).unlink(missing_ok=True)
+            except OSError:
+                logger.warning("Suppression du fichier avatar %s en échec", old.id)
+        db.delete(old)
 
 
 def _run_avatar_job(avatar_id: str) -> None:
@@ -43,20 +91,24 @@ def _run_avatar_job(avatar_id: str) -> None:
                 return
 
             # Tenter la génération réelle
-            gltf_path = avatar_service.generate_avatar(
+            gltf_filename = avatar_service.generate_avatar(
                 measurement=measurement,
                 skin_tone_hex=avatar.skin_tone_hex,
             )
 
-            if gltf_path:
-                avatar.gltf_url = f"/uploads/{gltf_path}"
+            if gltf_filename:
+                # Nom de fichier seul, jamais un chemin public — voir
+                # avatar_output_dir dans config.py et get_avatar_glb ci-dessous.
+                avatar.gltf_url = gltf_filename
                 avatar.status = JobStatus.ready
-                logger.info("Avatar %s généré avec succès : %s", avatar_id, gltf_path)
+                logger.info("Avatar %s généré avec succès : %s", avatar_id, gltf_filename)
             else:
                 # Fallback sur le mock
                 logger.warning("Génération Blender échouée pour avatar %s — repli mock", avatar_id)
                 avatar.gltf_url = generate_avatar_reference(avatar_id)
                 avatar.status = JobStatus.ready
+
+            _cleanup_superseded_avatars(db, avatar.client_id, avatar.measurement_id, avatar.id)
 
         except Exception:
             logger.exception("Erreur inattendue lors de la génération de l'avatar %s", avatar_id)
@@ -103,12 +155,31 @@ def create_avatar(
     return avatar
 
 
-@router.get("/{avatar_id}", response_model=AvatarOut)
-def get_avatar(avatar_id: str, db: Session = Depends(get_db)):
+def _require_avatar_owner(avatar_id: str, user: User, db: Session) -> Avatar:
+    """
+    Charge l'avatar et vérifie que `user` en est propriétaire.
+
+    Centralisé pour `get_avatar` et `get_avatar_glb` : avant cette correction,
+    seul le second appliquait ce contrôle — `GET /avatars/{id}` était
+    accessible à n'importe quel compte authentifié, sans vérification de
+    propriété.
+    """
     avatar = db.get(Avatar, avatar_id)
     if not avatar:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Avatar not found")
+    client = db.query(ClientProfile).filter(ClientProfile.user_id == user.id).first()
+    if not avatar.client_id or avatar.client_id != (client.id if client else None):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your avatar")
     return avatar
+
+
+@router.get("/{avatar_id}", response_model=AvatarOut)
+def get_avatar(
+    avatar_id: str,
+    user: User = Depends(require_roles("client")),
+    db: Session = Depends(get_db),
+):
+    return _require_avatar_owner(avatar_id, user, db)
 
 
 @router.get("/{avatar_id}/glb")
@@ -120,30 +191,17 @@ def get_avatar_glb(
     """
     Télécharge le fichier GLB de l'avatar.
 
-    Vérifie que l'utilisateur est le propriétaire de l'avatar et que le
-    fichier existe bien sur le disque. Renvoie le fichier avec le bon
-    Content-Type pour un chargement Three.js.
+    C'est la SEULE voie d'accès à ce fichier : `avatar_output_dir` n'est pas
+    monté en statique (contrairement à `upload_dir`), donc le contrôle de
+    propriété fait ici n'est plus contournable en devinant une URL directe —
+    voir la note sur `avatar_output_dir` dans config.py.
     """
-    avatar = db.get(Avatar, avatar_id)
-    if not avatar:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Avatar not found")
+    avatar = _require_avatar_owner(avatar_id, user, db)
 
-    # Vérifier la propriété
-    client = db.query(ClientProfile).filter(ClientProfile.user_id == user.id).first()
-    if not avatar.client_id or avatar.client_id != (client.id if client else None):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your avatar")
-
-    if not avatar.gltf_url:
+    if not avatar.gltf_url or avatar.gltf_url.startswith("mock-asset://"):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "GLB not ready yet")
 
-    # Extraire le chemin du fichier depuis l'URL
-    # gltf_url = "/uploads/avatars/avatar_xxx.glb"
-    if avatar.gltf_url.startswith("/uploads/"):
-        relative = avatar.gltf_url[len("/uploads/"):]
-        file_path = Path(os.environ.get("UPLOAD_DIR", "./uploads")) / relative
-    else:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Invalid GLB URL")
-
+    file_path = _avatar_file_path(avatar.gltf_url)
     if not file_path.exists():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "GLB file not found on disk")
 

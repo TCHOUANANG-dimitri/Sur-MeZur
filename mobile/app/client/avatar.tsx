@@ -64,7 +64,7 @@ export default function AvatarPage() {
       <Header title={t("avatar.title")} showBack />
       <View style={{ padding: 18 }}>
         <Viewer3D
-          glbUrl={avatarMeshUrl(avatar?.gltf_url)}
+          glbUrl={avatarMeshUrl(avatar)}
           skinToneHex={skinTone}
           measurements={measurement.data}
           height={300}

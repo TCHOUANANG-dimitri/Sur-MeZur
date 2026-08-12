@@ -193,7 +193,7 @@ export default function TryOn() {
           ) : (
             <>
               <Viewer3D
-                glbUrl={avatarMeshUrl(detailAvatar.gltf_url)}
+                glbUrl={avatarMeshUrl(detailAvatar)}
                 skinToneHex={detailAvatar.skin_tone_hex}
                 garmentColorHex={fabric?.color_hex}
                 measurements={detailMeasurement?.data}
@@ -243,7 +243,7 @@ export default function TryOn() {
         <Header title={t("tryon.title")} showBack onBack={backToList} />
         <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 24 }}>
           <Viewer3D
-            glbUrl={avatarMeshUrl(avatar.gltf_url)}
+            glbUrl={avatarMeshUrl(avatar)}
             skinToneHex={avatar.skin_tone_hex}
             garmentColorHex={selectedFabric?.color_hex}
             measurements={measurement?.data}

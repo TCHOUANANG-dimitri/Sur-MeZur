@@ -246,17 +246,28 @@ export function fileUrl(path: string | null | undefined): string | undefined {
 }
 
 /**
- * URL absolue du maillage glTF d'un avatar, ou `null` s'il n'y en a pas.
+ * URL du maillage glTF d'un avatar, ou `null` s'il n'y en a pas.
  *
- * `gltf_url` prend deux formes selon l'issue de la génération : un chemin
- * `/uploads/avatars/....glb` quand Blender a produit un vrai maillage, ou
- * `mock-asset://avatar/<id>` quand la chaîne s'est repliée sur le mock
- * (Blender absent, délai dépassé). Le second n'est pas une adresse : le passer
- * à `fileUrl` fabriquerait `https://hoteMock-asset://...`, que le chargeur
- * glTF tenterait puis échouerait à récupérer. On renvoie `null`, ce que le
- * visualiseur interprète comme « affiche le corps procédural ».
+ * Pointe toujours vers `/avatars/{id}/glb`, jamais vers `gltf_url` tel quel :
+ * ce champ n'est plus un chemin public depuis que les fichiers ont été
+ * déplacés hors du dossier servi en statique (voir `avatar_output_dir` côté
+ * backend) — c'est désormais la SEULE route qui sait les servir, et elle
+ * vérifie la propriété. Elle exige un jeton d'authentification, que
+ * `Viewer3D` attache via `authHeaders()` avant de charger le modèle.
+ *
+ * `gltf_url` vaut `mock-asset://avatar/<id>` quand la chaîne Blender a
+ * échoué et que le service s'est replié sur le mock : dans ce cas il n'existe
+ * aucun fichier réel à charger, et on renvoie `null` — ce que le visualiseur
+ * interprète comme « affiche le corps procédural ».
  */
-export function avatarMeshUrl(gltfUrl: string | null | undefined): string | null {
-  if (!gltfUrl || gltfUrl.startsWith("mock-asset://")) return null;
-  return fileUrl(gltfUrl) ?? null;
+export function avatarMeshUrl(avatar: { id: string; gltf_url: string | null } | null | undefined): string | null {
+  if (!avatar?.gltf_url || avatar.gltf_url.startsWith("mock-asset://")) return null;
+  return `${API_BASE_URL}/api/avatars/${avatar.id}/glb`;
+}
+
+/** En-têtes d'authentification pour une requête hors du client `api.*` —
+ *  nécessaire pour `GLTFLoader.load()`, qui fait sa propre requête réseau. */
+export async function authHeaders(): Promise<Record<string, string>> {
+  const token = await getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
