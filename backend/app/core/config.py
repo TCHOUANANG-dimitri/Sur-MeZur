@@ -48,6 +48,17 @@ class Settings(BaseSettings):
     pose_min_visibility: float = 0.5
     pose_min_detection_confidence: float = 0.5
 
+    # Sur O2Switch, `a2wsgi` (voir passenger_wsgi.py) attend la fin complète
+    # d'un `BackgroundTasks` — y compris son propre traitement CPU de 10 à
+    # 90 s — avant de rendre la main au worker Passenger : tout le site reste
+    # bloqué pendant ce temps, pour tous les utilisateurs, pas seulement celui
+    # qui mesure. "inline" (par défaut, local/Render sous uvicorn ASGI réel) :
+    # le job tourne via BackgroundTasks, résultat en quelques secondes.
+    # "cron" (O2Switch) : `upload_photos` enregistre les photos et rend la
+    # main immédiatement ; `app.worker_measurements`, invoqué par une tâche
+    # cron, va chercher les sessions en attente et les traite séparément.
+    measurement_worker_mode: str = "inline"
+
     # --- Modélisation 3D (avatar via Blender + MPFB2) -----------------------
     # Blender tourne en subprocess (--background --python) : pas de dépendance
     # pip, mais le binaire doit être présent sur la machine. Local uniquement

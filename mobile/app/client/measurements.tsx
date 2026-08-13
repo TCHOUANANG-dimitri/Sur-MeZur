@@ -15,6 +15,7 @@ import { Screen } from "../../src/components/Screen";
 import { useI18n } from "../../src/i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../../src/theme/ThemeProvider";
 import { fonts, radii, type ThemeColors } from "../../src/theme/tokens";
+import { compressForMeasurement } from "../../src/utils/imageCompress";
 
 type Step = "intro" | "form" | "capture" | "processing" | "review";
 
@@ -117,11 +118,12 @@ export default function MeasurementFlow() {
     });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
-    setForTarget(target, {
+    const compressed = await compressForMeasurement({
       uri: asset.uri,
       name: asset.fileName || `photo-${Date.now()}.jpg`,
       type: asset.mimeType || "image/jpeg",
     });
+    setForTarget(target, compressed);
   };
 
   const heightNum = parseFloat(height.replace(",", "."));

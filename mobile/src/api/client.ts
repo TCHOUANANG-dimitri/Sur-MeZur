@@ -120,6 +120,11 @@ export function setAuthFailureHandler(fn: AuthFailureHandler | null) {
 const REQUEST_TIMEOUT_MS = 15000;
 const UPLOAD_TIMEOUT_MS = 60000;
 
+/** Backoff (ms) entre réessais sur coupure réseau transitoire — pas sur
+ *  timeout : un timeout a déjà épuisé son budget d'attente, le retenter
+ *  aussitôt ne ferait que tripler l'attente pour le même échec. */
+const RETRY_BACKOFF_MS = [800, 2000];
+
 // Single-flight: several screens fire requests in parallel, and they would all
 // hit 401 at the same moment. Without sharing one refresh, each would spend the
 // refresh token separately and race.
@@ -157,10 +162,10 @@ async function refreshAccessToken(): Promise<string | null> {
 
 async function request<T>(
   path: string,
-  options: RequestInit & { auth?: boolean } = {},
+  options: RequestInit & { auth?: boolean; retries?: number } = {},
   isRetry = false
 ): Promise<T> {
-  const { auth = true, headers, ...rest } = options;
+  const { auth = true, headers, retries = 0, ...rest } = options;
   const finalHeaders: Record<string, string> = { ...(headers as Record<string, string>) };
 
   const isFormData = rest.body instanceof FormData;
@@ -188,6 +193,16 @@ async function request<T>(
     // il ne peut agir que sur sa propre connexion. L'URL reste dans
     // `technicalDetail`, pour le journal.
     const aborted = e instanceof Error && e.name === "AbortError";
+    // Micro-coupure pendant un upload de plusieurs Mo (fréquent sur réseau
+    // mobile instable) : on réessaie plutôt que d'obliger à reprendre les
+    // photos depuis le début. Pas sur timeout — celui-ci a déjà attendu tout
+    // son budget, le retenter aussitôt ne ferait que tripler l'attente.
+    if (!aborted && retries > 0) {
+      const attempt = RETRY_BACKOFF_MS.length - retries;
+      const wait = RETRY_BACKOFF_MS[attempt] ?? RETRY_BACKOFF_MS[RETRY_BACKOFF_MS.length - 1];
+      await new Promise((r) => setTimeout(r, wait));
+      return request<T>(path, { ...options, retries: retries - 1 }, isRetry);
+    }
     throw new ApiError(
       0,
       translate(aborted ? "error.timeout" : "error.offline"),
@@ -236,7 +251,12 @@ export const api = {
     }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
-  postForm: <T>(path: string, form: FormData) => request<T>(path, { method: "POST", body: form }),
+  // retries: 2 par défaut — un upload multipart (photos) est la requête la
+  // plus exposée aux micro-coupures réseau, et rejouer un enregistrement de
+  // fichier déjà identifié par son id de ressource ne duplique rien côté
+  // serveur (voir uploadPhotos, verification, ready-to-wear photos).
+  postForm: <T>(path: string, form: FormData, retries = 2) =>
+    request<T>(path, { method: "POST", body: form, retries }),
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 

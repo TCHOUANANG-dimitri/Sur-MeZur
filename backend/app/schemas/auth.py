@@ -35,6 +35,18 @@ class RegisterIn(BaseModel):
     def _valid_password(cls, v: str) -> str:
         return validate_password(v)
 
+    @field_validator("role")
+    @classmethod
+    def _no_self_service_admin(cls, v: UserRole) -> UserRole:
+        # Cette route est publique, sans authentification : accepter "admin"
+        # ici revenait à laisser n'importe qui s'auto-promouvoir admin d'un
+        # simple appel API. Seuls client/tailor s'inscrivent d'eux-mêmes ; un
+        # admin se crée hors de cette route (script d'exploitation, ou promu
+        # par un admin existant).
+        if v == UserRole.admin:
+            raise ValueError("Auto-inscription admin non autorisée")
+        return v
+
 
 class LoginIn(BaseModel):
     phone: str

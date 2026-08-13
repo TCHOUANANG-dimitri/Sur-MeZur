@@ -13,6 +13,7 @@ import {
 import Svg, { Line, Path } from "react-native-svg";
 
 import { useI18n } from "../i18n/I18nProvider";
+import { compressForMeasurement } from "../utils/imageCompress";
 import { Button } from "./Button";
 
 export type CaptureTarget = "front" | "side";
@@ -124,11 +125,12 @@ export function GuidedCapture({
     try {
       const photo = await cam.takePictureAsync({ quality: 0.9, skipProcessing: false });
       if (photo?.uri) {
-        onCaptured({
+        const compressed = await compressForMeasurement({
           uri: photo.uri,
           name: `${target}-${Date.now()}.jpg`,
           type: "image/jpeg",
         });
+        onCaptured(compressed);
       }
     } finally {
       setBusy(false);

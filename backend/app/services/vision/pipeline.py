@@ -46,8 +46,13 @@ _EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="vision-step")
 
 def _with_timeout(fn, timeout_s: float = _STEP_TIMEOUT_S):
     """Exécute `fn()` dans un thread avec un timeout. Retourne le résultat ou None si timeout."""
+    return _future_result(_EXECUTOR.submit(fn), timeout_s)
+
+
+def _future_result(future, timeout_s: float = _STEP_TIMEOUT_S):
+    """Attend un future déjà soumis (voir `run`, silhouette face + pose profil
+    lancées de front) avec le même traitement d'erreur que `_with_timeout`."""
     try:
-        future = _EXECUTOR.submit(fn)
         return future.result(timeout=timeout_s)
     except FuturesTimeout:
         logger.warning("Étape timeout après %.1fs", timeout_s)
@@ -353,11 +358,24 @@ def run(
         return None
 
     # 3. Silhouette (optionnelle) : c'est elle qui fait la précision V2.
-    front_widths = _with_timeout(lambda: silhouette_mod.measure_widths(front_photo, pose_front, orientation="front"))
+    #    La pose du profil ne dépend en rien de la photo de face : les deux
+    #    sont soumises ensemble au pool de threads au lieu de s'attendre l'une
+    #    l'autre en série — mesuré : ~1,5 à 3 s gagnées, la silhouette du
+    #    profil restant elle seule dépendante des deux (levels + pose_side).
+    front_widths_future = _EXECUTOR.submit(
+        silhouette_mod.measure_widths, front_photo, pose_front, orientation="front"
+    )
+    pose_side_future = (
+        _EXECUTOR.submit(pose_mod.extract_pose, side_photo, settings.pose_min_detection_confidence)
+        if side_photo else None
+    )
+
+    front_widths = _future_result(front_widths_future)
+    pose_side = _future_result(pose_side_future) if pose_side_future is not None else None
+
     side_widths = None
     side_cm_per_pixel = None
     if side_photo:
-        pose_side = _with_timeout(lambda: pose_mod.extract_pose(side_photo, settings.pose_min_detection_confidence))
         if pose_side is not None:
             side_widths = _with_timeout(lambda: silhouette_mod.measure_widths(
                 side_photo, pose_side, orientation="side",

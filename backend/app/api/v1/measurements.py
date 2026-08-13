@@ -280,7 +280,13 @@ def upload_photos(
     db.commit()
     db.refresh(session_row)
 
-    background_tasks.add_task(_run_measurement_job, session_id)
+    # En mode "cron" (O2Switch), le traitement est délibérément laissé de
+    # côté : app.worker_measurements le prendra en charge séparément, voir
+    # settings.measurement_worker_mode. En mode "inline" (défaut, ASGI réel),
+    # BackgroundTasks reste la voie la plus rapide : résultat en quelques
+    # secondes sans attendre un cycle cron.
+    if settings.measurement_worker_mode != "cron":
+        background_tasks.add_task(_run_measurement_job, session_id)
     return session_row
 
 
