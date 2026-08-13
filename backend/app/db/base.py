@@ -1,7 +1,10 @@
+import logging
 import os
 from pathlib import Path
 
 from sqlalchemy import create_engine, event
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.core.config import settings
@@ -30,12 +33,24 @@ if settings.database_url.startswith("sqlite"):
     # mesure se termine) attend alors derrière. WAL autorise les lectures
     # concurrentes à une écriture en cours — seules deux écritures
     # simultanées restent sérialisées, cas rare ici.
+    #
+    # Best-effort : WAL exige d'écrire deux fichiers auxiliaires (-wal, -shm)
+    # dans le MÊME dossier que la base, pas seulement dans le fichier lui-même
+    # — impossible sur un dossier en lecture seule pour le process, et non
+    # fiable sur un système de fichiers réseau (limitation documentée de
+    # SQLite), configuration plausible sur un hébergement mutualisé. Sans ce
+    # try/except, un PRAGMA qui échoue ici faisait échouer CHAQUE connexion à
+    # la base — donc chaque requête, y compris la connexion — avec une 500.
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragma(dbapi_connection, _record):
         cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA synchronous=NORMAL")
-        cursor.close()
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+        except Exception:
+            logger.warning("PRAGMA WAL indisponible sur ce système de fichiers — mode par défaut conservé", exc_info=True)
+        finally:
+            cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
