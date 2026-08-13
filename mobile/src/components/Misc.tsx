@@ -68,6 +68,9 @@ export function PasswordInput(props: Omit<TextInputProps, "secureTextEntry">) {
     <View style={styles.passwordRow}>
       <TextInput
         placeholderTextColor={colors.textSecondary}
+        autoCapitalize="none"
+        autoCorrect={false}
+        spellCheck={false}
         {...props}
         secureTextEntry={hidden}
         style={[styles.input, styles.passwordInput, props.style]}
