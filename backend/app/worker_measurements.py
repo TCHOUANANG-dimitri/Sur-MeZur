@@ -46,6 +46,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 _BACKEND_DIR = Path(__file__).resolve().parents[1]
+# Sortie du processus détaché lancé par spawn_now — voir _double_fork_exec.
+_SPAWN_LOG_PATH = _BACKEND_DIR / "measurement_spawn.log"
 
 _LOCK_PATH = Path(tempfile.gettempdir()) / "surmezur_measurement_worker.lock"
 # Au-delà de cette durée, un verrou ne peut provenir que d'une exécution
@@ -137,10 +139,16 @@ def _double_fork_exec(argv: list[str]) -> None:
         if pid2 > 0:
             os._exit(0)  # petit-fils réattribué à init, s'exécute indépendamment
         os.chdir(str(_BACKEND_DIR))
-        devnull = os.open(os.devnull, os.O_RDWR)
-        os.dup2(devnull, 0)
-        os.dup2(devnull, 1)
-        os.dup2(devnull, 2)
+        # Journal dédié plutôt que /dev/null : un `exec` qui échoue (chemin
+        # python invalide, permissions...) ou un crash du process lancé AVANT
+        # que sa propre config `logging` prenne effet serait sinon totalement
+        # silencieux — aucune trace nulle part, une session resterait
+        # "processing" indéfiniment sans qu'on sache pourquoi.
+        log_fd = os.open(str(_SPAWN_LOG_PATH), os.O_CREAT | os.O_WRONLY | os.O_APPEND, 0o644)
+        devnull_in = os.open(os.devnull, os.O_RDONLY)
+        os.dup2(devnull_in, 0)
+        os.dup2(log_fd, 1)
+        os.dup2(log_fd, 2)
         os.execv(argv[0], argv)
     except Exception:
         os._exit(1)
