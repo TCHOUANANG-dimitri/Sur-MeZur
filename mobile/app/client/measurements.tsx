@@ -174,12 +174,16 @@ export default function MeasurementFlow() {
       let current = await MeasurementsApi.uploadPhotos(session.id, front, side);
       // The vision pipeline (MediaPipe/SAM) pays a one-off warm-up cost on the
       // first request after a server restart — observed 10-90+s there vs ~2s
-      // once warm. A short budget here would report "failed" while the backend
-      // is still quietly finishing the job, so this stays generous; the label
-      // below keeps the wait from reading as broken.
-      const POLL_INTERVAL_MS = 1500;
-      const MAX_ATTEMPTS = 60; // ~90s ceiling
-      const SLOW_AFTER_ATTEMPTS = 6; // ~9s: switch to the "premiere fois" hint
+      // once warm. In "cron" worker mode (see measurement_worker_mode server
+      // side), EVERY wake-up is a fresh process paying that cost again, plus
+      // up to a cron interval of wait before it even starts — a much larger
+      // and more variable budget than the old always-warm inline path. A
+      // short budget here would report "failed" while the backend is still
+      // quietly finishing the job, so this stays generous; the label below
+      // keeps the wait from reading as broken.
+      const POLL_INTERVAL_MS = 2000;
+      const MAX_ATTEMPTS = 90; // ~180s ceiling
+      const SLOW_AFTER_ATTEMPTS = 5; // ~10s: switch to the "premiere fois" hint
       for (let i = 0; i < MAX_ATTEMPTS && current.status === "processing"; i++) {
         if (!mountedRef.current) return;
         if (i === SLOW_AFTER_ATTEMPTS) setProcessingSlow(true);
@@ -188,8 +192,17 @@ export default function MeasurementFlow() {
         current = await MeasurementsApi.getSession(session.id);
       }
       if (!mountedRef.current) return;
-      if (current.status !== "ready" || !current.measurement_id) {
+      if (current.status === "failed") {
         throw new ApiError(0, current.error_message || t("measurement.err.failed"));
+      }
+      if (current.status !== "ready" || !current.measurement_id) {
+        // Toujours "processing" au-delà du budget d'attente : ce n'est pas un
+        // échec, seulement plus long que prévu (mode cron côté serveur — voir
+        // ci-dessus). Le renvoyer sur "reprenez vos photos" serait un mensonge
+        // : rien n'a échoué, il sera notifié dès que ce sera prêt, exactement
+        // comme s'il avait appuyé sur « continuer sans attendre ».
+        router.replace("/client/(tabs)/home");
+        return;
       }
       const list = await MeasurementsApi.list();
       if (!mountedRef.current) return;

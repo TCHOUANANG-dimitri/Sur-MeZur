@@ -280,12 +280,17 @@ def upload_photos(
     db.commit()
     db.refresh(session_row)
 
-    # En mode "cron" (O2Switch), le traitement est délibérément laissé de
-    # côté : app.worker_measurements le prendra en charge séparément, voir
-    # settings.measurement_worker_mode. En mode "inline" (défaut, ASGI réel),
-    # BackgroundTasks reste la voie la plus rapide : résultat en quelques
-    # secondes sans attendre un cycle cron.
-    if settings.measurement_worker_mode != "cron":
+    # En mode "cron" (O2Switch), le traitement est lancé tout de suite via un
+    # processus détaché (voir worker_measurements.spawn_now) plutôt que via
+    # BackgroundTasks : a2wsgi bloquerait sinon ce worker Passenger jusqu'à la
+    # fin du calcul, comme avant ce fix. Le scan cron périodique ne sert plus
+    # que de filet de sécurité si ce lancement immédiat échoue à démarrer. En
+    # mode "inline" (défaut, ASGI réel), BackgroundTasks reste la voie la plus
+    # simple : pas d'a2wsgi à contourner.
+    if settings.measurement_worker_mode == "cron":
+        from app.worker_measurements import spawn_now
+        spawn_now(session_id)
+    else:
         background_tasks.add_task(_run_measurement_job, session_id)
     return session_row
 

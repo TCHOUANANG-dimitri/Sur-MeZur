@@ -1,5 +1,4 @@
-"""Worker de traitement des mesures — à invoquer par une tâche cron, hors du
-cycle de requête Passenger.
+"""Worker de traitement des mesures, hors du cycle de requête Passenger.
 
 Pourquoi ce fichier existe : `BackgroundTasks` de FastAPI ne rend jamais la
 main au worker Passenger avant la fin complète de la tâche — `a2wsgi` (voir
@@ -11,14 +10,30 @@ requête d'un autre utilisateur pendant ce temps. Actif uniquement quand
 sur Render et en local, `upload_photos` continue de traiter en ligne via
 BackgroundTasks, ce script n'a alors rien à faire.
 
-Déploiement (tâche cron O2Switch, ex. toutes les minutes) :
+Deux voies d'entrée :
+
+  - `spawn_now(session_id)`, appelée directement par `upload_photos` : lance
+    le traitement de CETTE session immédiatement, en processus détaché, sans
+    attendre le prochain réveil du cron. Un cron qui scanne toutes les
+    minutes ajoute jusqu'à 60 s d'attente pure, sans rapport avec le calcul
+    lui-même — ce chemin l'élimine.
+  - `main()` (`python -m app.worker_measurements`), invoquée par une tâche
+    cron classique, en FILET DE SÉCURITÉ à intervalle large (5-10 min) : si
+    le lancement immédiat échoue à démarrer (ex. limite de process atteinte
+    sur l'hébergement), une session reste "processing" avec ses deux photos
+    déjà présentes — ce scan la rattrape.
+
+Déploiement (tâche cron O2Switch, filet de sécurité, ex. toutes les 5 min) :
     cd /chemin/vers/backend && venv/bin/python -m app.worker_measurements
 """
 
 from __future__ import annotations
 
+import argparse
 import logging
 import os
+import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -29,6 +44,8 @@ from app.models.measurements import MeasurementSession
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+_BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 _LOCK_PATH = Path(tempfile.gettempdir()) / "surmezur_measurement_worker.lock"
 # Au-delà de cette durée, un verrou ne peut provenir que d'une exécution
@@ -76,6 +93,57 @@ def _release_lock(fd: int) -> None:
         _LOCK_PATH.unlink()
     except OSError:
         pass
+
+
+def spawn_now(session_id: str) -> None:
+    """
+    Lance le traitement de `session_id` immédiatement, en processus détaché
+    du worker web qui reçoit l'upload — appelée depuis `upload_photos`.
+
+    Double fork plutôt qu'un `subprocess.Popen` tout seul : sans lui, le
+    petit-fils resterait un zombie dans la table des process tant que CE
+    worker Passenger (qui peut vivre longtemps, des centaines de requêtes)
+    ne l'a pas "reapé" via wait(). Au double fork, le fils intermédiaire se
+    termine tout de suite — attendu aussitôt par le worker, donc jamais de
+    zombie durable — et le petit-fils, orphelin, est automatiquement
+    récupéré par init. Technique Unix standard de démonisation.
+
+    N'échoue jamais bruyamment : si le lancement rate (ex. limite de process
+    de l'hébergement atteinte), le scan périodique de `main()` rattrapera
+    cette session au prochain passage — mieux vaut un délai que casser la
+    réponse à l'upload pour un problème que le filet de sécurité corrige.
+    """
+    argv = [sys.executable, "-m", "app.worker_measurements", "--session-id", session_id]
+    try:
+        if not hasattr(os, "fork"):
+            # Windows (dev local) : ce mode n'y est jamais activé en
+            # pratique (measurement_worker_mode reste "inline"), mais on
+            # évite un crash si jamais c'était le cas.
+            subprocess.Popen(argv, cwd=str(_BACKEND_DIR))
+            return
+        _double_fork_exec(argv)
+    except Exception:
+        logger.exception("Lancement immédiat en échec pour la session %s — le cron de secours prendra le relais", session_id)
+
+
+def _double_fork_exec(argv: list[str]) -> None:
+    pid = os.fork()
+    if pid > 0:
+        os.waitpid(pid, 0)  # fils intermédiaire : reapé tout de suite, jamais de zombie
+        return
+    try:
+        os.setsid()
+        pid2 = os.fork()
+        if pid2 > 0:
+            os._exit(0)  # petit-fils réattribué à init, s'exécute indépendamment
+        os.chdir(str(_BACKEND_DIR))
+        devnull = os.open(os.devnull, os.O_RDWR)
+        os.dup2(devnull, 0)
+        os.dup2(devnull, 1)
+        os.dup2(devnull, 2)
+        os.execv(argv[0], argv)
+    except Exception:
+        os._exit(1)
 
 
 def _pending_ids() -> list[str]:
@@ -133,6 +201,24 @@ def run_once() -> int:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--session-id",
+        help="Traite UNE session immédiatement (lancement par spawn_now) puis quitte, "
+        "sans le verrou ni le scan global — chaque appel est indépendant.",
+    )
+    args = parser.parse_args()
+
+    if args.session_id:
+        from app.api.v1.measurements import _run_measurement_job
+
+        logger.info("Traitement immédiat session %s", args.session_id)
+        try:
+            _run_measurement_job(args.session_id)
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("Échec non rattrapé pour la session %s", args.session_id)
+        return
+
     fd = _acquire_lock()
     if fd is None:
         logger.info("Une autre exécution est déjà en cours — on passe.")
@@ -140,7 +226,7 @@ def main() -> None:
     try:
         n = run_once()
         if n:
-            logger.info("%d session(s) traitée(s)", n)
+            logger.info("%d session(s) traitée(s) par le scan de secours", n)
     finally:
         _release_lock(fd)
 
