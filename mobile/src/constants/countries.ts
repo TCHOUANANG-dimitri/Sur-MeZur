@@ -19,3 +19,14 @@ export const COUNTRIES: Country[] = [
   { code: "GH", dial: "+233", flag: "\u{1F1EC}\u{1F1ED}", name: "Ghana" },
   { code: "NG", dial: "+234", flag: "\u{1F1F3}\u{1F1EC}", name: "Nigeria" },
 ];
+
+/**
+ * Découpe un numéro complet (ex. "+237600000000") en indicatif reconnu +
+ * numéro local. Retourne le Cameroun par défaut si `value` ne commence par
+ * aucun indicatif connu (numéro vide ou saisie en cours).
+ */
+export function splitPhone(value: string): { country: Country; local: string } {
+  const country = COUNTRIES.find((c) => value.startsWith(c.dial)) ?? COUNTRIES[0];
+  const local = value.startsWith(country.dial) ? value.slice(country.dial.length) : "";
+  return { country, local };
+}

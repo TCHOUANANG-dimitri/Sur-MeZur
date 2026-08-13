@@ -4,7 +4,7 @@ import { AdminApi } from "../../../src/api/endpoints";
 import { Card } from "../../../src/components/Card";
 import { Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
-import { formatFcfa } from "../../../src/i18n/I18nProvider";
+import { formatFcfa, useI18n } from "../../../src/i18n/I18nProvider";
 import { useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../../../src/theme/tokens";
 
@@ -16,6 +16,7 @@ interface Tier {
 }
 
 export default function CommissionSettings() {
+  const { t } = useI18n();
   const styles = useThemedStyles(makeStyles);
   const [tiers, setTiers] = useState<Tier[] | null>(null);
 
@@ -27,16 +28,16 @@ export default function CommissionSettings() {
 
   return (
     <Screen>
-      <Header title="Barème de commission" />
+      <Header title={t("admin.commission.title")} />
       <View style={{ padding: 18 }}>
-        <Text style={styles.intro}>Barème par tranches (CDC §10.1) — taux décroissant, prélevé sur le tailleur.</Text>
-        {tiers.map((t) => (
-          <Card key={t.id} style={{ marginBottom: 10 }}>
+        <Text style={styles.intro}>{t("admin.commission.description")}</Text>
+        {tiers.map((tier) => (
+          <Card key={tier.id} style={{ marginBottom: 10 }}>
             <View style={styles.row}>
               <Text style={styles.range}>
-                {formatFcfa(t.min_price)} — {t.max_price ? formatFcfa(t.max_price) : "∞"}
+                {formatFcfa(tier.min_price)} — {tier.max_price ? formatFcfa(tier.max_price) : "∞"}
               </Text>
-              <Text style={styles.rate}>{(t.rate * 100).toFixed(0)}%</Text>
+              <Text style={styles.rate}>{(tier.rate * 100).toFixed(0)}%</Text>
             </View>
           </Card>
         ))}

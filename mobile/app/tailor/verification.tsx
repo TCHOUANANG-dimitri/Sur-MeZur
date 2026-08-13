@@ -25,7 +25,7 @@ export default function Verification() {
   const [bio, setBio] = useState("");
   const [city, setCity] = useState("Douala");
   const [tailorType, setTailorType] = useState<"individual" | "atelier">("individual");
-  const [portfolio, setPortfolio] = useState<PickedFile | null>(null);
+  const [selfPhoto, setSelfPhoto] = useState<PickedFile | null>(null);
   const [idCard, setIdCard] = useState<PickedFile | null>(null);
   const [atelierPhoto, setAtelierPhoto] = useState<PickedFile | null>(null);
   const [error, setError] = useState("");
@@ -33,7 +33,13 @@ export default function Verification() {
 
   useEffect(() => {
     TailorsApi.me()
-      .then(setProfile)
+      .then((p) => {
+        setProfile(p);
+        if (p?.shop_name) setShopName(p.shop_name);
+        if (p?.bio) setBio(p.bio);
+        if (p?.city) setCity(p.city);
+        if (p?.tailor_type) setTailorType(p.tailor_type);
+      })
       .catch(() => setProfile(null));
   }, []);
 
@@ -44,7 +50,10 @@ export default function Verification() {
     onPicked({ uri: asset.uri, name: asset.fileName || `file-${Date.now()}.jpg`, type: asset.mimeType || "image/jpeg" });
   };
 
+  const goToDashboard = () => router.replace("/tailor/(tabs)/dashboard");
+
   const submit = async () => {
+    if (!selfPhoto || !idCard || !atelierPhoto) return;
     setError("");
     setBusy(true);
     try {
@@ -62,7 +71,7 @@ export default function Verification() {
       }
       const result = await TailorsApi.submitVerification(
         { tailor_type: tailorType, shop_name: shopName, bio, city, lat, lng },
-        { portfolio: portfolio || undefined, id_card: idCard || undefined, atelier_photo: atelierPhoto || undefined }
+        { self_photo: selfPhoto, id_card: idCard, atelier_photo: atelierPhoto }
       );
       setProfile(result);
     } catch (e) {
@@ -74,55 +83,75 @@ export default function Verification() {
 
   if (profile === undefined) return null;
 
-  if (profile && profile.verification_status !== "rejected" && profile.shop_name) {
+  // Le statut vaut "pending" dès l'inscription, avant toute soumission : sans
+  // ce signal (le seul document toujours présent après un premier envoi),
+  // impossible de distinguer "vient de s'inscrire" de "dossier en cours
+  // d'examen" — les deux affichaient le même écran d'attente sans issue.
+  const hasSubmitted = !!profile?.atelier_photo_url;
+
+  if (hasSubmitted && profile!.verification_status !== "rejected") {
+    const approved = profile!.verification_status === "approved";
     return (
       <Screen>
         <Header title={t("tailor.verification.title")} />
         <View style={styles.statusWrap}>
           <StatusChip
-            status={profile.verification_status === "approved" ? "success" : "pending"}
-            label={profile.verification_status === "approved" ? "Vérifié" : t("tailor.verification.pending")}
+            status={approved ? "success" : "pending"}
+            label={approved ? t("common.verified") : t("tailor.verification.pending")}
           />
           <Text style={styles.statusText}>
-            {profile.verification_status === "approved" ? "Votre profil est vérifié." : "Un administrateur va examiner votre dossier."}
+            {approved ? t("tailor.verification.verified") : t("tailor.verification.reviewing")}
           </Text>
-          {profile.verification_status === "approved" && (
-            <Button onPress={() => router.replace("/tailor/(tabs)/dashboard")}>{t("nav.dashboard")}</Button>
-          )}
+          <Button onPress={goToDashboard} style={{ marginTop: 4 }}>
+            {t("nav.dashboard")}
+          </Button>
         </View>
       </Screen>
     );
   }
 
+  const rejected = hasSubmitted && profile!.verification_status === "rejected";
+  const canSubmit = !!shopName && !!selfPhoto && !!idCard && !!atelierPhoto;
+
   return (
     <Screen>
       <Header title={t("tailor.verification.title")} />
       <View style={{ padding: 18 }}>
+        {rejected && (
+          <View style={styles.rejectedBanner}>
+            <Text style={styles.rejectedText}>{t("tailor.verification.rejectedBanner")}</Text>
+          </View>
+        )}
+        {!hasSubmitted && <Text style={styles.intro}>{t("tailor.verification.intro")}</Text>}
         {error ? <ErrorBanner message={error} /> : null}
-        <Field label="Type">
+        <Field label={t("tailor.verification.type")}>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Button variant={tailorType === "individual" ? "primary" : "secondary"} onPress={() => setTailorType("individual")} style={{ flex: 1 }}>
-              Individu
+              {t("role.individual")}
             </Button>
             <Button variant={tailorType === "atelier" ? "primary" : "secondary"} onPress={() => setTailorType("atelier")} style={{ flex: 1 }}>
-              Atelier
+              {t("role.workshop")}
             </Button>
           </View>
         </Field>
-        <Field label="Nom de l'atelier / boutique">
+        <Field label={t("tailor.verification.workshopName")}>
           <Input value={shopName} onChangeText={setShopName} />
         </Field>
-        <Field label="Bio">
+        <Field label={t("tailor.verification.bio")}>
           <Input value={bio} onChangeText={setBio} multiline style={{ minHeight: 70, textAlignVertical: "top" }} />
         </Field>
-        <Field label="Ville">
+        <Field label={t("tailor.verification.city")}>
           <Input value={city} onChangeText={setCity} />
         </Field>
-        <FilePickerField label="Portfolio" file={portfolio} onPick={() => pick(setPortfolio)} />
-        <FilePickerField label="Pièce d'identité" file={idCard} onPick={() => pick(setIdCard)} />
-        <FilePickerField label="Photo de l'atelier" file={atelierPhoto} onPick={() => pick(setAtelierPhoto)} />
-        <Button fullWidth loading={busy} disabled={!shopName} onPress={submit} style={{ marginTop: 8 }}>
+        <FilePickerField label={t("tailor.verification.selfPhoto")} file={selfPhoto} onPick={() => pick(setSelfPhoto)} />
+        <FilePickerField label={t("tailor.verification.identity")} file={idCard} onPick={() => pick(setIdCard)} />
+        <FilePickerField label={t("tailor.verification.workshopPhoto")} file={atelierPhoto} onPick={() => pick(setAtelierPhoto)} />
+        <Text style={styles.hint}>{t("tailor.verification.requiredHint")}</Text>
+        <Button fullWidth loading={busy} disabled={!canSubmit} onPress={submit} style={{ marginTop: 8 }}>
           {t("common.send")}
+        </Button>
+        <Button variant="text" fullWidth onPress={goToDashboard} style={{ marginTop: 6 }}>
+          {t("tailor.verification.later")}
         </Button>
       </View>
     </Screen>
@@ -130,13 +159,14 @@ export default function Verification() {
 }
 
 function FilePickerField({ label, file, onPick }: { label: string; file: PickedFile | null; onPick: () => void }) {
+  const { t } = useI18n();
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   return (
     <Field label={label}>
       <TouchableOpacity style={styles.fileRow} onPress={onPick}>
         {file ? <CheckCircle2 size={18} color={colors.success} /> : <Paperclip size={18} color={colors.textSecondary} />}
-        <Text style={styles.fileLabel}>{file ? file.name : "Choisir un fichier"}</Text>
+        <Text style={styles.fileLabel}>{file ? file.name : t("common.chooseFile")}</Text>
       </TouchableOpacity>
     </Field>
   );
@@ -146,6 +176,15 @@ const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
   statusWrap: { padding: 24, alignItems: "center", gap: 14 },
   statusText: { fontSize: 13, color: colors.textSecondary, textAlign: "center", fontFamily: fonts.body },
+  intro: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body, marginBottom: 14 },
+  hint: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body, marginTop: 4 },
+  rejectedBanner: {
+    backgroundColor: colors.errorBg,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  rejectedText: { fontSize: 12, color: colors.error, fontFamily: fonts.bodySemiBold },
   fileRow: {
     flexDirection: "row",
     alignItems: "center",

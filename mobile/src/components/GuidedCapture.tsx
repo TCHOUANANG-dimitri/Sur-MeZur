@@ -71,10 +71,14 @@ function SilhouetteProfil({ color }: { color: string }) {
   );
 }
 
-/** Couleurs de la silhouette selon l'état de détection */
+/** Couleurs de la silhouette selon la phase de capture. Ce composant ne fait
+ *  aucune détection réelle (pas de pose/visage analysé en direct) — le vert
+ *  signale seulement que le compte à rebours est lancé, pas une pose validée
+ *  par vision. Un ancien commentaire disait « vert = visage détecté », ce qui
+ *  était faux et donnait une fausse impression de vérification en direct. */
 const COLORS = {
-  idle: "#FFFFFF",       // Blanc par défaut
-  detected: "#7CF5A0",   // Vert = visage détecté
+  idle: "#FFFFFF",     // Blanc : en attente
+  active: "#7CF5A0",   // Vert : compte à rebours en cours
 };
 
 export function GuidedCapture({
@@ -108,8 +112,8 @@ export function GuidedCapture({
       void shoot();
       return;
     }
-    const t = setTimeout(() => setCountdown((c) => (c === null ? null : c - 1)), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCountdown((c) => (c === null ? null : c - 1)), 1000);
+    return () => clearTimeout(timer);
   }, [countdown]);
 
   const shoot = async () => {
@@ -133,7 +137,7 @@ export function GuidedCapture({
 
   const silhouetteHeight = height * SILHOUETTE_HEIGHT_RATIO;
   const enCours = countdown !== null;
-  const silhouetteColor = enCours ? COLORS.detected : COLORS.idle;
+  const silhouetteColor = enCours ? COLORS.active : COLORS.idle;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onCancel}>
@@ -188,7 +192,7 @@ export function GuidedCapture({
             ) : null}
 
             <View style={styles.barre}>
-              <TouchableOpacity onPress={onCancel} style={styles.fermer} accessibilityLabel="Fermer">
+              <TouchableOpacity onPress={onCancel} style={styles.fermer} accessibilityLabel={t("common.close")}>
                 <X size={22} color="#FFFFFF" />
               </TouchableOpacity>
               {busy ? (

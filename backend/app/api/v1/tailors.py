@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db, require_roles
-from app.models.enums import TailorType, VerificationStatus
+from app.models.enums import TailorType, UserRole, VerificationStatus
 from app.models.users import TailorProfile, User, VerificationDocument
 from app.schemas.users import TailorProfileOut, TailorProfilePublicOut, VerificationDocumentOut
 from app.services.geo import haversine_km
+from app.services.notify import notify
 from app.services.storage import save_upload
 
 router = APIRouter(prefix="/tailors", tags=["tailors"])
@@ -19,9 +20,9 @@ def submit_verification(
     city: str | None = Form(None),
     lat: float | None = Form(None),
     lng: float | None = Form(None),
-    portfolio: UploadFile | None = File(None),
-    id_card: UploadFile | None = File(None),
-    atelier_photo: UploadFile | None = File(None),
+    self_photo: UploadFile = File(...),
+    id_card: UploadFile = File(...),
+    atelier_photo: UploadFile = File(...),
     user: User = Depends(require_roles("tailor")),
     db: Session = Depends(get_db),
 ):
@@ -40,12 +41,31 @@ def submit_verification(
     profile.verification_status = VerificationStatus.pending
     db.flush()
 
-    for file, doc_type in ((portfolio, "portfolio"), (id_card, "id_card"), (atelier_photo, "atelier_photo")):
-        if file is not None:
-            url = save_upload(file, "verification")
-            db.add(VerificationDocument(user_id=user.id, type=doc_type, file_url=url))
-            if doc_type == "atelier_photo":
-                profile.atelier_photo_url = url
+    # Chaque soumission remplace les 3 pièces : les anciennes traceraient une
+    # décision qui ne porte plus sur les documents réellement examinés.
+    db.query(VerificationDocument).filter(VerificationDocument.user_id == user.id).delete()
+    for file, doc_type in ((self_photo, "self_photo"), (id_card, "id_card"), (atelier_photo, "atelier_photo")):
+        url = save_upload(file, "verification")
+        db.add(VerificationDocument(user_id=user.id, type=doc_type, file_url=url))
+        if doc_type == "atelier_photo":
+            profile.atelier_photo_url = url
+
+    # Un admin doit être notifié à CHAQUE soumission (première fois ou
+    # nouvelle tentative après refus) : sans ça, le dossier attend en
+    # silence jusqu'à ce qu'un admin pense à vérifier la file d'attente.
+    admin_ids = [row[0] for row in db.query(User.id).filter(User.role == UserRole.admin).all()]
+    for admin_id in admin_ids:
+        notify(
+            db,
+            admin_id,
+            "verification_submitted",
+            {
+                "tailor_id": profile.id,
+                "full_name": user.full_name,
+                "shop_name": profile.shop_name,
+                "phone": user.phone,
+            },
+        )
 
     db.commit()
     db.refresh(profile)
@@ -88,10 +108,12 @@ def get_my_tailor_profile(
 
 @router.get("/{tailor_id}", response_model=TailorProfileOut)
 def get_tailor(tailor_id: str, db: Session = Depends(get_db)):
+    # Volontairement accessible quel que soit le statut : la recherche
+    # (`GET /tailors`) liste déjà les tailleurs non vérifiés avec leur badge,
+    # et bloquer l'accès par identifiant briserait le tap depuis cette liste
+    # (spinner infini côté client) sans rien apporter — le badge affiché sur
+    # ce même profil suffit à prévenir le client.
     tailor = db.get(TailorProfile, tailor_id)
-    # Même verrou que la recherche : un profil non approuvé n'est pas
-    # accessible publiquement par identifiant (le tailleur consulte le sien via
-    # /tailors/me, l'admin via /admin/verifications).
-    if not tailor or tailor.verification_status != VerificationStatus.approved:
+    if not tailor:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor not found")
     return tailor

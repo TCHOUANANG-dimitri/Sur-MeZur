@@ -60,7 +60,7 @@ export default function TailorProfilePage() {
         </View>
         <View style={styles.nameRow}>
           <Text style={styles.heroName}>{profile.shop_name}</Text>
-          {profile.verification_status === "approved" && <VerificationBadge status={profile.verification_status} />}
+          <VerificationBadge status={profile.verification_status} />
         </View>
         <Text style={styles.heroSub}>{user?.phone}</Text>
         {profile.city ? <Text style={styles.heroSub}>{profile.city}</Text> : null}
@@ -72,19 +72,19 @@ export default function TailorProfilePage() {
           <View style={styles.stat}>
             <Star size={15} color={colors.violetPrimary} />
             <Text style={styles.statValue}>{reviews.length > 0 ? profile.rating_avg.toFixed(1) : "—"}</Text>
-            <Text style={styles.statLabel}>Note</Text>
+            <Text style={styles.statLabel}>{t("tailor.profile.note")}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.stat}>
             <BadgeCheck size={15} color={colors.violetPrimary} />
             <Text style={styles.statValue}>{reviews.length}</Text>
-            <Text style={styles.statLabel}>Avis</Text>
+            <Text style={styles.statLabel}>{t("common.reviews")}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.stat}>
             <Package size={15} color={colors.violetPrimary} />
             <Text style={styles.statValue}>{delivered}</Text>
-            <Text style={styles.statLabel}>Livrées</Text>
+            <Text style={styles.statLabel}>{t("tailor.profile.delivered")}</Text>
           </View>
         </View>
 
@@ -92,16 +92,22 @@ export default function TailorProfilePage() {
           <View style={styles.ratingCard}>
             <Stars value={profile.rating_avg} />
             <Text style={styles.ratingHint}>
-              Moyenne sur {reviews.length} avis client{reviews.length > 1 ? "s" : ""}
+              {t("tailor.profile.averageOn")} {reviews.length} {t("tailor.dashboard.reviewsHint")}{reviews.length > 1 ? "s" : ""}
             </Text>
           </View>
         )}
 
-        <SettingsSection title="Mon atelier">
+        <SettingsSection title={t("tailor.profile.myWorkshop")}>
           <SettingsRow
             Icon={BadgeCheck}
-            label="Statut de vérification"
-            value={profile.verification_status === "approved" ? "Vérifié" : "En attente"}
+            label={t("tailor.profile.verificationStatus")}
+            value={
+              profile.verification_status === "approved"
+                ? t("common.verified")
+                : profile.verification_status === "rejected"
+                  ? t("tailor.verification.rejected")
+                  : t("common.pending")
+            }
             onPress={() => router.push("/tailor/verification")}
           />
           <SettingsRow Icon={Package} label={t("nav.orders")} onPress={() => router.push("/tailor/(tabs)/orders")} />
@@ -111,10 +117,10 @@ export default function TailorProfilePage() {
             onPress={() => router.push("/tailor/(tabs)/ready-to-wear")}
           />
           <SettingsRow Icon={Wallet} label={t("nav.finances")} onPress={() => router.push("/tailor/(tabs)/finances")} />
-          <SettingsRow Icon={Bell} label="Notifications" onPress={() => router.push("/tailor/notifications")} last />
+          <SettingsRow Icon={Bell} label={t("tailor.profile.notifications")} onPress={() => router.push("/tailor/notifications")} last />
         </SettingsSection>
 
-        <SettingsSection title="Apparence et langue">
+        <SettingsSection title={t("tailor.profile.appearanceAndLanguage")}>
           <SettingsRow
             Icon={Globe}
             label={t("profile.language")}
@@ -131,16 +137,16 @@ export default function TailorProfilePage() {
           />
           <SettingsRow
             Icon={mode === "dark" ? Moon : Sparkles}
-            label="Thème"
+            label={t("profile.theme")}
             last
             right={
               <Segmented
                 value={mode}
                 onChange={setMode}
                 options={[
-                  { value: "light", label: "Clair" },
-                  { value: "dark", label: "Sombre" },
-                  { value: "system", label: "Auto" },
+                  { value: "light", label: t("profile.themeLight") },
+                  { value: "dark", label: t("profile.themeDark") },
+                  { value: "system", label: t("profile.themeAuto") },
                 ]}
               />
             }

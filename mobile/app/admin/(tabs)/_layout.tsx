@@ -1,10 +1,12 @@
 import { Tabs } from "expo-router";
 import { BadgeCheck, LayoutDashboard, Percent, Scale, Users } from "lucide-react-native";
 import React from "react";
+import { useI18n } from "../../../src/i18n/I18nProvider";
 import { useTheme } from "../../../src/theme/ThemeProvider";
 import { fonts } from "../../../src/theme/tokens";
 
 export default function AdminTabsLayout() {
+  const { t } = useI18n();
   const { colors } = useTheme();
   return (
     <Tabs
@@ -18,23 +20,23 @@ export default function AdminTabsLayout() {
     >
       <Tabs.Screen
         name="overview"
-        options={{ title: "Vue d'ensemble", tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} /> }}
+        options={{ title: t("nav.overview"), tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="users"
-        options={{ title: "Utilisateurs", tabBarIcon: ({ color, size }) => <Users color={color} size={size} /> }}
+        options={{ title: t("nav.users"), tabBarIcon: ({ color, size }) => <Users color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="verifications"
-        options={{ title: "Vérifications", tabBarIcon: ({ color, size }) => <BadgeCheck color={color} size={size} /> }}
+        options={{ title: t("admin.verifications"), tabBarIcon: ({ color, size }) => <BadgeCheck color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="disputes"
-        options={{ title: "Litiges", tabBarIcon: ({ color, size }) => <Scale color={color} size={size} /> }}
+        options={{ title: t("admin.disputes"), tabBarIcon: ({ color, size }) => <Scale color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="commission"
-        options={{ title: "Commission", tabBarIcon: ({ color, size }) => <Percent color={color} size={size} /> }}
+        options={{ title: t("admin.commission"), tabBarIcon: ({ color, size }) => <Percent color={color} size={size} /> }}
       />
     </Tabs>
   );

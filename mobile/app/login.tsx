@@ -3,8 +3,10 @@ import React, { useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { userMessage, ApiError } from "../src/api/client";
 import { Button } from "../src/components/Button";
-import { ErrorBanner, Field, Input, PasswordInput } from "../src/components/Misc";
+import { ErrorBanner, Field, PasswordInput } from "../src/components/Misc";
+import { PhoneField } from "../src/components/PhoneField";
 import { Screen } from "../src/components/Screen";
+import { COUNTRIES } from "../src/constants/countries";
 import { useI18n } from "../src/i18n/I18nProvider";
 import { useAuth } from "../src/state/AuthContext";
 import { useThemedStyles } from "../src/theme/ThemeProvider";
@@ -15,7 +17,7 @@ export default function Login() {
   const { t } = useI18n();
   const { login } = useAuth();
   const router = useRouter();
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(COUNTRIES[0].dial);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,9 +42,7 @@ export default function Login() {
       <Image source={require("../assets/logo-transparent.png")} style={styles.logo} resizeMode="contain" />
       <Text style={styles.title}>{t("auth.login")}</Text>
       {error ? <ErrorBanner message={error} /> : null}
-      <Field label={t("auth.phone")}>
-        <Input value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-      </Field>
+      <PhoneField label={t("auth.phone")} value={phone} onChangeText={setPhone} />
       <Field label={t("auth.password")}>
         <PasswordInput value={password} onChangeText={setPassword} />
       </Field>

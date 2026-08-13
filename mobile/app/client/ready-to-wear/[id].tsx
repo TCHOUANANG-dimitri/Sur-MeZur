@@ -6,7 +6,7 @@ import type { Measurement, ReadyToWear } from "../../../src/api/types";
 import { Button } from "../../../src/components/Button";
 import { Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
-import { formatFcfa } from "../../../src/i18n/I18nProvider";
+import { formatFcfa, useI18n } from "../../../src/i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, radii, type ThemeColors } from "../../../src/theme/tokens";
 
@@ -14,6 +14,7 @@ export default function ReadyToWearDetail() {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useI18n();
   const [item, setItem] = useState<ReadyToWear | null>(null);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [result, setResult] = useState<{ match: boolean; message: string } | null>(null);
@@ -48,11 +49,11 @@ export default function ReadyToWearDetail() {
         <Text style={styles.price}>{formatFcfa(item.price)}</Text>
 
         <Button fullWidth disabled={busy || measurements.length === 0} loading={busy} onPress={compare} style={{ marginTop: 10 }}>
-          Comparer à mes mesures
+          {t("order.compareMeasures")}
         </Button>
 
         {measurements.length === 0 && (
-          <Text style={styles.hint}>Prenez vos mesures pour utiliser le comparateur.</Text>
+          <Text style={styles.hint}>{t("order.compareHint")}</Text>
         )}
 
         {result && (

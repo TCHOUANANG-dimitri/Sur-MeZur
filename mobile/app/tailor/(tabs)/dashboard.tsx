@@ -10,6 +10,7 @@ import { StatusChip } from "../../../src/components/Chip";
 import { Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { Stars } from "../../../src/components/Stars";
+import { VerificationNudge } from "../../../src/components/VerificationNudge";
 import { formatFcfa, useI18n } from "../../../src/i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../../../src/theme/tokens";
@@ -86,11 +87,7 @@ export default function Dashboard() {
         }
       />
       <View style={{ padding: 18 }}>
-        {profile && profile.verification_status !== "approved" && (
-          <Card style={{ marginBottom: 14, backgroundColor: colors.pendingBg, borderWidth: 0 }}>
-            <Text style={styles.pendingText}>{t("tailor.verification.pending")}</Text>
-          </Card>
-        )}
+        <VerificationNudge />
 
         <View style={styles.grid}>
           <StatTile
@@ -116,7 +113,7 @@ export default function Dashboard() {
             Icon={Star}
             label={t("tailor.dashboard.rating")}
             value={reviews.length > 0 ? (profile?.rating_avg || 0).toFixed(1) : "—"}
-            hint={`${reviews.length} avis`}
+            hint={`${reviews.length} ${t("common.reviews")}`}
           />
         </View>
 
@@ -129,7 +126,7 @@ export default function Dashboard() {
                 <Stars value={profile?.rating_avg || 0} />
               </View>
               <Text style={styles.ratingCount}>
-                {reviews.length} avis client{reviews.length > 1 ? "s" : ""}
+                {reviews.length} {t("tailor.dashboard.reviewsHint")}{reviews.length > 1 ? "s" : ""}
               </Text>
             </View>
             <View style={{ marginTop: 12, gap: 6 }}>
@@ -148,17 +145,17 @@ export default function Dashboard() {
         )}
 
         <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>À traiter</Text>
+          <Text style={styles.sectionTitle}>{t("tailor.dashboard.toProcess")}</Text>
           <TouchableOpacity onPress={() => router.push("/tailor/(tabs)/orders")} hitSlop={8}>
-            <Text style={styles.seeAll}>Tout voir</Text>
+            <Text style={styles.seeAll}>{t("tailor.dashboard.viewAll")}</Text>
           </TouchableOpacity>
         </View>
 
         {upcoming.length === 0 ? (
-          <Text style={styles.hint}>Aucune commande en attente.</Text>
+          <Text style={styles.hint}>{t("tailor.dashboard.noPendingOrders")}</Text>
         ) : (
           upcoming.map((o) => {
-            const due = dueLabel(o.desired_date, lang);
+            const due = dueLabel(o.desired_date, lang, t);
             const late = o.desired_date ? new Date(o.desired_date) < now : false;
             return (
               <Card key={o.id} onPress={() => router.push(`/tailor/orders/${o.id}`)} style={{ marginBottom: 8 }}>
@@ -169,12 +166,12 @@ export default function Dashboard() {
                 <View style={styles.dateRow}>
                   <CalendarClock size={13} color={colors.textSecondary} />
                   <Text style={styles.dateText}>
-                    Passée le {formatDate(o.created_at, lang)} · Livraison {formatDate(o.desired_date, lang)}
+                    {t("tailor.dashboard.placedOn")} {formatDate(o.created_at, lang)} · {t("common.deliveryDate")} {formatDate(o.desired_date, lang)}
                   </Text>
                 </View>
                 <View style={styles.orderBottom}>
                   <Text style={styles.orderPrice}>
-                    {o.agreed_price ? formatFcfa(o.agreed_price) : "En négociation"}
+                    {o.agreed_price ? formatFcfa(o.agreed_price) : t("common.inNegotiation")}
                   </Text>
                   {due && (
                     <Text style={[styles.due, late && o.status !== "finished_delivered" && styles.dueLate]}>{due}</Text>
@@ -223,7 +220,6 @@ function StatTile({
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    pendingText: { fontSize: 12, color: colors.indigoText, fontFamily: fonts.body },
     grid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 },
     tileHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
     tileIcon: {

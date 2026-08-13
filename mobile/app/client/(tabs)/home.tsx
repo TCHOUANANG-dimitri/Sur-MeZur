@@ -15,12 +15,12 @@ import { useAuth } from "../../../src/state/AuthContext";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, gradientColors, radii, type ThemeColors } from "../../../src/theme/tokens";
 
-const CATEGORIES: { key: GarmentCategory; label: string }[] = [
-  { key: "top", label: "Hauts" },
-  { key: "bottom", label: "Bas" },
-  { key: "dress", label: "Robes" },
-  { key: "traditional", label: "Traditionnel" },
-  { key: "other", label: "Autres" },
+const CATEGORY_KEYS: { key: GarmentCategory; labelKey: string }[] = [
+  { key: "top", labelKey: "home.category.tops" },
+  { key: "bottom", labelKey: "home.category.bottoms" },
+  { key: "dress", labelKey: "home.category.dresses" },
+  { key: "traditional", labelKey: "home.category.traditional" },
+  { key: "other", labelKey: "home.category.other" },
 ];
 
 export default function Home() {
@@ -36,7 +36,7 @@ export default function Home() {
 
   useEffect(() => {
     CatalogApi.models({ sort: "popular", limit: 10 }).then(setPopular);
-    CATEGORIES.forEach(({ key }) => {
+    CATEGORY_KEYS.forEach(({ key }) => {
       CatalogApi.models({ category: key, limit: 10 }).then((list) =>
         setByCategory((prev) => ({ ...prev, [key]: list }))
       );
@@ -55,7 +55,7 @@ export default function Home() {
             style={styles.seeMore}
             onPress={() => router.push({ pathname: "/client/models", params: category ? { category } : {} })}
           >
-            <Text style={styles.seeMoreText}>Voir plus</Text>
+            <Text style={styles.seeMoreText}>{t("home.seeMore")}</Text>
             <ChevronRight size={14} color={colors.violetPrimary} />
           </TouchableOpacity>
         </View>
@@ -97,12 +97,12 @@ export default function Home() {
       </View>
 
       <TouchableOpacity style={styles.searchBar} onPress={() => router.push("/client/(tabs)/search")}>
-        <Text style={styles.searchPlaceholder}>Rechercher un modèle, un tailleur…</Text>
+        <Text style={styles.searchPlaceholder}>{t("home.searchPlaceholder")}</Text>
       </TouchableOpacity>
 
       <ModelSection title={t("home.popularModels")} models={popular ?? undefined} />
-      {CATEGORIES.map(({ key, label }) => (
-        <ModelSection key={key} title={label} models={byCategory[key]} category={key} />
+      {CATEGORY_KEYS.map(({ key, labelKey }) => (
+        <ModelSection key={key} title={t(labelKey)} models={byCategory[key]} category={key} />
       ))}
 
       <View style={[styles.section, { paddingHorizontal: 18 }]}>

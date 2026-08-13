@@ -8,6 +8,7 @@ import { LikeButton } from "../../../src/components/Badges";
 import { Chip } from "../../../src/components/Chip";
 import { Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
+import { useI18n } from "../../../src/i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, radii, type ThemeColors } from "../../../src/theme/tokens";
 
@@ -18,6 +19,7 @@ export default function Gallery() {
   const styles = useThemedStyles(makeStyles);
   const params = useLocalSearchParams<{ tailorId?: string; category?: GarmentCategory }>();
   const router = useRouter();
+  const { t } = useI18n();
   const [category, setCategory] = useState<GarmentCategory | null>(params.category || null);
   const [sort, setSort] = useState<"recent" | "popular">("recent");
   const [models, setModels] = useState<GarmentModel[] | null>(null);
@@ -41,10 +43,10 @@ export default function Gallery() {
 
   return (
     <Screen>
-      <Header title="Galerie de modèles" showBack />
+      <Header title={t("search.modelsGallery")} showBack />
       <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 16 }}>
-        <Chip label="Récents" active={sort === "recent"} onPress={() => setSort("recent")} />
-        <Chip label="Plus aimés" active={sort === "popular"} onPress={() => setSort("popular")} />
+        <Chip label={t("common.recent")} active={sort === "recent"} onPress={() => setSort("recent")} />
+        <Chip label={t("common.mostLiked")} active={sort === "popular"} onPress={() => setSort("popular")} />
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, padding: 16 }}>
         {CATEGORIES.map((c) => (

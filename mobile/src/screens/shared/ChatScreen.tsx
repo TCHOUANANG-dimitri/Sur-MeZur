@@ -14,20 +14,20 @@ import { Screen } from "../../components/Screen";
 import { useTheme, useThemedStyles } from "../../theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../../theme/tokens";
 
-function dayLabel(iso: string): string {
+function dayLabel(iso: string, t: (key: string) => string, lang: "fr" | "en"): string {
   const d = new Date(iso);
   const today = new Date();
   const yesterday = new Date(today.getTime() - 86400000);
-  if (d.toDateString() === today.toDateString()) return "Aujourd'hui";
-  if (d.toDateString() === yesterday.toDateString()) return "Hier";
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+  if (d.toDateString() === today.toDateString()) return t("common.today");
+  if (d.toDateString() === yesterday.toDateString()) return t("common.yesterday");
+  return d.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", { day: "numeric", month: "long" });
 }
 
 export function ChatScreenBody({ orderId, base }: { orderId: string; base: "client" | "tailor" }) {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
@@ -105,10 +105,10 @@ export function ChatScreenBody({ orderId, base }: { orderId: string; base: "clie
         contentContainerStyle={{ padding: 16 }}
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
       >
-        {messages.length === 0 && <EmptyState text="Aucun message pour le moment." />}
+        {messages.length === 0 && <EmptyState text={t("common.noMessages")} />}
         {messages.map((m) => {
           const mod = m.modification_id ? modById.get(m.modification_id) : undefined;
-          const label = dayLabel(m.created_at);
+          const label = dayLabel(m.created_at, t, lang);
           const showDaySeparator = label !== lastDay;
           lastDay = label;
           return (
@@ -120,16 +120,16 @@ export function ChatScreenBody({ orderId, base }: { orderId: string; base: "clie
               )}
               {m.type !== "system" && (
                 <Text style={[styles.senderLabel, m.sender_id === user?.id ? styles.senderLabelMine : styles.senderLabelTheirs]}>
-                  {m.sender_id === user?.id ? "Vous" : t(`role.${base === "client" ? "tailor" : "client"}`)}
+                  {m.sender_id === user?.id ? t("common.you") : t(`role.${base === "client" ? "tailor" : "client"}`)}
                 </Text>
               )}
               <ChatBubble mine={m.sender_id === user?.id} body={m.body || ""} kind={m.type} time={m.created_at} />
               {mod && mod.status === "proposed" && mod.proposed_by !== user?.role && !isFinished && (
                 <View style={styles.modActions}>
                   <Button variant="secondary" onPress={() => respond(mod.id, false)}>
-                    Refuser
+                    {t("chat.refuse")}
                   </Button>
-                  <Button onPress={() => respond(mod.id, true)}>Accepter ({formatFcfa(mod.new_garment_price)})</Button>
+                  <Button onPress={() => respond(mod.id, true)}>{t("chat.accept")} ({formatFcfa(mod.new_garment_price)})</Button>
                 </View>
               )}
             </View>
@@ -139,7 +139,7 @@ export function ChatScreenBody({ orderId, base }: { orderId: string; base: "clie
 
       {isFinished ? (
         <View style={styles.closedBar}>
-          <Text style={styles.closedText}>Cette commande est terminée — discussion en lecture seule.</Text>
+          <Text style={styles.closedText}>{t("common.orderComplete")}</Text>
         </View>
       ) : (
         <View style={styles.inputBar}>
@@ -160,13 +160,13 @@ export function ChatScreenBody({ orderId, base }: { orderId: string; base: "clie
       )}
 
       <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} title={t("order.editModel")}>
-        <Field label="Nouveau prix du vêtement (FCFA)">
+        <Field label={t("chat.newPrice")}>
           <Input keyboardType="numeric" value={newPrice} onChangeText={setNewPrice} />
         </Field>
-        <Field label="Variation prix accessoire (FCFA)">
+        <Field label={t("chat.priceVariation")}>
           <Input keyboardType="numeric" value={delta} onChangeText={setDelta} />
         </Field>
-        <Field label="Justification">
+        <Field label={t("chat.justification")}>
           <Input value={justification} onChangeText={setJustification} multiline style={{ minHeight: 70, textAlignVertical: "top" }} />
         </Field>
         <Button fullWidth onPress={proposeModification}>

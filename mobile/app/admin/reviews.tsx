@@ -9,9 +9,11 @@ import { StatusChip } from "../../src/components/Chip";
 import { EmptyState, Header, Spinner } from "../../src/components/Misc";
 import { Screen } from "../../src/components/Screen";
 import { Stars } from "../../src/components/Stars";
+import { useI18n } from "../../src/i18n/I18nProvider";
 import { fonts } from "../../src/theme/tokens";
 
 export default function ReviewModeration() {
+  const { t } = useI18n();
   const [reviews, setReviews] = useState<Review[] | null>(null);
 
   const load = useCallback(() => {
@@ -33,10 +35,10 @@ export default function ReviewModeration() {
 
   return (
     <Screen>
-      <Header title="Modération avis" showBack />
+      <Header title={t("admin.reviewsPage.title")} showBack />
       <View style={{ padding: 18 }}>
         {reviews.length === 0 ? (
-          <EmptyState text="Aucun avis." />
+          <EmptyState text={t("common.noReviews")} />
         ) : (
           reviews.map((r) => (
             <Card key={r.id} style={{ marginBottom: 10 }}>
@@ -50,10 +52,10 @@ export default function ReviewModeration() {
               <Text style={styles.comment}>{r.comment}</Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Button variant="secondary" onPress={() => moderate(r.id, "visible")} style={{ flex: 1 }}>
-                  Visible
+                  {t("admin.reviewsPage.show")}
                 </Button>
                 <Button variant="danger" onPress={() => moderate(r.id, "hidden")} style={{ flex: 1 }}>
-                  Masquer
+                  {t("admin.reviewsPage.hide")}
                 </Button>
               </View>
             </Card>

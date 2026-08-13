@@ -7,6 +7,7 @@ import type { GarmentModel } from "../../src/api/types";
 import { LikeButton } from "../../src/components/Badges";
 import { EmptyState, Header, Spinner } from "../../src/components/Misc";
 import { Screen } from "../../src/components/Screen";
+import { useI18n } from "../../src/i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../../src/theme/ThemeProvider";
 import { fonts, radii, type ThemeColors } from "../../src/theme/tokens";
 
@@ -14,6 +15,7 @@ export default function LikedModels() {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const router = useRouter();
+  const { t } = useI18n();
   const [models, setModels] = useState<GarmentModel[] | null>(null);
 
   const load = useCallback(() => {
@@ -39,10 +41,10 @@ export default function LikedModels() {
 
   return (
     <Screen>
-      <Header title="Modèles enregistrés" showBack />
+      <Header title={t("profile.savedModels")} showBack />
       <View style={{ padding: 18 }}>
         {models.length === 0 ? (
-          <EmptyState text="Aucun modèle enregistré pour le moment. Touchez le cœur sur un modèle pour l'ajouter ici." />
+          <EmptyState text={t("profile.savedModelsEmpty")} />
         ) : (
           <View style={styles.grid}>
             {models.map((m) => (

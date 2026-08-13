@@ -83,14 +83,16 @@ npm run dev                    # http://localhost:5173, proxies /api to :8000
 
 Open http://localhost:5173.
 
-### Accounts (created by `app/seed.py`, password `password123`)
+### Accounts (created by `app/seed.py`)
 
-| Role | Phone | Notes |
+| Role | Phone | Password |
 |---|---|---|
-| Admin | `+237696982953` | Platform administrator |
-| Tailor (market seed) | `+237600000002` | Pre-verified (`Chez Fatou Couture`) — powers the catalog |
+| Admin | `+237696982953` | `dimi11` |
 
-Clients register their own accounts from the app; no demo client is created.
+No demo tailor or client account is created — both register their own
+accounts from the app. `app/seed.py` still seeds ownerless catalog data
+(fabrics, accessories); garment models and ready-to-wear listings only
+appear once a real tailor registers and publishes them.
 
 ### Automated verification
 
@@ -107,8 +109,8 @@ escrow release → review → tailor rating recompute. All assertions passed.
 The frontend builds cleanly under TypeScript strict mode (`npm run build`).
 Manual click-through in a browser wasn't possible in this session (no
 headless-browser tooling or network access to install one here) — please
-run both servers and click through yourself; the demo accounts above cover
-all three roles.
+run both servers and click through yourself; only the admin account above is
+pre-seeded, register client/tailor accounts from the app to test those roles.
 
 ## Project structure
 

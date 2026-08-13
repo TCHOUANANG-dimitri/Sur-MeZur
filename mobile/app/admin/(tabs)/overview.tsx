@@ -13,8 +13,10 @@ import {
 } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { AdminApi, type AdminStats } from "../../../src/api/endpoints";
+import { AdminApi, NotificationsApi, type AdminStats } from "../../../src/api/endpoints";
+import type { Notification } from "../../../src/api/types";
 import { Card } from "../../../src/components/Card";
+import { NotifBell } from "../../../src/components/Badges";
 import { Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { SettingsRow, SettingsSection } from "../../../src/components/SettingsRow";
@@ -23,25 +25,19 @@ import { useAuth } from "../../../src/state/AuthContext";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../../../src/theme/tokens";
 
-const STATUS_LABEL: Record<string, string> = {
-  new: "Nouvelles",
-  in_progress: "En cours",
-  ready_for_pickup: "Prêtes",
-  finished_delivered: "Livrées",
-  finished_not_delivered: "Non livrées",
-};
-
 export default function AdminOverview() {
   const router = useRouter();
   const { logout } = useAuth();
-  const { lang, setLang } = useI18n();
+  const { t, lang, setLang } = useI18n();
   const { colors, mode, setMode } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [notifs, setNotifs] = useState<Notification[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       AdminApi.stats().then(setStats).catch(() => {});
+      NotificationsApi.list().then(setNotifs).catch(() => {});
     }, [])
   );
 
@@ -49,55 +45,69 @@ export default function AdminOverview() {
 
   const maxStatus = Math.max(1, ...Object.values(stats.orders_by_status));
 
+  const STATUS_LABEL: Record<string, string> = {
+    new: t("admin.overview.statusNew"),
+    in_progress: t("admin.overview.statusInProgress"),
+    ready_for_pickup: t("admin.overview.statusReady"),
+    finished_delivered: t("admin.overview.statusDelivered"),
+    finished_not_delivered: t("admin.overview.statusNotDelivered"),
+  };
+
   return (
     <Screen>
-      <Header title="Vue d'ensemble" />
+      <Header
+        title={t("admin.overview.title")}
+        right={
+          <NotifBell
+            count={notifs.filter((n) => !n.read_at).length}
+            onPress={() => router.push("/admin/notifications")}
+          />
+        }
+      />
       <View style={{ padding: 18 }}>
-        {/* Anything needing action is surfaced first. */}
         {(stats.tailors_pending > 0 || stats.open_disputes > 0) && (
           <Card style={styles.alertCard}>
-            <Text style={styles.alertTitle}>À traiter</Text>
+            <Text style={styles.alertTitle}>{t("admin.overview.toProcess")}</Text>
             {stats.tailors_pending > 0 && (
               <Text style={styles.alertLine}>
-                {stats.tailors_pending} vérification{stats.tailors_pending > 1 ? "s" : ""} de tailleur en attente
+                {stats.tailors_pending} {t("admin.overview.pendingVerifications")}
               </Text>
             )}
             {stats.open_disputes > 0 && (
               <Text style={styles.alertLine}>
-                {stats.open_disputes} litige{stats.open_disputes > 1 ? "s" : ""} ouvert
-                {stats.open_disputes > 1 ? "s" : ""}
+                {stats.open_disputes} {t("admin.overview.openDisputes")}
               </Text>
             )}
           </Card>
         )}
 
         <View style={styles.grid}>
-          <Tile Icon={Users} label="Clients" value={String(stats.clients)} />
-          <Tile Icon={BadgeCheck} label="Tailleurs" value={String(stats.tailors)} hint={`${stats.tailors_pending} en attente`} />
-          <Tile Icon={Package} label="Commandes" value={String(stats.orders_total)} />
-          <Tile Icon={UserX} label="Suspendus" value={String(stats.suspended)} tone={stats.suspended > 0 ? "error" : undefined} />
+          <Tile Icon={Users} label={t("admin.overview.clients")} value={String(stats.clients)} />
+          <Tile Icon={BadgeCheck} label={t("admin.overview.tailors")} value={String(stats.tailors)} hint={`${stats.tailors_pending} ${t("admin.overview.tailorsPending")}`} />
+          <Tile Icon={Package} label={t("admin.overview.orders")} value={String(stats.orders_total)} />
+          <Tile Icon={UserX} label={t("admin.overview.suspended")} value={String(stats.suspended)} tone={stats.suspended > 0 ? "error" : undefined} />
         </View>
 
         <Card style={{ marginBottom: 16 }}>
-          <Text style={styles.sectionTitle}>Activité financière</Text>
+          <Text style={styles.sectionTitle}>{t("admin.overview.financialActivity")}</Text>
           <View style={styles.moneyRow}>
             <View style={styles.moneyItem}>
               <Wallet size={14} color={colors.violetPrimary} />
               <Text style={styles.moneyValue}>{formatFcfa(stats.gmv)}</Text>
-              <Text style={styles.moneyLabel}>Volume livré</Text>
+              <Text style={styles.moneyLabel}>{t("admin.overview.deliveredVolume")}</Text>
             </View>
             <View style={styles.moneyDivider} />
             <View style={styles.moneyItem}>
               <Percent size={14} color={colors.violetPrimary} />
               <Text style={styles.moneyValue}>{formatFcfa(stats.commission_earned)}</Text>
-              <Text style={styles.moneyLabel}>Commission plateforme</Text>
+              <Text style={styles.moneyLabel}>{t("admin.overview.platformCommission")}</Text>
             </View>
           </View>
         </Card>
 
         {Object.keys(stats.orders_by_status).length > 0 && (
           <Card style={{ marginBottom: 16 }}>
-            <Text style={styles.sectionTitle}>Commandes par statut</Text>
+            <Text style={styles.sectionTitle}>{t("admin.overview.ordersByStatus")}</Text>
             <View style={{ gap: 8, marginTop: 4 }}>
               {Object.entries(stats.orders_by_status).map(([key, count]) => (
                 <View key={key} style={styles.barRow}>
@@ -114,27 +124,27 @@ export default function AdminOverview() {
           </Card>
         )}
 
-        <SettingsSection title="Modération">
+        <SettingsSection title={t("admin.overview.moderation")}>
           <SettingsRow
             Icon={Star}
-            label="Avis clients"
+            label={t("admin.overview.customerReviews")}
             value={stats.pending_reviews > 0 ? String(stats.pending_reviews) : undefined}
             onPress={() => router.push("/admin/reviews")}
           />
-          <SettingsRow Icon={Package} label="Toutes les commandes" onPress={() => router.push("/admin/orders")} last />
+          <SettingsRow Icon={Package} label={t("admin.overview.allOrders")} onPress={() => router.push("/admin/orders")} last />
         </SettingsSection>
 
-        <SettingsSection title="Apparence et langue">
+        <SettingsSection title={t("admin.overview.appearanceAndLanguage")}>
           <SettingsRow
             Icon={Users}
-            label="Langue"
-            value={lang === "fr" ? "Français" : "English"}
+            label={t("admin.overview.language")}
+            value={lang === "fr" ? t("admin.overview.french") : t("admin.overview.english")}
             onPress={() => setLang(lang === "fr" ? "en" : "fr")}
           />
           <SettingsRow
             Icon={Star}
-            label="Thème"
-            value={mode === "light" ? "Clair" : mode === "dark" ? "Sombre" : "Auto"}
+            label={t("admin.overview.theme")}
+            value={mode === "light" ? t("admin.overview.themeLight") : mode === "dark" ? t("admin.overview.themeDark") : t("admin.overview.themeAuto")}
             last
             onPress={() => setMode(mode === "light" ? "dark" : mode === "dark" ? "system" : "light")}
           />
@@ -143,7 +153,7 @@ export default function AdminOverview() {
         <SettingsSection>
           <SettingsRow
             Icon={LogOut}
-            label="Déconnexion"
+            label={t("admin.overview.logout")}
             danger
             last
             onPress={async () => {

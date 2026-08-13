@@ -61,7 +61,7 @@ export default function Payment() {
       <View style={{ padding: 18 }}>
         {error ? <ErrorBanner message={error} /> : null}
         <Card style={{ marginBottom: 16 }}>
-          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.totalLabel}>{t("common.total")}</Text>
           <Text style={styles.total}>{formatFcfa(quote.total)}</Text>
           <Text style={styles.line}>
             {t("payment.deposit")}: <Text style={styles.bold}>{formatFcfa(deposit)}</Text>
@@ -93,13 +93,13 @@ export default function Payment() {
           </>
         )}
 
-        {status === "pending" && <Spinner label="Confirmation Mobile Money en cours…" />}
+        {status === "pending" && <Spinner label={t("payment.confirming")} />}
 
         {status === "paid" && (
           <>
             <View style={styles.successRow}>
               <CheckCircle2 size={18} color={colors.success} />
-              <Text style={styles.success}>Paiement confirmé</Text>
+              <Text style={styles.success}>{t("payment.confirmed")}</Text>
             </View>
             <Button fullWidth onPress={() => router.replace(`/client/orders/${id}`)}>
               {t("common.confirm")}

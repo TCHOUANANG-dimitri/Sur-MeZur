@@ -55,7 +55,7 @@ export default function OrderCreate() {
     setError("");
     const amountNum = parseFloat(amount) || 0;
     if (!tailorId || !modelId || !measurementId || amountNum <= 0) {
-      setError("Choisissez un tailleur et un prix.");
+      setError(t("order.chooseError"));
       return;
     }
     setBusy(true);
@@ -85,13 +85,13 @@ export default function OrderCreate() {
 
   return (
     <Screen>
-      <Header title="Nouvelle commande" showBack />
+      <Header title={t("order.newOrder")} showBack />
       <View style={{ padding: 18 }}>
         {error ? <ErrorBanner message={error} /> : null}
 
         {!tailorId ? (
           <>
-            <Text style={styles.sectionTitle}>Choisir un tailleur</Text>
+            <Text style={styles.sectionTitle}>{t("order.chooseTailor")}</Text>
             {tailors.map((tl) => (
               <Card key={tl.id} onPress={() => setTailorId(tl.id)} style={{ marginBottom: 8 }}>
                 <Text style={styles.tailorName}>{tl.shop_name}</Text>
@@ -103,14 +103,14 @@ export default function OrderCreate() {
           <>
             <Card style={{ marginBottom: 16 }}>
               {model && <Text style={styles.modelName}>{model.name}</Text>}
-              {fabric && <Text style={styles.detail}>Tissu: {fabric.name}</Text>}
+              {fabric && <Text style={styles.detail}>{t("order.fabricLabel")}{fabric.name}</Text>}
               {selectedAccessories.length > 0 && (
-                <Text style={styles.detail}>Accessoires: {selectedAccessories.map((a) => a.name).join(", ")}</Text>
+                <Text style={styles.detail}>{t("order.accessoriesLabel")}{selectedAccessories.map((a) => a.name).join(", ")}</Text>
               )}
             </Card>
 
             <Field label={t("order.priceOffer")}>
-              <Input keyboardType="numeric" value={amount} onChangeText={setAmount} placeholder="Votre offre en FCFA" />
+              <Input keyboardType="numeric" value={amount} onChangeText={setAmount} placeholder={t("order.priceOfferPlaceholder")} />
             </Field>
 
             <Field label={t("order.receptionMode")}>
@@ -124,15 +124,15 @@ export default function OrderCreate() {
               </View>
             </Field>
 
-            <Field label={`${t("order.desiredDate")} (AAAA-MM-JJ)`}>
+            <Field label={`${t("order.desiredDate")} (${t("order.desiredDate.format")})`}>
               <Input value={desiredDate} onChangeText={setDesiredDate} placeholder="2026-09-01" />
             </Field>
 
-            <Field label="Précisions sur le vêtement souhaité">
+            <Field label={t("order.clothDetails")}>
               <Input
                 value={clientNotes}
                 onChangeText={setClientNotes}
-                placeholder="Ex: manches longues, col rond, broderie sur la poche…"
+                placeholder={t("order.clothDetailsPlaceholder")}
                 multiline
                 style={{ minHeight: 80, textAlignVertical: "top" }}
               />

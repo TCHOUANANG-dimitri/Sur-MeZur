@@ -8,7 +8,7 @@ import type { ReadyToWear, Review, TailorProfile } from "../../../src/api/types"
 import { Button } from "../../../src/components/Button";
 import { Card } from "../../../src/components/Card";
 import { Chip } from "../../../src/components/Chip";
-import { Header, Spinner } from "../../../src/components/Misc";
+import { EmptyState, Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { Stars } from "../../../src/components/Stars";
 import { VerificationBadge } from "../../../src/components/Badges";
@@ -21,19 +21,22 @@ export default function TailorProfilePage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useI18n();
-  const [tailor, setTailor] = useState<TailorProfile | null>(null);
+  const [tailor, setTailor] = useState<TailorProfile | null | undefined>(undefined);
   const [tab, setTab] = useState<"pap" | "reviews">("pap");
   const [items, setItems] = useState<ReadyToWear[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
 
   useEffect(() => {
     if (!id) return;
-    TailorsApi.get(id).then(setTailor);
+    TailorsApi.get(id)
+      .then(setTailor)
+      .catch(() => setTailor(null));
     CatalogApi.readyToWear(id).then(setItems);
     api.get<Review[]>(`/tailors/${id}/reviews`).then(setReviews).catch(() => {});
   }, [id]);
 
-  if (!tailor) return <Spinner />;
+  if (tailor === undefined) return <Spinner />;
+  if (tailor === null) return <EmptyState text={t("common.notFound")} />;
 
   return (
     <Screen>
@@ -51,7 +54,7 @@ export default function TailorProfilePage() {
           <View style={{ flexDirection: "row", gap: 6, marginTop: 4, alignItems: "center" }}>
             <Stars value={tailor.rating_avg} />
             <Text style={styles.meta}>
-              {tailor.completed_orders_count} commandes · ~{tailor.avg_response_minutes}min
+              {tailor.completed_orders_count} {t("common.orders")} · ~{tailor.avg_response_minutes}min
             </Text>
           </View>
           <Text style={styles.bio}>{tailor.bio}</Text>
@@ -63,12 +66,12 @@ export default function TailorProfilePage() {
 
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
           <Chip label={t("nav.readyToWear")} active={tab === "pap"} onPress={() => setTab("pap")} />
-          <Chip label="Avis" active={tab === "reviews"} onPress={() => setTab("reviews")} />
+          <Chip label={t("tailor.profile.reviews")} active={tab === "reviews"} onPress={() => setTab("reviews")} />
         </View>
 
         {tab === "pap" ? (
           items.length === 0 ? (
-            <Text style={styles.empty}>Aucun article pour le moment.</Text>
+            <Text style={styles.empty}>{t("common.noItems")}</Text>
           ) : (
             <View style={styles.grid}>
               {items.map((it) => (
@@ -80,7 +83,7 @@ export default function TailorProfilePage() {
             </View>
           )
         ) : reviews.length === 0 ? (
-          <Text style={styles.empty}>Aucun avis pour le moment.</Text>
+          <Text style={styles.empty}>{t("common.noReviewsEmpty")}</Text>
         ) : (
           reviews.map((r) => (
             <Card key={r.id} style={{ marginBottom: 8 }}>

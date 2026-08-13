@@ -38,7 +38,10 @@ logger = logging.getLogger(__name__)
 # Évite qu'un appel bloquant (MediaPipe/SAM) ne coince le thread indefiniment.
 _STEP_TIMEOUT_S = 30
 
-_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="vision-step")
+# Chaque requête soumet 2 à 4 étapes à ce pool (pose face, silhouette face,
+# pose profil, silhouette profil) : à 2 workers, une deuxième requête
+# concurrente était déjà entièrement mise en file derrière la première.
+_EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="vision-step")
 
 
 def _with_timeout(fn, timeout_s: float = _STEP_TIMEOUT_S):

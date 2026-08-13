@@ -1,4 +1,4 @@
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { ImagePlus, Plus, Trash2, X } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
@@ -12,6 +12,7 @@ import { Button } from "../../../src/components/Button";
 import { Card } from "../../../src/components/Card";
 import { EmptyState, ErrorBanner, Field, Header, Input, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
+import { VerificationNudge } from "../../../src/components/VerificationNudge";
 import { formatFcfa, useI18n } from "../../../src/i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, radii, type ThemeColors } from "../../../src/theme/tokens";
@@ -20,6 +21,7 @@ export default function ReadyToWear() {
   const { t } = useI18n();
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
+  const router = useRouter();
 
   const [items, setItems] = useState<RTW[] | null>(null);
   const [tailorProfile, setTailorProfile] = useState<{ verification_status: string } | null>(null);
@@ -79,7 +81,7 @@ export default function ReadyToWear() {
     setError("");
     const priceNum = parseFloat(price) || 0;
     if (!name || priceNum <= 0) {
-      setError("Nom et prix requis.");
+      setError(t("tailor.rtw.nameAndPriceRequired"));
       return;
     }
     setBusy(true);
@@ -108,10 +110,10 @@ export default function ReadyToWear() {
   };
 
   const confirmDelete = (item: RTW) => {
-    Alert.alert("Supprimer l'article", `Retirer « ${item.name} » de votre boutique ?`, [
-      { text: "Annuler", style: "cancel" },
+    Alert.alert(t("tailor.rtw.deleteTitle"), t("tailor.rtw.deleteConfirm", { name: item.name }), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Supprimer",
+        text: t("common.delete"),
         style: "destructive",
         onPress: async () => {
           setItems((prev) => prev?.filter((x) => x.id !== item.id) ?? null);
@@ -127,28 +129,37 @@ export default function ReadyToWear() {
 
   if (!items) return <Spinner />;
 
+  const openAddSheet = () => {
+    if (!isVerified) {
+      router.push("/tailor/verification");
+      return;
+    }
+    setSheetOpen(true);
+  };
+
   return (
     <Screen>
       <Header
         title={t("nav.readyToWear")}
         right={
-          <TouchableOpacity style={styles.addBtn} onPress={() => setSheetOpen(true)} hitSlop={8}>
+          <TouchableOpacity style={styles.addBtn} onPress={openAddSheet} hitSlop={8}>
             <Plus size={18} color={colors.white} />
           </TouchableOpacity>
         }
       />
       <View style={{ padding: 18 }}>
+        <VerificationNudge />
         {!isVerified && tailorProfile !== null && (
           <Card style={{ marginBottom: 14, backgroundColor: colors.pendingBg }}>
             <Text style={{ fontSize: 13, color: colors.pending, fontWeight: "600" }}>
-              {t("tailor.verification.pending")} — {t("tailor.rtw.verificationRequired")}
+              {t("tailor.rtw.verificationRequired")}
             </Text>
           </Card>
         )}
         {items.length === 0 ? (
           <EmptyState
-            text="Aucun article publié. Ajoutez vos pièces en stock avec leurs photos."
-            cta={<Button onPress={() => setSheetOpen(true)}>{t("tailor.readyToWear.add")}</Button>}
+            text={`${t("common.noItems")} ${t("common.noItemsHint")}`}
+            cta={<Button onPress={openAddSheet}>{t("tailor.readyToWear.add")}</Button>}
           />
         ) : (
           <View style={styles.grid}>
@@ -174,7 +185,7 @@ export default function ReadyToWear() {
                   <Text style={styles.itemPrice}>{formatFcfa(it.price)}</Text>
                   <View style={styles.itemFooter}>
                     <Text style={[styles.stock, !it.in_stock && styles.stockOut]}>
-                      {it.in_stock ? "En stock" : "Épuisé"}
+                      {it.in_stock ? t("common.inStock") : t("common.soldOut")}
                     </Text>
                     <TouchableOpacity onPress={() => confirmDelete(it)} hitSlop={8}>
                       <Trash2 size={15} color={colors.error} />
@@ -196,27 +207,27 @@ export default function ReadyToWear() {
         title={t("tailor.readyToWear.add")}
       >
         {error ? <ErrorBanner message={error} /> : null}
-        <Field label="Nom">
-          <Input value={name} onChangeText={setName} placeholder="Chemise en pagne, taille M" />
+        <Field label={t("tailor.rtw.name")}>
+          <Input value={name} onChangeText={setName} placeholder={t("tailor.rtw.namePlaceholder")} />
         </Field>
-        <Field label="Description">
+        <Field label={t("common.description")}>
           <Input
             value={description}
             onChangeText={setDescription}
             multiline
-            placeholder="Matière, coupe, finitions…"
+            placeholder={t("tailor.rtw.descriptionPlaceholder")}
             style={{ minHeight: 70, textAlignVertical: "top" }}
           />
         </Field>
-        <Field label="Prix (FCFA)">
+        <Field label={t("tailor.rtw.priceLabel")}>
           <Input keyboardType="numeric" value={price} onChangeText={setPrice} placeholder="12000" />
         </Field>
 
-        <Field label={`Photos${photos.length > 0 ? ` (${photos.length})` : ""}`}>
+        <Field label={`${t("common.photos")}${photos.length > 0 ? ` (${photos.length})` : ""}`}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             <TouchableOpacity style={styles.picker} onPress={pickImages}>
               <ImagePlus size={20} color={colors.violetPrimary} />
-              <Text style={styles.pickerText}>Ajouter</Text>
+              <Text style={styles.pickerText}>{t("common.add")}</Text>
             </TouchableOpacity>
             {photos.map((p, i) => (
               <View key={`${p.uri}-${i}`} style={styles.previewWrap}>

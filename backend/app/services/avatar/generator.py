@@ -103,6 +103,23 @@ BREADTH_DEPTH_TARGETS = {
     "buttock_depth_scale": ("hip", "hip-scale-depth"),
 }
 
+# Longueur du torse relative à la taille (torso_ratio, dérivé de
+# sittingheight/height dans body_params.py) : seule cible verticale du tronc
+# disponible côté MakeHuman.
+PROPORTION_TARGETS = {
+    "torso_ratio": ("torso", "torso-scale-vert"),
+}
+
+# Poitrine et taille ont chacune une largeur ET une profondeur issues de SAM
+# (chest_breadth_scale, chest_depth_scale, waist_breadth_scale,
+# waist_depth_scale — voir body_params.py), mais MakeHuman n'expose qu'UNE
+# cible d'échelle horizontale et UNE de profondeur pour tout le tronc
+# (torso-scale-horiz/depth) : il n'y a pas de cible séparée par niveau. On
+# moyenne donc poitrine et taille sur chaque axe plutôt que d'ignorer deux des
+# quatre valeurs mesurées.
+TORSO_WIDTH_TARGET = ("torso", "torso-scale-horiz")
+TORSO_DEPTH_TARGET = ("torso", "torso-scale-depth")
+
 BASE_HEIGHT_CM = 165.94  # hauteur du maillage MPFB par défaut, mesurée
 
 
@@ -194,11 +211,24 @@ def _apply_morphology(human, params):
     print(f"Cibles MakeHuman : {targets_dir}")
     appliquees = 0
 
-    for table in (MEASURE_TARGETS, SHAPE_TARGETS, BREADTH_DEPTH_TARGETS):
+    for table in (MEASURE_TARGETS, SHAPE_TARGETS, BREADTH_DEPTH_TARGETS, PROPORTION_TARGETS):
         for param, (sous, racine) in table.items():
             valeur = float(params.get(param, 0.0) or 0.0)
             if _load_target(targets_dir, sous, racine, valeur):
                 appliquees += 1
+
+    # Largeur/profondeur du tronc : moyenne poitrine+taille sur chaque axe,
+    # faute de cible MakeHuman séparée par niveau (voir TORSO_WIDTH_TARGET /
+    # TORSO_DEPTH_TARGET ci-dessus). Ignorées jusqu'ici, ces 4 valeurs SAM
+    # étaient calculées pour rien.
+    largeur = (float(params.get("chest_breadth_scale", 0.0) or 0.0)
+               + float(params.get("waist_breadth_scale", 0.0) or 0.0)) / 2.0
+    if _load_target(targets_dir, *TORSO_WIDTH_TARGET, largeur):
+        appliquees += 1
+    profondeur = (float(params.get("chest_depth_scale", 0.0) or 0.0)
+                  + float(params.get("waist_depth_scale", 0.0) or 0.0)) / 2.0
+    if _load_target(targets_dir, *TORSO_DEPTH_TARGET, profondeur):
+        appliquees += 1
 
     # Volume mammaire : cible dédiée, uniquement pertinente au féminin.
     # Elle ne suit pas la convention decr/incr — MakeHuman nomme ses deux
@@ -218,6 +248,14 @@ def _apply_morphology(human, params):
                              ("legs", "l-upperleg-fat"), ("legs", "r-upperleg-fat"),
                              ("stomach", "stomach-pregnant")):
             if _load_target(targets_dir, sous, racine, poids_corps * 0.6):
+                appliquees += 1
+
+    # Musculature : jusqu'ici calculée (body_params.py) mais jamais lue ici —
+    # seul weight_factor pilotait la corpulence, muscle_factor ne faisait rien.
+    muscle = float(params.get("muscle_factor", 0.0) or 0.0)
+    if abs(muscle) >= 0.02:
+        for sous, racine in (("torso", "torso-muscle-pectoral"), ("torso", "torso-muscle-dorsi")):
+            if _load_target(targets_dir, sous, racine, muscle):
                 appliquees += 1
 
     return appliquees

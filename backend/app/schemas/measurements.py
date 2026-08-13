@@ -40,13 +40,20 @@ class MeasurementOut(ORMModel):
     weight_kg: float | None
     gender: str | None
     data: dict
+    # Entrées brutes (squelette MediaPipe + silhouette SAM) données au modèle
+    # pour prédire `data`. Colonne DB déjà peuplée par le pipeline (voir
+    # vision/pipeline.py::run) mais jamais exposée jusqu'ici — ajoutée pour
+    # que le client puisse afficher aussi ces mesures intermédiaires.
+    features: dict | None
     confidence: dict | None
     is_active: bool
 
 
 class MeasurementPatchIn(BaseModel):
     data: dict
-    height_cm: float | None = None
+    # Mêmes bornes qu'à la création (MeasurementSessionCreateIn) : sans elles,
+    # rien n'empêchait un PATCH de fixer une taille à 0 ou négative.
+    height_cm: float | None = Field(None, gt=50, lt=260)
 
 
 class AvatarCreateIn(BaseModel):

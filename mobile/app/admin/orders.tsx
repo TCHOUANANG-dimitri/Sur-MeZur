@@ -29,8 +29,6 @@ const FILTERS: (OrderStatus | null)[] = [
   "finished_delivered",
 ];
 
-/** Platform-wide order supervision — the admin sees every order, unlike the
- *  tailor and client lists which are scoped to their own participation. */
 export default function AdminOrders() {
   const { t, lang } = useI18n();
   const { colors } = useTheme();
@@ -49,7 +47,7 @@ export default function AdminOrders() {
 
   return (
     <Screen scroll={false}>
-      <Header title="Toutes les commandes" showBack />
+      <Header title={t("admin.ordersPage.title")} showBack />
 
       <View style={styles.filterRow}>
         {FILTERS.map((key) => {
@@ -57,7 +55,7 @@ export default function AdminOrders() {
           return (
             <Chip
               key={key ?? "all"}
-              label={key === null ? "Toutes" : t(`order.status.${key}`)}
+              label={key === null ? t("common.all") : t(`order.status.${key}`)}
               active={active}
               icon={key === null ? <LayoutGrid size={13} color={active ? colors.white : colors.textSecondary} /> : undefined}
               onPress={() => setFilter(key)}
@@ -70,7 +68,7 @@ export default function AdminOrders() {
         {!orders ? (
           <Spinner />
         ) : orders.length === 0 ? (
-          <EmptyState text="Aucune commande pour ce filtre." />
+          <EmptyState text={t("common.noOrders")} />
         ) : (
           orders.map((o) => (
             <Card key={o.id} style={{ marginBottom: 10 }}>
@@ -81,14 +79,14 @@ export default function AdminOrders() {
               <View style={styles.dateRow}>
                 <CalendarClock size={12} color={colors.textSecondary} />
                 <Text style={styles.meta}>
-                  {o.type === "ready_to_wear" ? "Prêt-à-porter" : "Sur mesure"} · {formatDate(o.created_at, lang)}
+                  {o.type === "ready_to_wear" ? t("admin.ordersPage.typeRtw") : t("admin.ordersPage.typeCustom")} · {formatDate(o.created_at, lang)}
                 </Text>
               </View>
               <View style={styles.footer}>
                 <Text style={styles.price}>
-                  {o.agreed_price ? formatFcfa(o.agreed_price) : "En négociation"}
+                  {o.agreed_price ? formatFcfa(o.agreed_price) : t("common.inNegotiation")}
                 </Text>
-                {o.dispute_status === "open" && <Text style={styles.dispute}>Litige ouvert</Text>}
+                {o.dispute_status === "open" && <Text style={styles.dispute}>{t("admin.ordersPage.openDispute")}</Text>}
               </View>
             </Card>
           ))

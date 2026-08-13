@@ -1,18 +1,17 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronDown } from "lucide-react-native";
 import React, { useState } from "react";
-import { Image, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Switch, Text, View } from "react-native";
 import { userMessage, ApiError } from "../src/api/client";
 import { AuthApi } from "../src/api/endpoints";
 import { Button } from "../src/components/Button";
-import { BottomSheet } from "../src/components/BottomSheet";
 import { ErrorBanner, Field, Input, PasswordInput } from "../src/components/Misc";
+import { PhoneField } from "../src/components/PhoneField";
 import { Screen } from "../src/components/Screen";
-import { COUNTRIES, type Country } from "../src/constants/countries";
+import { COUNTRIES, splitPhone } from "../src/constants/countries";
 import { useI18n } from "../src/i18n/I18nProvider";
 import { useAuth } from "../src/state/AuthContext";
 import { useTheme, useThemedStyles } from "../src/theme/ThemeProvider";
-import { fonts, radii, type ThemeColors } from "../src/theme/tokens";
+import { fonts, type ThemeColors } from "../src/theme/tokens";
 import { isValidPassword } from "../src/validate/password";
 
 export default function Register() {
@@ -24,9 +23,7 @@ export default function Register() {
   const { register } = useAuth();
   const router = useRouter();
 
-  const [country, setCountry] = useState<Country>(COUNTRIES[0]);
-  const [localNumber, setLocalNumber] = useState("");
-  const [countryPickerOpen, setCountryPickerOpen] = useState(false);
+  const [phone, setPhone] = useState(COUNTRIES[0].dial);
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [consent, setConsent] = useState(true);
@@ -36,12 +33,10 @@ export default function Register() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const phone = `${country.dial}${localNumber}`;
-
   const requestOtp = async () => {
     setError("");
-    if (!localNumber || !fullName || !isValidPassword(password)) {
-      setError("Complétez tous les champs. Le mot de passe doit contenir 6 caractères exactement (au moins un chiffre et une lettre).");
+    if (!splitPhone(phone).local || !fullName || !isValidPassword(password)) {
+      setError(t("auth.err.fillAllFields"));
       return;
     }
     setBusy(true);
@@ -71,7 +66,6 @@ export default function Register() {
   };
 
   return (
-    <>
       <Screen padded>
       <Image source={require("../assets/logo-transparent.png")} style={styles.logo} resizeMode="contain" />
       <Text style={styles.title}>
@@ -84,23 +78,7 @@ export default function Register() {
           <Field label={t("auth.fullName")}>
             <Input value={fullName} onChangeText={setFullName} />
           </Field>
-          <Field label={t("auth.phone")}>
-            <View style={styles.phoneRow}>
-              <TouchableOpacity style={styles.countryButton} onPress={() => setCountryPickerOpen(true)} activeOpacity={0.7}>
-                <Text style={styles.countryFlag}>{country.flag}</Text>
-                <Text style={styles.countryDial}>{country.dial}</Text>
-                <ChevronDown size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
-              <Input
-                value={localNumber}
-                onChangeText={(v) => setLocalNumber(v.replace(/[^0-9]/g, ""))}
-                keyboardType="phone-pad"
-                placeholder="6 00 00 00 00"
-                style={styles.phoneInput}
-                maxLength={12}
-              />
-            </View>
-          </Field>
+          <PhoneField label={t("auth.phone")} value={phone} onChangeText={setPhone} />
           <Field label={t("auth.password")}>
             <PasswordInput value={password} onChangeText={setPassword} maxLength={6} placeholder={t("auth.password.placeholder")} />
           </Field>
@@ -129,25 +107,6 @@ export default function Register() {
         </>
       )}
       </Screen>
-
-    <BottomSheet visible={countryPickerOpen} onClose={() => setCountryPickerOpen(false)} title="Pays / indicatif">
-      {COUNTRIES.map((c) => (
-        <TouchableOpacity
-          key={c.code}
-          style={styles.countryRow}
-          activeOpacity={0.7}
-          onPress={() => {
-            setCountry(c);
-            setCountryPickerOpen(false);
-          }}
-        >
-          <Text style={styles.countryFlag}>{c.flag}</Text>
-          <Text style={styles.countryName}>{c.name}</Text>
-          <Text style={styles.countryRowDial}>{c.dial}</Text>
-        </TouchableOpacity>
-      ))}
-    </BottomSheet>
-    </>
   );
 }
 
@@ -172,29 +131,4 @@ const makeStyles = (colors: ThemeColors) =>
     textAlign: "center",
     color: colors.violetPrimary,
   },
-  phoneRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  countryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.button,
-    backgroundColor: colors.surface,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-  },
-  countryFlag: { fontSize: 18 },
-  countryDial: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.indigoText },
-  phoneInput: { flex: 1 },
-  countryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  countryName: { flex: 1, fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.indigoText },
-  countryRowDial: { fontFamily: fonts.body, fontSize: 13, color: colors.textSecondary },
 });

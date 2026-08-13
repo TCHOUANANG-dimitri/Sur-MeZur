@@ -25,8 +25,8 @@ export default function QuoteForm() {
   const router = useRouter();
   const { t } = useI18n();
   const [lineItems, setLineItems] = useState([
-    { label: "Tissu", amount: "" },
-    { label: "Confection", amount: "" },
+    { label: t("quote.fabric"), amount: "" },
+    { label: t("quote.confection"), amount: "" },
   ]);
   const [fabricMetrage, setFabricMetrage] = useState("");
   const [delayDays, setDelayDays] = useState("10");
@@ -45,7 +45,7 @@ export default function QuoteForm() {
     if (!id) return;
     setError("");
     if (total <= 0) {
-      setError("Ajoutez au moins un poste de coût.");
+      setError(t("quote.atLeastOneItem"));
       return;
     }
     setBusy(true);
@@ -76,18 +76,18 @@ export default function QuoteForm() {
           </View>
         ))}
         <Button variant="text" onPress={() => setLineItems((items) => [...items, { label: "", amount: "" }])}>
-          + Ajouter un poste
+          {t("quote.addLineItem")}
         </Button>
 
-        <Field label="Métrage tissu">
-          <Input value={fabricMetrage} onChangeText={setFabricMetrage} placeholder="ex: 2.5m" />
+        <Field label={t("quote.fabricLength")}>
+          <Input value={fabricMetrage} onChangeText={setFabricMetrage} placeholder={t("quote.fabricLengthPlaceholder")} />
         </Field>
         <Field label={t("tailor.quote.delay")}>
           <Input keyboardType="numeric" value={delayDays} onChangeText={setDelayDays} />
         </Field>
 
         <Card style={{ marginBottom: 16 }}>
-          <Row label="Total" value={formatFcfa(total)} />
+          <Row label={t("quote.total")} value={formatFcfa(total)} />
           <Row label={`Commission (${(rate * 100).toFixed(0)}%)`} value={`- ${formatFcfa(commission)}`} />
           <Row label={t("quote.net")} value={formatFcfa(total - commission)} bold />
         </Card>

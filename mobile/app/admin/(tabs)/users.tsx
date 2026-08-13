@@ -2,9 +2,10 @@ import { useFocusEffect } from "expo-router";
 import { Ban, CheckCircle2, Scissors, Search, ShieldCheck, User as UserIcon } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { userMessage, ApiError } from "../../../src/api/client";
+import { userMessage } from "../../../src/api/client";
 import { AdminApi } from "../../../src/api/endpoints";
 import type { User } from "../../../src/api/types";
+import { VerificationBadge } from "../../../src/components/Badges";
 import { Card } from "../../../src/components/Card";
 import { Chip } from "../../../src/components/Chip";
 import { EmptyState, Header, Input, Spinner } from "../../../src/components/Misc";
@@ -16,16 +17,16 @@ import { useI18n } from "../../../src/i18n/I18nProvider";
 
 type RoleFilter = "all" | "client" | "tailor" | "admin";
 
-const ROLE_META: Record<string, { Icon: React.ComponentType<{ size?: number; color?: string }>; label: string }> = {
-  client: { Icon: UserIcon, label: "Client" },
-  tailor: { Icon: Scissors, label: "Tailleur" },
-  admin: { Icon: ShieldCheck, label: "Admin" },
-};
-
 export default function AdminUsers() {
-  const { lang } = useI18n();
+  const { t, lang } = useI18n();
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
+
+  const ROLE_META: Record<string, { Icon: React.ComponentType<{ size?: number; color?: string }>; label: string }> = {
+    client: { Icon: UserIcon, label: t("role.client") },
+    tailor: { Icon: Scissors, label: t("role.tailor") },
+    admin: { Icon: ShieldCheck, label: t("role.admin") },
+  };
 
   const [users, setUsers] = useState<User[] | null>(null);
   const [role, setRole] = useState<RoleFilter>("all");
@@ -47,14 +48,14 @@ export default function AdminUsers() {
   const toggleActive = (u: User) => {
     const suspending = u.is_active;
     Alert.alert(
-      suspending ? "Suspendre le compte" : "Réactiver le compte",
+      suspending ? t("common.suspendAccount") : t("common.reactivateAccount"),
       suspending
-        ? `${u.full_name} ne pourra plus se connecter tant que le compte est suspendu. Continuer ?`
-        : `${u.full_name} pourra de nouveau se connecter.`,
+        ? `${u.full_name} ${t("common.suspendConfirm")}`
+        : `${u.full_name} ${t("common.reactivateConfirm")}`,
       [
-        { text: "Annuler", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: suspending ? "Suspendre" : "Réactiver",
+          text: suspending ? t("common.suspend") : t("common.reactivate"),
           style: suspending ? "destructive" : "default",
           onPress: async () => {
             setBusyId(u.id);
@@ -62,7 +63,7 @@ export default function AdminUsers() {
               const updated = await AdminApi.setUserActive(u.id, !u.is_active);
               setUsers((prev) => prev?.map((x) => (x.id === updated.id ? updated : x)) ?? null);
             } catch (e) {
-              Alert.alert("Action impossible", userMessage(e));
+              Alert.alert(t("common.impossibleAction"), userMessage(e));
             } finally {
               setBusyId(null);
             }
@@ -74,7 +75,7 @@ export default function AdminUsers() {
 
   return (
     <Screen scroll={false}>
-      <Header title="Utilisateurs" />
+      <Header title={t("admin.users.title")} />
 
       <View style={styles.controls}>
         <View style={styles.searchWrap}>
@@ -84,7 +85,7 @@ export default function AdminUsers() {
             onChangeText={setQuery}
             onSubmitEditing={load}
             returnKeyType="search"
-            placeholder="Nom, téléphone ou email"
+            placeholder={t("admin.users.searchPlaceholder")}
             style={styles.searchInput}
           />
         </View>
@@ -92,7 +93,7 @@ export default function AdminUsers() {
           {(["all", "client", "tailor", "admin"] as RoleFilter[]).map((r) => (
             <Chip
               key={r}
-              label={r === "all" ? "Tous" : ROLE_META[r].label + "s"}
+              label={r === "all" ? t("admin.users.all") : ROLE_META[r].label + "s"}
               active={role === r}
               onPress={() => setRole(r)}
             />
@@ -104,7 +105,7 @@ export default function AdminUsers() {
         {!users ? (
           <Spinner />
         ) : users.length === 0 ? (
-          <EmptyState text="Aucun utilisateur pour ce filtre." />
+          <EmptyState text={t("common.noUsers")} />
         ) : (
           users.map((u) => {
             const meta = ROLE_META[u.role] || ROLE_META.client;
@@ -116,23 +117,26 @@ export default function AdminUsers() {
                     <Icon size={16} color={u.is_active ? colors.violetPrimary : colors.textSecondary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.name} numberOfLines={1}>
-                      {u.full_name}
-                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text style={styles.name} numberOfLines={1}>
+                        {u.full_name}
+                      </Text>
+                      {u.role === "tailor" && u.verification_status && (
+                        <VerificationBadge status={u.verification_status} />
+                      )}
+                    </View>
                     <Text style={styles.meta}>
                       {meta.label} · {u.phone}
                     </Text>
-                    <Text style={styles.meta}>Inscrit le {formatDate(u.created_at, lang)}</Text>
+                    <Text style={styles.meta}>{t("common.registeredOn")} {formatDate(u.created_at, lang)}</Text>
                   </View>
                   <View style={[styles.statusPill, u.is_active ? styles.pillOn : styles.pillOff]}>
                     <Text style={[styles.pillText, { color: u.is_active ? colors.success : colors.error }]}>
-                      {u.is_active ? "Actif" : "Suspendu"}
+                      {u.is_active ? t("common.active") : t("common.suspended")}
                     </Text>
                   </View>
                 </View>
 
-                {/* Admins are excluded server-side too; hiding the control here
-                    just avoids offering an action that will be refused. */}
                 {u.role !== "admin" && (
                   <TouchableOpacity
                     style={[styles.action, u.is_active ? styles.actionDanger : styles.actionOk]}
@@ -145,7 +149,7 @@ export default function AdminUsers() {
                       <CheckCircle2 size={14} color={colors.success} />
                     )}
                     <Text style={[styles.actionText, { color: u.is_active ? colors.error : colors.success }]}>
-                      {busyId === u.id ? "…" : u.is_active ? "Suspendre le compte" : "Réactiver le compte"}
+                      {busyId === u.id ? "…" : u.is_active ? t("common.suspendAccount") : t("common.reactivateAccount")}
                     </Text>
                   </TouchableOpacity>
                 )}

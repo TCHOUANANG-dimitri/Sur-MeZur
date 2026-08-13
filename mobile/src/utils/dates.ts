@@ -24,9 +24,19 @@ export function daysUntil(iso: string | null | undefined): number | null {
 }
 
 /** Short human hint for a due date, e.g. "dans 3 j", "aujourd'hui", "en retard de 2 j". */
-export function dueLabel(iso: string | null | undefined, lang: "fr" | "en" = "fr"): string | null {
+export function dueLabel(
+  iso: string | null | undefined,
+  lang: "fr" | "en" = "fr",
+  t?: (key: string) => string,
+): string | null {
   const n = daysUntil(iso);
   if (n === null) return null;
+  if (t) {
+    if (n === 0) return t("dates.today");
+    return n > 0
+      ? t("dates.daysIn").replace("{n}", String(n))
+      : t("dates.daysLate").replace("{n}", String(-n));
+  }
   if (lang === "en") {
     if (n === 0) return "today";
     return n > 0 ? `in ${n} d` : `${-n} d overdue`;

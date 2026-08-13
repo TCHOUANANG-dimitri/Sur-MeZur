@@ -7,11 +7,12 @@ import { Button } from "../../../src/components/Button";
 import { Card } from "../../../src/components/Card";
 import { EmptyState, Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
-import { formatFcfa } from "../../../src/i18n/I18nProvider";
+import { formatFcfa, useI18n } from "../../../src/i18n/I18nProvider";
 import { useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../../../src/theme/tokens";
 
 export default function Disputes() {
+  const { t } = useI18n();
   const styles = useThemedStyles(makeStyles);
   const [orders, setOrders] = useState<Order[] | null>(null);
 
@@ -26,7 +27,7 @@ export default function Disputes() {
   );
 
   const resolve = async (id: string, resolution: string) => {
-    await AdminApi.resolveDispute(id, resolution, "Résolu par l'administrateur.");
+    await AdminApi.resolveDispute(id, resolution, t("admin.disputes.resolved"));
     load();
   };
 
@@ -34,10 +35,10 @@ export default function Disputes() {
 
   return (
     <Screen>
-      <Header title="Litiges" />
+      <Header title={t("admin.disputes.title")} />
       <View style={{ padding: 18 }}>
         {orders.length === 0 ? (
-          <EmptyState text="Aucun litige ouvert." />
+          <EmptyState text={t("common.noDisputes")} />
         ) : (
           orders.map((o) => (
             <Card key={o.id} style={{ marginBottom: 10 }}>
@@ -45,10 +46,10 @@ export default function Disputes() {
               <Text style={styles.price}>{o.agreed_price ? formatFcfa(o.agreed_price) : "-"}</Text>
               <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
                 <Button variant="secondary" onPress={() => resolve(o.id, "resolved_client")} style={{ flex: 1 }}>
-                  En faveur du client
+                  {t("admin.disputes.inFavorClient")}
                 </Button>
                 <Button onPress={() => resolve(o.id, "resolved_tailor")} style={{ flex: 1 }}>
-                  En faveur du tailleur
+                  {t("admin.disputes.inFavorTailor")}
                 </Button>
               </View>
             </Card>

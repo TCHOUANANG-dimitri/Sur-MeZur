@@ -5,10 +5,10 @@ import React, { useCallback, useEffect, useState } from "react";
 import { BackHandler, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { AvatarsApi, CatalogApi, MeasurementsApi, TryonApi } from "../../../src/api/endpoints";
 import type { Accessory, Avatar, Fabric, GarmentModel, Measurement, TryonSession } from "../../../src/api/types";
-import { avatarMeshUrl, fileUrl } from "../../../src/api/client";
+import { avatarMeshUrl, fileUrl, userMessage } from "../../../src/api/client";
 import { BottomSheet } from "../../../src/components/BottomSheet";
 import { Button } from "../../../src/components/Button";
-import { EmptyState, Header, Spinner } from "../../../src/components/Misc";
+import { EmptyState, ErrorBanner, Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { Viewer3D } from "../../../src/components/Viewer3D";
 import { useI18n } from "../../../src/i18n/I18nProvider";
@@ -47,20 +47,29 @@ export default function TryOn() {
   const [previewAcc, setPreviewAcc] = useState<Accessory | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  const [configError, setConfigError] = useState("");
+  const [catalogError, setCatalogError] = useState("");
 
   // Detail state.
   const [selected, setSelected] = useState<TryonSession | null>(null);
   const [detailAvatar, setDetailAvatar] = useState<Avatar | null>(null);
   const [detailMeasurement, setDetailMeasurement] = useState<Measurement | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailError, setDetailError] = useState("");
 
   useEffect(() => {
-    CatalogApi.models().then(setModels);
-    CatalogApi.fabrics().then((list) => {
-      setFabrics(list);
-      if (list[0]) setFabricId((prev) => prev || list[0].id);
-    });
-    CatalogApi.accessories().then(setAccessories);
+    // Sans .catch, un échec ici (réseau, serveur) laissait models/fabrics/
+    // accessories vides indéfiniment, sans que rien ne le signale — le
+    // configurateur rendait alors des listes vides muettes.
+    CatalogApi.models().then(setModels).catch(() => setCatalogError(t("tryon.err.catalogUnavailable")));
+    CatalogApi.fabrics()
+      .then((list) => {
+        setFabrics(list);
+        if (list[0]) setFabricId((prev) => prev || list[0].id);
+      })
+      .catch(() => setCatalogError(t("tryon.err.catalogUnavailable")));
+    CatalogApi.accessories().then(setAccessories).catch(() => setCatalogError(t("tryon.err.catalogUnavailable")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSessions = useCallback(() => {
@@ -105,11 +114,16 @@ export default function TryOn() {
     setSelected(session);
     setMode("detail");
     setLoadingDetail(true);
+    setDetailError("");
     try {
       const av = await AvatarsApi.get(session.avatar_id);
       setDetailAvatar(av);
       const list = await MeasurementsApi.list();
       setDetailMeasurement(list.find((m) => m.id === av.measurement_id) || null);
+    } catch (e) {
+      // Sans ce catch, un avatar supprimé côté serveur laissait `detailAvatar`
+      // à null pour toujours : l'écran restait sur un spinner infini.
+      setDetailError(userMessage(e));
     } finally {
       setLoadingDetail(false);
     }
@@ -147,6 +161,7 @@ export default function TryOn() {
 
   const finalize = async () => {
     if (!avatar || !modelId) return;
+    setConfigError("");
     setFinalizing(true);
     try {
       let session = await TryonApi.create({
@@ -159,8 +174,16 @@ export default function TryOn() {
         await new Promise((r) => setTimeout(r, 800));
         session = await TryonApi.get(session.id);
       }
+      if (session.status === "failed") {
+        setConfigError(t("tryon.err.sessionFailed"));
+        return;
+      }
       loadSessions();
       backToList();
+    } catch (e) {
+      // Sans ce catch, une erreur réseau/serveur arrêtait juste le spinner
+      // sans que le client comprenne pourquoi l'essayage n'a pas eu lieu.
+      setConfigError(userMessage(e));
     } finally {
       setFinalizing(false);
     }
@@ -188,8 +211,13 @@ export default function TryOn() {
       <Screen>
         <Header title={model?.name || t("tryon.title")} />
         <View style={{ padding: 18 }}>
-          {loadingDetail || !detailAvatar ? (
+          {loadingDetail ? (
             <Spinner />
+          ) : detailError || !detailAvatar ? (
+            <EmptyState
+              text={detailError || t("tryon.err.avatarUnavailable")}
+              cta={<Button onPress={backToList}>{t("tryon.backToList")}</Button>}
+            />
           ) : (
             <>
               <Viewer3D
@@ -197,6 +225,7 @@ export default function TryOn() {
                 skinToneHex={detailAvatar.skin_tone_hex}
                 garmentColorHex={fabric?.color_hex}
                 measurements={detailMeasurement?.data}
+                gender={detailMeasurement?.gender}
                 height={340}
               />
               <Text style={styles.detailText}>
@@ -205,15 +234,18 @@ export default function TryOn() {
               </Text>
               {selected.accessory_ids.length > 0 && (
                 <Text style={styles.detailSub}>
-                  {selected.accessory_ids.length} accessoire
-                  {selected.accessory_ids.length > 1 ? "s" : ""}
+                  {selected.accessory_ids.length} {selected.accessory_ids.length > 1 ? t("tryon.accessoryCountPlural") : t("tryon.accessoryCount")}
                 </Text>
               )}
-              <Button fullWidth onPress={goToOrder} style={{ marginTop: 16 }}>
-                Passer commande
-              </Button>
+              {selected.status === "failed" ? (
+                <Text style={styles.detailError}>{t("tryon.err.sessionFailed")}</Text>
+              ) : (
+                <Button fullWidth onPress={goToOrder} style={{ marginTop: 16 }}>
+                  {t("tryon.placeOrder")}
+                </Button>
+              )}
               <Button variant="secondary" fullWidth onPress={backToList} style={{ marginTop: 8 }}>
-                Retour à mes essayages
+                {t("tryon.backToList")}
               </Button>
             </>
           )}
@@ -229,7 +261,7 @@ export default function TryOn() {
         <Screen>
           <Header title={t("tryon.title")} showBack={sessions !== null && sessions.length > 0} onBack={backToList} />
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>Prenez d'abord vos mesures pour générer votre avatar.</Text>
+            <Text style={styles.emptyText}>{t("tryon.takeMeasurements")}</Text>
             <Button onPress={() => router.push("/client/measurements")}>{t("measurement.intro.title")}</Button>
           </View>
         </Screen>
@@ -242,11 +274,14 @@ export default function TryOn() {
       <Screen scroll={false}>
         <Header title={t("tryon.title")} showBack onBack={backToList} />
         <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 24 }}>
+          {catalogError ? <ErrorBanner message={catalogError} /> : null}
+          {configError ? <ErrorBanner message={configError} /> : null}
           <Viewer3D
             glbUrl={avatarMeshUrl(avatar)}
             skinToneHex={avatar.skin_tone_hex}
             garmentColorHex={selectedFabric?.color_hex}
             measurements={measurement?.data}
+            gender={measurement?.gender}
             height={320}
           />
 
@@ -310,10 +345,10 @@ export default function TryOn() {
                 }
                 style={{ marginTop: 12 }}
               >
-                {selectedAcc.includes(previewAcc.id) ? "Retirer" : t("tryon.addAccessory")}
+                {selectedAcc.includes(previewAcc.id) ? t("tryon.remove") : t("tryon.addAccessory")}
               </Button>
               <Button variant="text" fullWidth onPress={() => setPreviewAcc(null)} style={{ marginTop: 4 }}>
-                ← Retour à la liste
+                {t("tryon.backToTryons")}
               </Button>
             </View>
           ) : (
@@ -348,14 +383,14 @@ export default function TryOn() {
       <View style={{ padding: 18 }}>
         {sessions.length === 0 ? (
           <View style={styles.emptyWrap}>
-            <EmptyState text="Vous n'avez pas encore d'essayage. Créez-en un pour voir votre avatar habillé." />
-            <Button onPress={() => setMode("new")}>Nouvel essayage</Button>
+            <EmptyState text={t("tryon.noTryons")} />
+            <Button onPress={() => setMode("new")}>{t("tryon.newTryon")}</Button>
           </View>
         ) : (
           <>
             <TouchableOpacity style={styles.newRow} onPress={() => setMode("new")} activeOpacity={0.7}>
               <Plus size={18} color={colors.violetPrimary} />
-              <Text style={styles.newRowLabel}>Nouvel essayage</Text>
+              <Text style={styles.newRowLabel}>{t("tryon.newTryon")}</Text>
             </TouchableOpacity>
 
             <View style={styles.grid}>
@@ -368,7 +403,7 @@ export default function TryOn() {
                       colors={[fabric?.color_hex || model?.thumbnail_color || colors.violetPrimary, colors.indigoText]}
                       style={styles.thumb}
                     />
-                    <Text style={styles.name}>{model?.name || "Modèle"}</Text>
+                    <Text style={styles.name}>{model?.name || t("tryon.modelFallback")}</Text>
                     {fabric && <Text style={styles.sub}>{fabric.name}</Text>}
                   </TouchableOpacity>
                 );
@@ -410,6 +445,7 @@ const makeStyles = (colors: ThemeColors) =>
   sub: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },
   detailText: { marginTop: 14, fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.indigoText, textAlign: "center" },
   detailSub: { marginTop: 4, fontSize: 12, color: colors.textSecondary, fontFamily: fonts.body, textAlign: "center" },
+  detailError: { marginTop: 16, fontSize: 13, color: colors.error, fontFamily: fonts.bodySemiBold, textAlign: "center" },
   accRow: {
     flexDirection: "row",
     alignItems: "center",

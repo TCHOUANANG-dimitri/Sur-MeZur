@@ -26,6 +26,10 @@ export interface Viewer3DProps {
   skinToneHex?: string;
   garmentColorHex?: string | null;
   measurements?: Record<string, number> | null;
+  /** Uniquement utilisé par le corps procédural (repli sans GLB) — les
+   *  proportions par défaut (épaules/hanches) étaient celles d'un gabarit
+   *  unique quel que soit le sexe du client. */
+  gender?: string | null;
   autoRotate?: boolean;
   height?: number;
 }
@@ -35,6 +39,7 @@ export function Viewer3D({
   skinToneHex = "#C68863",
   garmentColorHex = null,
   measurements = null,
+  gender = null,
   autoRotate = true,
   height = 320,
 }: Viewer3DProps) {
@@ -44,12 +49,29 @@ export function Viewer3D({
   const lastDx = useRef(0);
   const rafRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      // Le renderer WebGL garde géométries, matériaux et programmes shader en
+      // mémoire GPU tant qu'on ne les libère pas explicitement — React ne le
+      // fait pas pour nous. Sans ça, chaque aller-retour sur un écran avec
+      // avatar (essayage, configurateur...) laissait un contexte GL derrière
+      // lui, jamais récupéré.
+      sceneRef.current?.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
+        if (Array.isArray(material)) material.forEach((m) => m.dispose());
+        else material?.dispose();
+      });
+      rendererRef.current?.dispose();
+      rendererRef.current = null;
+      sceneRef.current = null;
     };
   }, []);
 
@@ -87,8 +109,10 @@ export function Viewer3D({
     });
     renderer.setSize(width, heightPx, false);
     renderer.setClearColor(0xf4f2f8, 1);
+    rendererRef.current = renderer;
 
     const scene = new THREE.Scene();
+    sceneRef.current = scene;
     const camera = new THREE.PerspectiveCamera(35, width / heightPx, 0.1, 100);
     camera.position.set(0, 1.1, 4.2);
     camera.lookAt(0, 0.9, 0);
@@ -137,9 +161,29 @@ export function Viewer3D({
             const size = box.getSize(new THREE.Vector3());
             const focusY = Math.min(size.y, 1.8) * 0.55;
             camera.lookAt(0, focusY, 0);
+
+            // Le GLB exporté par generator.py est le corps seul, sans
+            // géométrie de vêtement à teinter directement (voir
+            // generator.py::_export_glb) : sans ce recouvrement, choisir un
+            // tissu n'avait aucun effet visible sur un avatar réel — seul le
+            // corps procédural (repli sans GLB) réagissait à cette prop.
+            if (garmentColorHex) {
+              const garmentMat = new THREE.MeshStandardMaterial({
+                color: garmentColorHex,
+                roughness: 0.75,
+                metalness: 0.05,
+              });
+              const torsoRadius = Math.max(size.x, size.z) * 0.32;
+              const garment = new THREE.Mesh(
+                new THREE.CylinderGeometry(torsoRadius, torsoRadius * 0.92, size.y * 0.32, 24, 1, true),
+                garmentMat
+              );
+              garment.position.y = size.y * 0.62;
+              group.add(garment);
+            }
           },
           undefined,
-          (error) => console.error("Erreur chargement GLB:", error)
+          (error) => console.error("GLB load error:", error)
         );
       });
     } else {
@@ -150,11 +194,19 @@ export function Viewer3D({
       const hipsCm = measurements?.hips ?? 96;
       const shoulderCm = measurements?.shoulder ?? 40;
 
+      // Sans mensuration détaillée à disposition (repli le plus dégradé), le
+      // sexe reste le seul signal pour ne pas rendre le même gabarit à
+      // tout le monde : hanches un peu plus marquées et épaules un peu
+      // moins larges au féminin, l'inverse au masculin.
+      const feminine = (gender || "").toLowerCase().startsWith("f");
+      const hipFactor = feminine ? 1.08 : 0.96;
+      const shoulderFactor = feminine ? 0.94 : 1.06;
+
       const scale = heightCm / 170;
       const torsoRadius = (chestCm / (2 * Math.PI)) * 0.028;
       const waistRadius = (waistCm / (2 * Math.PI)) * 0.028;
-      const hipRadius = (hipsCm / (2 * Math.PI)) * 0.028;
-      const shoulderWidth = (shoulderCm / 100) * 0.9;
+      const hipRadius = (hipsCm / (2 * Math.PI)) * 0.028 * hipFactor;
+      const shoulderWidth = (shoulderCm / 100) * 0.9 * shoulderFactor;
 
       const skinMat = new THREE.MeshStandardMaterial({ color: skinToneHex, roughness: 0.6 });
       group.scale.setScalar(scale);

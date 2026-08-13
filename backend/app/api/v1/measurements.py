@@ -1,5 +1,4 @@
 import logging
-import time
 from pathlib import Path
 
 from fastapi import (
@@ -28,7 +27,7 @@ from app.schemas.measurements import (
 )
 from app.services import vision
 from app.services.notify import notify
-from app.services.storage import save_upload
+from app.services.storage import delete_upload, save_upload
 
 logger = logging.getLogger(__name__)
 
@@ -60,13 +59,19 @@ def debug_analyze(
     """
     front_path = save_upload(front, "debug")
     side_path = save_upload(side, "debug") if side is not None else None
-    return vision.analyze_debug(
-        front_photo=_photo_path(front_path),
-        side_photo=_photo_path(side_path),
-        height_cm=height_cm,
-        weight_kg=weight_kg,
-        gender=gender,
-    )
+    try:
+        return vision.analyze_debug(
+            front_photo=_photo_path(front_path),
+            side_photo=_photo_path(side_path),
+            height_cm=height_cm,
+            weight_kg=weight_kg,
+            gender=gender,
+        )
+    finally:
+        # Outil d'inspection : rien n'est gardé en base, les photos elles-mêmes
+        # n'ont donc plus de raison d'exister une fois la trace renvoyée.
+        delete_upload(front_path)
+        delete_upload(side_path)
 
 
 def _client_profile(user: User, db: Session) -> ClientProfile:
@@ -158,7 +163,6 @@ def _measure(session_row: MeasurementSession) -> tuple[dict, dict, MeasurementSo
 
 
 def _run_measurement_job(session_id: str) -> None:
-    time.sleep(2)  # mimics the "Analyse en cours..." wait from doc 1 §4.6
     with SessionLocal() as db:
         session_row = db.get(MeasurementSession, session_id)
         if not session_row:
@@ -169,7 +173,7 @@ def _run_measurement_job(session_id: str) -> None:
                 client_id=session_row.client_id,
                 source=source,
                 version=1,
-                height_cm=session_row.height_cm or 170,
+                height_cm=session_row.height_cm,
                 weight_kg=session_row.weight_kg,
                 gender=session_row.gender,
                 data=data,
@@ -265,6 +269,11 @@ def upload_photos(
     if not session_row or session_row.client_id != client.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Session not found")
 
+    # Reprise de photos (le client rappelle cette route avec la même session) :
+    # sans ce nettoyage, chaque nouvelle tentative laissait les anciens
+    # fichiers sur disque indéfiniment.
+    delete_upload(session_row.front_photo_url)
+    delete_upload(session_row.side_photo_url)
     session_row.front_photo_url = save_upload(front, "measurement_photos")
     session_row.side_photo_url = save_upload(side, "measurement_photos")
     session_row.status = JobStatus.processing
@@ -277,23 +286,32 @@ def upload_photos(
 
 @router.get("/session/{session_id}", response_model=MeasurementSessionOut)
 def get_session(
-    session_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    session_id: str, user: User = Depends(require_roles("client")), db: Session = Depends(get_db)
 ):
+    client = _client_profile(user, db)
     session_row = db.get(MeasurementSession, session_id)
-    if not session_row:
+    # Même vérification que upload_photos : sans elle, n'importe quel client
+    # authentifié pouvait lire la session (donc les mesures corporelles) d'un
+    # autre en devinant/énumérant son id.
+    if not session_row or session_row.client_id != client.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Session not found")
     return session_row
 
 
 @router.get("", response_model=list[MeasurementOut])
 def list_measurements(
-    user: User = Depends(require_roles("client")), db: Session = Depends(get_db)
+    limit: int = 50,
+    offset: int = 0,
+    user: User = Depends(require_roles("client")),
+    db: Session = Depends(get_db),
 ):
     client = _client_profile(user, db)
     return (
         db.query(Measurement)
         .filter(Measurement.client_id == client.id)
         .order_by(Measurement.created_at.desc())
+        .offset(max(offset, 0))
+        .limit(min(max(limit, 1), 100))
         .all()
     )
 
@@ -315,7 +333,7 @@ def patch_measurement(
     measurement.data = merged
     if payload.height_cm is not None:
         measurement.height_cm = payload.height_cm
-    if measurement.source in (MeasurementSource.ai, MeasurementSource.estimated):
+    if measurement.source == MeasurementSource.ai:
         measurement.source = MeasurementSource.mixed
     db.commit()
     db.refresh(measurement)

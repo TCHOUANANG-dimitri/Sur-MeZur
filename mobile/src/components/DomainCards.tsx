@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { formatFcfa, useI18n } from "../i18n/I18nProvider";
 import type { Quote } from "../api/types";
@@ -31,7 +31,7 @@ export function PriceSummary({
   const { t } = useI18n();
   return (
     <Card>
-      <Row label="Total" value={formatFcfa(total)} bold />
+      <Row label={t("common.total")} value={formatFcfa(total)} bold />
       <Row label={t("payment.deposit")} value={formatFcfa(deposit)} />
       <Row label={t("payment.balance")} value={formatFcfa(balance)} />
       {showEscrowNote && <Text style={styles.note}>{t("payment.escrowNote")}</Text>}
@@ -50,26 +50,66 @@ export function MeasurementRow({
   value,
   editable,
   onChange,
+  unit = "cm",
+  labelPrefix = "measure",
+  confidence,
 }: {
   measureKey: string;
   value: number;
   editable?: boolean;
   onChange?: (v: number) => void;
+  /** `weight_kg` est la seule entrée du modèle en kilos ; tout le reste (y
+   *  compris `stature_m`, en centimètres malgré son nom de colonne ANSUR)
+   *  est en centimètres. */
+  unit?: "cm" | "kg";
+  /** Les entrées brutes du modèle (`feature.*`) partagent des clés avec les
+   *  mesures finales (ex. `hipbreadth` vs `hips`) : un préfixe distinct évite
+   *  toute collision de traduction entre les deux tables. */
+  labelPrefix?: "measure" | "feature";
+  /** Score 0-1 renvoyé par le serveur pour cette mesure précise — jusqu'ici
+   *  calculé mais jamais montré au client, qui n'avait aucun moyen de savoir
+   *  qu'une valeur était moins fiable qu'une autre. */
+  confidence?: number;
 }) {
   const styles = useThemedStyles(makeStyles);
   const { t } = useI18n();
+  // Texte local plutôt que `value` directement : sinon effacer le champ pour
+  // taper une nouvelle valeur repassait par `parseFloat("") || 0`, qui
+  // écrasait silencieusement la mesure à 0 le temps de la frappe suivante.
+  const [text, setText] = useState(String(value));
+
+  useEffect(() => {
+    setText(String(value));
+  }, [value]);
+
+  const handleChange = (v: string) => {
+    setText(v);
+    const parsed = parseFloat(v);
+    // Rien n'est propagé tant que le champ ne contient pas un nombre valide
+    // (vide, "-", "1." en cours de frappe) : la dernière valeur connue reste
+    // la valeur réelle jusqu'à ce que l'utilisateur en tape une nouvelle.
+    if (v.trim() !== "" && Number.isFinite(parsed)) {
+      onChange?.(parsed);
+    }
+  };
+
   return (
     <View style={styles.measureRow}>
-      <Text style={styles.measureLabel}>{t(`measure.${measureKey}`)}</Text>
+      <View style={{ flexShrink: 1 }}>
+        <Text style={styles.measureLabel}>{t(`${labelPrefix}.${measureKey}`)}</Text>
+        {confidence !== undefined && (
+          <Text style={styles.measureConfidence}>{Math.round(confidence * 100)}%</Text>
+        )}
+      </View>
       {editable ? (
         <TextInput
           keyboardType="numeric"
-          value={String(value)}
-          onChangeText={(v) => onChange?.(parseFloat(v) || 0)}
+          value={text}
+          onChangeText={handleChange}
           style={styles.measureInput}
         />
       ) : (
-        <Text style={styles.measureValue}>{value.toFixed(1)} cm</Text>
+        <Text style={styles.measureValue}>{value.toFixed(1)} {unit}</Text>
       )}
     </View>
   );
@@ -85,7 +125,7 @@ export function QuoteCard({ quote }: { quote: Quote }) {
         <Row key={i} label={li.label} value={formatFcfa(li.amount)} />
       ))}
       <View style={styles.divider} />
-      <Row label="Total" value={formatFcfa(quote.total)} bold />
+      <Row label={t("common.total")} value={formatFcfa(quote.total)} bold />
       <Row
         label={`${t("quote.commission")} (${(quote.commission_rate * 100).toFixed(0)}%)`}
         value={`- ${formatFcfa(quote.commission_amount)}`}
@@ -107,6 +147,7 @@ export function ChatBubble({
   time?: string;
 }) {
   const styles = useThemedStyles(makeStyles);
+  const { t, lang } = useI18n();
   const isSystem = kind === "system";
   return (
     <View
@@ -121,13 +162,13 @@ export function ChatBubble({
           isSystem ? styles.bubbleSystem : mine ? styles.bubbleMine : styles.bubbleTheirs,
         ]}
       >
-        {kind === "modification" && <Text style={styles.bubbleKicker}>Modification proposée</Text>}
+        {kind === "modification" && <Text style={styles.bubbleKicker}>{t("notifications.modificationProposed")}</Text>}
         <Text style={[styles.bubbleText, isSystem ? styles.bubbleTextSystem : mine ? styles.bubbleTextMine : styles.bubbleTextTheirs]}>
           {body}
         </Text>
         {time && (
           <Text style={[styles.bubbleTime, mine && !isSystem && { color: "rgba(255,255,255,0.7)" }]}>
-            {new Date(time).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+            {new Date(time).toLocaleTimeString(lang === "fr" ? "fr-FR" : "en-US", { hour: "2-digit", minute: "2-digit" })}
           </Text>
         )}
       </View>
@@ -152,6 +193,7 @@ const makeStyles = (colors: ThemeColors) =>
     borderBottomColor: colors.border,
   },
   measureLabel: { fontSize: 13, color: colors.indigoText, fontFamily: fonts.body },
+  measureConfidence: { fontSize: 10, color: colors.textSecondary, fontFamily: fonts.body, marginTop: 1 },
   measureValue: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.indigoText },
   measureInput: {
     width: 70,

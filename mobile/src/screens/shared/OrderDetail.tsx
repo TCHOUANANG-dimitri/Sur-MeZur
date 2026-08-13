@@ -32,23 +32,25 @@ const STATUS_VARIANT: Record<string, "success" | "error" | "pending" | "neutral"
   finished_not_delivered: "error",
 };
 
-/** Ordered stages of the happy path; `finished_not_delivered` is an exit, not a
- *  step, so it isn't part of the track. */
-const TRACK: { status: OrderStatus; label: string }[] = [
-  { status: "new", label: "Commande reçue" },
-  { status: "in_progress", label: "En confection" },
-  { status: "ready_for_pickup", label: "Prête à récupérer" },
-  { status: "finished_delivered", label: "Remise au client" },
-];
+function getTrack(t: (key: string) => string): { status: OrderStatus; label: string }[] {
+  return [
+    { status: "new", label: t("orderDetail.received") },
+    { status: "in_progress", label: t("orderDetail.inConfection") },
+    { status: "ready_for_pickup", label: t("orderDetail.readyForPickup") },
+    { status: "finished_delivered", label: t("orderDetail.handedOver") },
+  ];
+}
 
 function OrderTracker({ status }: { status: OrderStatus }) {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
+  const { t } = useI18n();
+  const TRACK = getTrack(t);
   const currentIndex = TRACK.findIndex((s) => s.status === status);
 
   return (
     <Card style={{ marginBottom: 14 }}>
-      <Text style={styles.detailTitle}>Suivi de la commande</Text>
+      <Text style={styles.detailTitle}>{t("orderDetail.trackTitle")}</Text>
       {TRACK.map((step, i) => {
         const done = currentIndex >= 0 && i <= currentIndex;
         const active = i === currentIndex;
@@ -125,7 +127,7 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
 
   return (
     <Screen>
-      <Header title={`Commande #${order.id.slice(0, 8)}`} showBack />
+      <Header title={t("orderDetail.orderNumber").replace("{id}", order.id.slice(0, 8))} showBack />
       <View style={{ padding: 18 }}>
         <View style={{ marginBottom: 14 }}>
           <StatusChip status={STATUS_VARIANT[order.status]} label={t(`order.status.${order.status}`)} />
@@ -133,17 +135,14 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
 
         <OrderTracker status={order.status} />
 
-        {/* The whole point of the pickup step: the client must not have to
-            guess that the garment is waiting for them. */}
         {order.status === "ready_for_pickup" && isClient && (
           <Card style={styles.readyBanner}>
             <View style={styles.readyHead}>
               <BellRing size={16} color={colors.success} />
-              <Text style={styles.readyTitle}>Votre commande est prête</Text>
+              <Text style={styles.readyTitle}>{t("orderDetail.orderReady")}</Text>
             </View>
             <Text style={styles.readyText}>
-              Le tailleur a terminé votre vêtement. Vous pouvez venir le récupérer, puis confirmer la remise
-              ci-dessous.
+              {t("orderDetail.orderReadyBody")}
             </Text>
           </Card>
         )}
@@ -152,26 +151,25 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
           <Card style={styles.readyBanner}>
             <View style={styles.readyHead}>
               <PackageCheck size={16} color={colors.success} />
-              <Text style={styles.readyTitle}>Client prévenu</Text>
+              <Text style={styles.readyTitle}>{t("orderDetail.clientNotified")}</Text>
             </View>
             <Text style={styles.readyText}>
-              Le client a été notifié que sa commande est prête. Elle passera en « livrée » dès qu&apos;il
-              confirmera la remise.
+              {t("orderDetail.clientNotifiedBody")}
             </Text>
           </Card>
         )}
 
         <Card style={{ marginBottom: 14 }}>
           {model && <Text style={styles.modelName}>{model.name}</Text>}
-          {fabric && <Text style={styles.detail}>Tissu: {fabric.name}</Text>}
-          <Text style={styles.detail}>Réception: {t(`order.${order.reception_mode}`)}</Text>
-          {order.desired_date && <Text style={styles.detail}>Date souhaitée: {order.desired_date}</Text>}
+          {fabric && <Text style={styles.detail}>{t("orderDetail.fabric")}{fabric.name}</Text>}
+          <Text style={styles.detail}>{t("orderDetail.reception")}{t(`order.${order.reception_mode}`)}</Text>
+          {order.desired_date && <Text style={styles.detail}>{t("orderDetail.desiredDate")}{order.desired_date}</Text>}
           {order.agreed_price ? <Text style={styles.price}>{formatFcfa(order.agreed_price)}</Text> : null}
         </Card>
 
         {order.client_notes && (
           <Card style={{ marginBottom: 14 }}>
-            <Text style={styles.detailTitle}>Précisions du client</Text>
+            <Text style={styles.detailTitle}>{t("order.detailsLabel")}</Text>
             <Text style={styles.measureList}>{order.client_notes}</Text>
           </Card>
         )}
@@ -193,7 +191,7 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
             {t("tailor.orders.respond")}
           </Button>
         )}
-        {!quote && isClient && <Text style={styles.hint}>En attente du devis du tailleur.</Text>}
+        {!quote && isClient && <Text style={styles.hint}>{t("common.waitingForQuote")}</Text>}
 
         {quote && (
           <View style={{ marginBottom: 14 }}>
@@ -223,12 +221,10 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
 
         {depositPaid && isTailor && (
           <Button variant="secondary" fullWidth onPress={() => router.push(`/tailor/orders/${orderId}/pattern`)} style={{ marginTop: 10 }}>
-            Voir le patron
+            {t("orderDetail.viewPattern")}
           </Button>
         )}
 
-        {/* The tailor closes out their side of the work here; delivery itself
-            is still confirmed by the client. */}
         {depositPaid && isTailor && order.status === "in_progress" && (
           <Button
             fullWidth
@@ -244,7 +240,7 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
               }
             }}
           >
-            Signaler la commande prête
+            {t("orderDetail.markReady")}
           </Button>
         )}
 
@@ -252,7 +248,7 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
           isClient &&
           (order.status === "ready_for_pickup" || order.status === "in_progress") && (
             <Button fullWidth loading={busy} onPress={confirmDelivery} style={{ marginTop: 10 }}>
-              {order.status === "ready_for_pickup" ? "J'ai récupéré ma commande" : "Confirmer la livraison"}
+              {order.status === "ready_for_pickup" ? t("orderDetail.confirmPickup") : t("orderDetail.confirmDelivery")}
             </Button>
           )}
 
@@ -266,7 +262,7 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
               load();
             }}
           >
-            Démarrer la confection
+            {t("orderDetail.startConfection")}
           </Button>
         )}
 
@@ -291,15 +287,15 @@ export function OrderDetailScreen({ orderId, base }: { orderId: string; base: "c
             fullWidth
             style={{ marginTop: 6 }}
             onPress={async () => {
-              await OrdersApi.openDispute(orderId, "Signalé depuis l'application.");
+              await OrdersApi.openDispute(orderId, t("orderDetail.reportedFromApp"));
               load();
             }}
           >
-            <Text style={{ color: colors.error, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>Signaler un litige</Text>
+            <Text style={{ color: colors.error, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>{t("orderDetail.openDispute")}</Text>
           </Button>
         )}
         {order.dispute_status === "open" && (
-          <Text style={styles.disputeNote}>Litige en cours d&apos;examen par l&apos;administrateur.</Text>
+          <Text style={styles.disputeNote}>{t("orderDetail.disputeInProgress")}</Text>
         )}
       </View>
     </Screen>

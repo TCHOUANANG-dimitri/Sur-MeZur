@@ -68,8 +68,9 @@ npm run typecheck       # tsc --noEmit
 
 Same as the backend seed data — see the root `README.md`. Quickest path:
 language screen → onboarding → "Connexion" → admin phone `+237696982953` /
-password `password123`. Clients register their own account from the app
-(the password must be exactly 6 characters, including a digit and a letter).
+password `dimi11`. Clients and tailors register their own account from the
+app (the password must be exactly 6 characters, including a digit and a
+letter).
 
 ## Verification performed
 

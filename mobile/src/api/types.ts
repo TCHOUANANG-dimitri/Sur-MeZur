@@ -29,6 +29,8 @@ export interface User {
   photo_consent: boolean;
   is_active: boolean;
   created_at: string;
+  /** role === "tailor" only; null for client/admin. */
+  verification_status: VerificationStatus | null;
 }
 
 export interface TokenResponse {
@@ -66,7 +68,7 @@ export interface TailorProfile {
 export interface VerificationDocument {
   id: string;
   user_id: string;
-  type: "id_card" | "portfolio" | "atelier_photo";
+  type: "id_card" | "self_photo" | "atelier_photo";
   file_url: string;
   status: VerificationStatus;
   reviewed_by: string | null;
@@ -89,6 +91,9 @@ export interface Measurement {
   weight_kg: number | null;
   gender: string | null;
   data: Record<string, number>;
+  /** Entrées brutes (squelette MediaPipe + silhouette SAM) données au modèle
+   *  pour prédire `data` — mesures intermédiaires, pas les 12 mesures finales. */
+  features: Record<string, number> | null;
   confidence: Record<string, number> | null;
   is_active: boolean;
 }

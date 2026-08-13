@@ -8,6 +8,7 @@ import { Card } from "../../../src/components/Card";
 import { Chip, StatusChip } from "../../../src/components/Chip";
 import { EmptyState, Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
+import { VerificationNudge } from "../../../src/components/VerificationNudge";
 import { formatFcfa, useI18n } from "../../../src/i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../../../src/theme/tokens";
@@ -61,7 +62,7 @@ export default function TailorOrders() {
           return (
             <Chip
               key={key ?? "all"}
-              label={`${key === null ? "Toutes" : t(`order.status.${key}`)} (${countFor(key)})`}
+              label={`${key === null ? t("common.all") : t(`order.status.${key}`)} (${countFor(key)})`}
               active={active}
               icon={<Icon size={13} color={active ? colors.white : colors.textSecondary} />}
               onPress={() => setFilter(key)}
@@ -71,13 +72,14 @@ export default function TailorOrders() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 18, paddingTop: 6 }}>
+        <VerificationNudge />
         {!orders ? (
           <Spinner />
         ) : filtered.length === 0 ? (
-          <EmptyState text="Aucune commande." />
+          <EmptyState text={t("common.noOrders")} />
         ) : (
           filtered.map((o) => {
-            const due = dueLabel(o.desired_date, lang);
+            const due = dueLabel(o.desired_date, lang, t);
             const late =
               o.desired_date &&
               new Date(o.desired_date) < new Date() &&
@@ -94,12 +96,12 @@ export default function TailorOrders() {
 
                 <View style={styles.dates}>
                   <View style={styles.dateItem}>
-                    <Text style={styles.dateLabel}>Commandée</Text>
+                    <Text style={styles.dateLabel}>{t("common.orderedOn")}</Text>
                     <Text style={styles.dateValue}>{formatDate(o.created_at, lang)}</Text>
                   </View>
                   <View style={styles.dateDivider} />
                   <View style={styles.dateItem}>
-                    <Text style={styles.dateLabel}>Livraison</Text>
+                    <Text style={styles.dateLabel}>{t("common.deliveryDate")}</Text>
                     <Text style={[styles.dateValue, late && styles.dateLate]}>
                       {formatDate(o.desired_date, lang)}
                     </Text>
@@ -107,7 +109,7 @@ export default function TailorOrders() {
                 </View>
 
                 <View style={styles.footer}>
-                  <Text style={styles.price}>{o.agreed_price ? formatFcfa(o.agreed_price) : "En négociation"}</Text>
+                  <Text style={styles.price}>{o.agreed_price ? formatFcfa(o.agreed_price) : t("common.inNegotiation")}</Text>
                   {due && (
                     <View style={styles.dueWrap}>
                       <CalendarClock size={12} color={late ? colors.error : colors.textSecondary} />

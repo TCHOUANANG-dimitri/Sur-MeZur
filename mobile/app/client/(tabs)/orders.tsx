@@ -10,6 +10,7 @@ import { Screen } from "../../../src/components/Screen";
 import { formatFcfa, useI18n } from "../../../src/i18n/I18nProvider";
 import { useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../../../src/theme/tokens";
+import { formatDate } from "../../../src/utils/dates";
 
 const STATUS_VARIANT: Record<string, "success" | "error" | "pending" | "neutral"> = {
   new: "pending",
@@ -21,7 +22,7 @@ const STATUS_VARIANT: Record<string, "success" | "error" | "pending" | "neutral"
 
 export default function OrderList() {
   const styles = useThemedStyles(makeStyles);
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[] | null>(null);
 
@@ -38,14 +39,14 @@ export default function OrderList() {
         {!orders ? (
           <Spinner />
         ) : orders.length === 0 ? (
-          <EmptyState text="Aucune commande pour le moment." />
+          <EmptyState text={t("common.noOrdersEmpty")} />
         ) : (
           orders.map((o) => (
             <Card key={o.id} onPress={() => router.push(`/client/orders/${o.id}`)} style={{ marginBottom: 10 }}>
               <Text style={styles.id}>#{o.id.slice(0, 8)}</Text>
               <StatusChip status={STATUS_VARIANT[o.status]} label={t(`order.status.${o.status}`)} />
-              <Text style={styles.price}>{o.agreed_price ? formatFcfa(o.agreed_price) : "En négociation"}</Text>
-              <Text style={styles.date}>{new Date(o.created_at).toLocaleDateString("fr-FR")}</Text>
+              <Text style={styles.price}>{o.agreed_price ? formatFcfa(o.agreed_price) : t("common.inNegotiation")}</Text>
+              <Text style={styles.date}>{formatDate(o.created_at, lang)}</Text>
             </Card>
           ))
         )}

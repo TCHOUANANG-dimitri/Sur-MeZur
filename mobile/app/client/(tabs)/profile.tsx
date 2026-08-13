@@ -61,16 +61,16 @@ export default function Profile() {
 
   const purgePhotos = () => {
     Alert.alert(
-      "Effacer mes photos corporelles",
-      "Cette action supprime le consentement lié à vos photos de mesure. Continuer ?",
+      t("profile.deleteBodyPhotosTitle"),
+      t("profile.deleteBodyPhotosConfirm"),
       [
-        { text: "Annuler", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Effacer",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             await UsersApi.purgePhotos();
-            Alert.alert("Fait", "Vos données photo ont été effacées.");
+            Alert.alert(t("common.confirm"), t("profile.deleteBodyPhotosDone"));
           },
         },
       ]
@@ -98,7 +98,7 @@ export default function Profile() {
               }}
             >
               <Pencil size={12} color="#FFFFFF" />
-              <Text style={styles.editChipText}>Modifier mon profil</Text>
+              <Text style={styles.editChipText}>{t("profile.editProfile")}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -110,7 +110,7 @@ export default function Profile() {
             <Field label={t("auth.fullName")}>
               <Input value={fullName} onChangeText={setFullName} />
             </Field>
-            <Field label="Email">
+            <Field label={t("common.email")}>
               <Input value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
             </Field>
             <View style={{ flexDirection: "row", gap: 8 }}>
@@ -125,14 +125,14 @@ export default function Profile() {
         )}
 
         <View style={styles.statsRow}>
-          <Stat value={measurementCount} label="Mesures" Icon={Ruler} />
+          <Stat value={measurementCount} label={t("profile.measurements")} Icon={Ruler} />
           <View style={styles.statDivider} />
-          <Stat value={likedCount} label="Favoris" Icon={Heart} />
+          <Stat value={likedCount} label={t("profile.favorites")} Icon={Heart} />
           <View style={styles.statDivider} />
-          <Stat value={orderCount} label="Commandes" Icon={Package} />
+          <Stat value={orderCount} label={t("profile.orders")} Icon={Package} />
         </View>
 
-        <SettingsSection title="Mon compte">
+        <SettingsSection title={t("profile.myAccount")}>
           <SettingsRow
             Icon={Ruler}
             label={t("profile.myMeasurements")}
@@ -141,7 +141,7 @@ export default function Profile() {
           />
           <SettingsRow
             Icon={Heart}
-            label="Modèles enregistrés"
+            label={t("profile.savedModels")}
             value={likedCount > 0 ? String(likedCount) : undefined}
             onPress={() => router.push("/client/liked-models")}
           />
@@ -153,7 +153,7 @@ export default function Profile() {
           />
         </SettingsSection>
 
-        <SettingsSection title="Apparence et langue">
+        <SettingsSection title={t("profile.appearanceAndLanguage")}>
           <SettingsRow
             Icon={Globe}
             label={t("profile.language")}
@@ -170,24 +170,24 @@ export default function Profile() {
           />
           <SettingsRow
             Icon={mode === "dark" ? Moon : Sparkles}
-            label="Thème"
+            label={t("profile.theme")}
             last
             right={
               <Segmented
                 value={mode}
                 onChange={setMode}
                 options={[
-                  { value: "light", label: "Clair" },
-                  { value: "dark", label: "Sombre" },
-                  { value: "system", label: "Auto" },
+                  { value: "light", label: t("profile.themeLight") },
+                  { value: "dark", label: t("profile.themeDark") },
+                  { value: "system", label: t("profile.themeAuto") },
                 ]}
               />
             }
           />
         </SettingsSection>
 
-        <SettingsSection title="Confidentialité">
-          <SettingsRow Icon={ShieldCheck} label="Effacer mes photos corporelles" onPress={purgePhotos} last />
+        <SettingsSection title={t("profile.privacy")}>
+          <SettingsRow Icon={ShieldCheck} label={t("profile.deleteBodyPhotos")} onPress={purgePhotos} last />
         </SettingsSection>
 
         <SettingsSection>

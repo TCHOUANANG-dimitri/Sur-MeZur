@@ -90,7 +90,20 @@ def list_users(
     if q:
         like = f"%{q}%"
         query = query.filter(or_(User.full_name.ilike(like), User.phone.ilike(like), User.email.ilike(like)))
-    return query.order_by(User.created_at.desc()).all()
+    users = query.order_by(User.created_at.desc()).all()
+
+    tailor_status = {
+        tp.user_id: VerificationStatus(tp.verification_status)
+        for tp in db.query(TailorProfile.user_id, TailorProfile.verification_status).filter(
+            TailorProfile.user_id.in_([u.id for u in users])
+        )
+    }
+    out = []
+    for u in users:
+        item = UserOut.model_validate(u)
+        item.verification_status = tailor_status.get(u.id)
+        out.append(item)
+    return out
 
 
 @router.post("/users/{user_id}/active", response_model=UserOut)
@@ -131,12 +144,18 @@ def list_all_orders(status_filter: str | None = None, db: Session = Depends(get_
 
 
 @router.get("/verifications", response_model=list[TailorProfileOut])
-def list_pending_verifications(db: Session = Depends(get_db)):
-    return (
-        db.query(TailorProfile)
-        .filter(TailorProfile.verification_status == VerificationStatus.pending)
-        .all()
-    )
+def list_verifications(status_filter: VerificationStatus | None = None, db: Session = Depends(get_db)):
+    """Tailleurs ayant soumis au moins un document, du plus récemment mis à
+    jour au plus ancien. Sans `status_filter` : toutes les décisions passées
+    restent consultables (un tailleur approuvé/refusé ne doit pas disparaître
+    de cet écran, seul son statut change). Exclut les tailleurs qui n'ont
+    encore rien soumis — ils sont `pending` par défaut dès l'inscription, ce
+    qui les rendrait indiscernables d'un vrai dossier en attente."""
+    submitted_user_ids = db.query(VerificationDocument.user_id).distinct()
+    query = db.query(TailorProfile).filter(TailorProfile.user_id.in_(submitted_user_ids))
+    if status_filter:
+        query = query.filter(TailorProfile.verification_status == status_filter)
+    return query.order_by(TailorProfile.updated_at.desc()).all()
 
 
 @router.get("/verifications/{tailor_id}/documents", response_model=list[VerificationDocumentOut])

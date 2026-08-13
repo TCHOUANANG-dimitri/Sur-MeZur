@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import math
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -43,6 +44,11 @@ logger = logging.getLogger(__name__)
 
 _predictor = None
 _load_attempted = False
+# Sans lui, deux requêtes arrivant avant la fin du premier chargement lisaient
+# toutes deux `_load_attempted = False` et lançaient chacune leur propre
+# import/chargement de SAM (plusieurs centaines de Mo) — même mécanisme que
+# `_warm_up_lock` dans pipeline.py pour MediaPipe.
+_load_lock = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -124,34 +130,40 @@ def _get_predictor():
     global _predictor, _load_attempted
     if _load_attempted:
         return _predictor
-    _load_attempted = True
 
-    if not is_available():
-        logger.info("SAM indisponible (%s)", unavailable_reason())
-        return None
+    with _load_lock:
+        # Revérifié sous verrou : une requête qui attendait pendant qu'une
+        # autre chargeait ne doit pas relancer le chargement à son tour.
+        if _load_attempted:
+            return _predictor
+        _load_attempted = True
 
-    try:
-        import torch
+        if not is_available():
+            logger.info("SAM indisponible (%s)", unavailable_reason())
+            return None
 
-        is_mobile = settings.sam_backend == "mobile_sam"
-        if is_mobile:
-            from mobile_sam import SamPredictor, sam_model_registry
-            model_type = "vit_t"  # seule architecture fournie par MobileSAM
-        else:
-            from segment_anything import SamPredictor, sam_model_registry
-            model_type = settings.sam_model_type
+        try:
+            import torch
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        sam = sam_model_registry[model_type](checkpoint=settings.sam_checkpoint_path)
-        sam.to(device)
-        sam.eval()
-        _predictor = SamPredictor(sam)
-        logger.info("SAM chargé (%s, backend=%s, %s)", model_type, settings.sam_backend, device)
-    except Exception:
-        logger.exception("Échec du chargement de SAM — repli sur le squelette seul")
-        _predictor = None
+            is_mobile = settings.sam_backend == "mobile_sam"
+            if is_mobile:
+                from mobile_sam import SamPredictor, sam_model_registry
+                model_type = "vit_t"  # seule architecture fournie par MobileSAM
+            else:
+                from segment_anything import SamPredictor, sam_model_registry
+                model_type = settings.sam_model_type
 
-    return _predictor
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            sam = sam_model_registry[model_type](checkpoint=settings.sam_checkpoint_path)
+            sam.to(device)
+            sam.eval()
+            _predictor = SamPredictor(sam)
+            logger.info("SAM chargé (%s, backend=%s, %s)", model_type, settings.sam_backend, device)
+        except Exception:
+            logger.exception("Échec du chargement de SAM — repli sur le squelette seul")
+            _predictor = None
+
+        return _predictor
 
 
 def _body_mask(image_path: str | Path, pose: PoseResult):
@@ -399,7 +411,11 @@ def resolve_clothing_thickness(
     target = weight_kg / _BODY_DENSITY_KG_PER_L * _TRUNK_VOLUME_FRACTION
     lo, hi = _THICKNESS_BOUNDS_CM
     # Le volume décroît strictement avec l'épaisseur : dichotomie simple.
-    for _ in range(60):
+    # 20 itérations sur les 12 cm de _THICKNESS_BOUNDS_CM donnent déjà une
+    # précision de l'ordre du micron, bien au-delà de ce que des mesures
+    # quantifiées en pixels peuvent justifier — 60 ne faisait que brûler du
+    # CPU pour une précision totalement illusoire.
+    for _ in range(20):
         mid = (lo + hi) / 2.0
         if volume_litres(mid) > target:
             lo = mid

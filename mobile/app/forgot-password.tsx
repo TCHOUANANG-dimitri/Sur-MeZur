@@ -5,7 +5,9 @@ import { userMessage, ApiError } from "../src/api/client";
 import { AuthApi } from "../src/api/endpoints";
 import { Button } from "../src/components/Button";
 import { ErrorBanner, Field, Header, Input, PasswordInput } from "../src/components/Misc";
+import { PhoneField } from "../src/components/PhoneField";
 import { Screen } from "../src/components/Screen";
+import { COUNTRIES, splitPhone } from "../src/constants/countries";
 import { useI18n } from "../src/i18n/I18nProvider";
 import { useThemedStyles } from "../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../src/theme/tokens";
@@ -15,7 +17,7 @@ export default function ForgotPassword() {
   const { t } = useI18n();
   const styles = useThemedStyles(makeStyles);
   const router = useRouter();
-  const [phone, setPhone] = useState("+237");
+  const [phone, setPhone] = useState(COUNTRIES[0].dial);
   const [step, setStep] = useState<"phone" | "reset" | "done">("phone");
   const [devCode, setDevCode] = useState("");
   const [code, setCode] = useState("");
@@ -25,8 +27,8 @@ export default function ForgotPassword() {
 
   const requestCode = async () => {
     setError("");
-    if (!phone) {
-      setError("Entrez votre numéro de téléphone.");
+    if (!splitPhone(phone).local) {
+      setError(t("auth.err.enterPhone"));
       return;
     }
     setBusy(true);
@@ -44,7 +46,7 @@ export default function ForgotPassword() {
   const confirmReset = async () => {
     setError("");
     if (!isValidPassword(newPassword)) {
-      setError("Le mot de passe doit contenir 6 caractères exactement (au moins un chiffre et une lettre).");
+      setError(t("auth.err.passwordRules"));
       return;
     }
     setBusy(true);
@@ -69,9 +71,7 @@ export default function ForgotPassword() {
             <Text style={styles.body}>
               {t("auth.forgotPassword.body")}
             </Text>
-            <Field label={t("auth.phone")}>
-              <Input value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder={t("auth.phone.placeholder")} />
-            </Field>
+            <PhoneField label={t("auth.phone")} value={phone} onChangeText={setPhone} />
             <Button fullWidth loading={busy} onPress={requestCode}>
               {t("auth.forgotPassword.sendCode")}
             </Button>

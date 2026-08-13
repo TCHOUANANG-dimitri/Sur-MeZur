@@ -92,12 +92,12 @@ export const TailorsApi = {
     city?: string;
     lat?: number;
     lng?: number;
-  }, files: { portfolio?: PickedFile; id_card?: PickedFile; atelier_photo?: PickedFile }) => {
+  }, files: { self_photo: PickedFile; id_card: PickedFile; atelier_photo: PickedFile }) => {
     const form = new FormData();
     Object.entries(fields).forEach(([k, v]) => v !== undefined && form.append(k, String(v)));
-    if (files.portfolio) appendFile(form, "portfolio", files.portfolio);
-    if (files.id_card) appendFile(form, "id_card", files.id_card);
-    if (files.atelier_photo) appendFile(form, "atelier_photo", files.atelier_photo);
+    appendFile(form, "self_photo", files.self_photo);
+    appendFile(form, "id_card", files.id_card);
+    appendFile(form, "atelier_photo", files.atelier_photo);
     return api.postForm<TailorProfile>("/tailors/verification", form);
   },
 };
@@ -257,7 +257,8 @@ export const AdminApi = {
     api.post<User>(`/admin/users/${userId}/active`, { is_active }),
   allOrders: (status_filter?: string) =>
     api.get<Order[]>(`/admin/orders${status_filter ? `?status_filter=${status_filter}` : ""}`),
-  pendingVerifications: () => api.get<TailorProfile[]>("/admin/verifications"),
+  verifications: (status?: "pending" | "approved" | "rejected") =>
+    api.get<TailorProfile[]>(`/admin/verifications${status ? `?status_filter=${status}` : ""}`),
   verificationDocuments: (tailorId: string) =>
     api.get<VerificationDocument[]>(`/admin/verifications/${tailorId}/documents`),
   decideVerification: (tailorId: string, status: "approved" | "rejected") =>

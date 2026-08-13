@@ -9,6 +9,7 @@ import { Chip } from "../../../src/components/Chip";
 import { EmptyState, Header, Spinner } from "../../../src/components/Misc";
 import { Screen } from "../../../src/components/Screen";
 import { Stars } from "../../../src/components/Stars";
+import { VerificationNudge } from "../../../src/components/VerificationNudge";
 import { formatFcfa, useI18n } from "../../../src/i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../../../src/theme/tokens";
@@ -99,29 +100,30 @@ export default function Finances() {
     <Screen scroll={false}>
       <Header title={t("tailor.finances.title")} />
       <View style={styles.periodRow}>
-        <Chip label="Semaine" active={period === "week"} onPress={() => setPeriod("week")} />
-        <Chip label="Mois" active={period === "month"} onPress={() => setPeriod("month")} />
-        <Chip label="Année" active={period === "year"} onPress={() => setPeriod("year")} />
+        <Chip label={t("tailor.finances.week")} active={period === "week"} onPress={() => setPeriod("week")} />
+        <Chip label={t("tailor.finances.month")} active={period === "month"} onPress={() => setPeriod("month")} />
+        <Chip label={t("tailor.finances.year")} active={period === "year"} onPress={() => setPeriod("year")} />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 18, paddingTop: 10 }}>
+        <VerificationNudge />
         <Card style={{ marginBottom: 12 }}>
-          <Text style={styles.totalLabel}>Gains sur la période</Text>
+          <Text style={styles.totalLabel}>{t("tailor.finances.periodEarnings")}</Text>
           <Text style={styles.total}>{formatFcfa(total)}</Text>
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>{delivered.length}</Text>
-              <Text style={styles.summaryLabel}>commande{delivered.length > 1 ? "s" : ""} livrée{delivered.length > 1 ? "s" : ""}</Text>
+              <Text style={styles.summaryLabel}>{t("tailor.finances.ordersDelivered", { count: delivered.length })}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>{rated.length > 0 ? avgStars.toFixed(1) : "—"}</Text>
-              <Text style={styles.summaryLabel}>note moyenne</Text>
+              <Text style={styles.summaryLabel}>{t("common.rating")} {t("common.average")}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>{formatFcfa(pending)}</Text>
-              <Text style={styles.summaryLabel}>en séquestre</Text>
+              <Text style={styles.summaryLabel}>{t("tailor.finances.escrow")}</Text>
             </View>
           </View>
         </Card>
@@ -129,11 +131,11 @@ export default function Finances() {
         {/* Split by origin so the tailor sees what stock sales bring in versus
             made-to-measure work. */}
         <Card style={{ marginBottom: 12 }}>
-          <Text style={styles.detailTitle}>Répartition</Text>
+          <Text style={styles.detailTitle}>{t("tailor.finances.repartition")}</Text>
           <View style={styles.breakRow}>
             <View style={styles.breakLabelWrap}>
               <Ruler size={13} color={colors.violetPrimary} />
-              <Text style={styles.breakLabel}>Sur mesure</Text>
+              <Text style={styles.breakLabel}>{t("tailor.finances.customOrders")}</Text>
             </View>
             <Text style={styles.breakValue}>{formatFcfa(customTotal)}</Text>
           </View>
@@ -141,7 +143,7 @@ export default function Finances() {
             <View style={styles.breakLabelWrap}>
               <Shirt size={13} color={colors.violetPrimary} />
               <Text style={styles.breakLabel}>
-                Prêt-à-porter{rtwCount > 0 ? ` (${rtwCount})` : ""}
+                {t("tailor.finances.readyToWear")}{rtwCount > 0 ? ` (${rtwCount})` : ""}
               </Text>
             </View>
             <Text style={styles.breakValue}>{formatFcfa(rtwTotal)}</Text>
@@ -149,7 +151,7 @@ export default function Finances() {
         </Card>
 
         {delivered.length === 0 ? (
-          <EmptyState text="Aucune commande livrée sur cette période." />
+          <EmptyState text={t("tailor.finances.noDeliveredOrders")} />
         ) : (
           delivered.map((o) => {
             const split = splits[o.id];
@@ -169,7 +171,7 @@ export default function Finances() {
                     <Ruler size={11} color={colors.textSecondary} />
                   )}
                   <Text style={styles.date}>
-                    {isRtw ? "Prêt-à-porter" : "Sur mesure"} · Livrée {formatDate(o.created_at, lang)}
+                    {isRtw ? t("tailor.finances.readyToWear") : t("tailor.finances.customOrders")} · {t("tailor.profile.delivered")} {formatDate(o.created_at, lang)}
                   </Text>
                 </View>
 
@@ -180,7 +182,7 @@ export default function Finances() {
                       <Text style={styles.ratingText}>{review.stars}/5</Text>
                     </>
                   ) : (
-                    <Text style={styles.noRating}>Pas encore noté par le client</Text>
+                    <Text style={styles.noRating}>{t("tailor.finances.notRated")}</Text>
                   )}
                 </View>
 
@@ -202,8 +204,8 @@ export default function Finances() {
                     )}
                     <Text style={[styles.escrowText, { color: released ? colors.success : colors.pending }]}>
                       {released
-                        ? `Séquestre libéré (${formatFcfa(split.escrow_30)})`
-                        : `${formatFcfa(split.escrow_30)} en séquestre`}
+                        ? `${t("tailor.finances.escrowReleased")} (${formatFcfa(split.escrow_30)})`
+                        : `${formatFcfa(split.escrow_30)} ${t("tailor.finances.escrow")}`}
                     </Text>
                   </View>
                 )}

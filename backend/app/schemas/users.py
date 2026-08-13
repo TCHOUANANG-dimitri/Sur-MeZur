@@ -16,6 +16,10 @@ class UserOut(ORMModel):
     photo_consent: bool
     is_active: bool
     created_at: datetime
+    # Uniquement pertinent pour role == tailor ; None pour client/admin.
+    # Peuplé manuellement par l'endpoint (pas une colonne de `User`), pour que
+    # la liste admin des utilisateurs montre le statut sans écran séparé.
+    verification_status: VerificationStatus | None = None
 
 
 class MePatchIn(BaseModel):

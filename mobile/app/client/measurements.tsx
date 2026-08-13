@@ -1,7 +1,7 @@
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Camera, CheckCircle2, ImageUp, X } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ApiError, userMessage } from "../../src/api/client";
 import { MeasurementsApi } from "../../src/api/endpoints";
@@ -18,6 +18,36 @@ import { fonts, radii, type ThemeColors } from "../../src/theme/tokens";
 
 type Step = "intro" | "form" | "capture" | "processing" | "review";
 
+// Ordre d'affichage fixe : `Object.entries(data)` suit l'ordre du JSON reçu,
+// qui dépend de l'ordre d'insertion côté serveur — deux appels pouvaient donc
+// réordonner la liste sans raison visible pour l'utilisateur. Toute clé
+// inconnue de cet ordre (nouvelle mesure ajoutée côté serveur) atterrit à la
+// fin plutôt que de disparaître.
+const DATA_ORDER = [
+  "height_total", "chest", "waist", "hips", "shoulder",
+  "biceps", "thigh", "neck", "wrist", "ankle",
+  "sleeve_length", "inseam", "back_length",
+];
+const FEATURE_ORDER = [
+  "stature_m", "weight_kg",
+  "biacromialbreadth", "bideltoidbreadth", "hipbreadth",
+  "sittingheight", "crotchheight",
+  "chestbreadth", "waistbreadth", "chestdepth", "waistdepth", "buttockdepth",
+  "chestbreadth_body", "chestdepth_body", "waistbreadth_body", "waistdepth_body",
+  "hipbreadth_body", "buttockdepth_body",
+];
+
+function sortedEntries<T>(record: Record<string, T>, order: string[]): [string, T][] {
+  return Object.entries(record).sort(([a], [b]) => {
+    const ia = order.indexOf(a);
+    const ib = order.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+}
+
 export default function MeasurementFlow() {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
@@ -33,7 +63,16 @@ export default function MeasurementFlow() {
   const [side, setSide] = useState<PickedFile | null>(null);
   const [error, setError] = useState("");
   const [data, setData] = useState<Record<string, number>>({});
+  const [features, setFeatures] = useState<Record<string, number> | null>(null);
+  const [confidence, setConfidence] = useState<Record<string, number> | null>(null);
   const [measurementId, setMeasurementId] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  // Le polling attend jusqu'à ~90s : sans ce garde, un client qui quitte
+  // l'écran pendant l'attente déclenchait des setState sur un composant
+  // démonté.
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
   // Which slot the source-picker sheet is currently choosing for.
   const [pickingTarget, setPickingTarget] = useState<"front" | "side" | null>(null);
   const [captureTarget, setCaptureTarget] = useState<"front" | "side" | null>(null);
@@ -88,20 +127,23 @@ export default function MeasurementFlow() {
   const heightNum = parseFloat(height.replace(",", "."));
   const weightNum = parseFloat(weight.replace(",", "."));
 
-  /** Blocks the step rather than the upload, so the user is told immediately. */
-  const validateForm = (): string | null => {
+  /** Blocks the step rather than the upload, so the user is told immediately.
+   *  Mémoïsé : appelé à la fois dans `disabled={...}` (donc à chaque rendu du
+   *  formulaire) et dans les handlers ci-dessous — sans useMemo, ce même
+   *  calcul (6 comparaisons + accès i18n) tournait deux fois par frappe. */
+  const formError = useMemo((): string | null => {
     if (!height.trim() || Number.isNaN(heightNum)) return t("measurement.err.height");
     if (heightNum <= 50 || heightNum >= 260) return t("measurement.err.heightRange");
     if (!weight.trim() || Number.isNaN(weightNum)) return t("measurement.err.weight");
     if (weightNum <= 20 || weightNum >= 400) return t("measurement.err.weightRange");
     if (!gender) return t("measurement.err.gender");
     return null;
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [height, weight, gender, heightNum, weightNum]);
 
   const goToCapture = () => {
-    const problem = validateForm();
-    if (problem) {
-      setError(problem);
+    if (formError) {
+      setError(formError);
       return;
     }
     setError("");
@@ -113,9 +155,8 @@ export default function MeasurementFlow() {
       setError(t("measurement.err.photos"));
       return;
     }
-    const problem = validateForm();
-    if (problem) {
-      setError(problem);
+    if (formError) {
+      setError(formError);
       setStep("form");
       return;
     }
@@ -138,19 +179,26 @@ export default function MeasurementFlow() {
       const MAX_ATTEMPTS = 60; // ~90s ceiling
       const SLOW_AFTER_ATTEMPTS = 6; // ~9s: switch to the "premiere fois" hint
       for (let i = 0; i < MAX_ATTEMPTS && current.status === "processing"; i++) {
+        if (!mountedRef.current) return;
         if (i === SLOW_AFTER_ATTEMPTS) setProcessingSlow(true);
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+        if (!mountedRef.current) return;
         current = await MeasurementsApi.getSession(session.id);
       }
+      if (!mountedRef.current) return;
       if (current.status !== "ready" || !current.measurement_id) {
         throw new ApiError(0, current.error_message || t("measurement.err.failed"));
       }
       const list = await MeasurementsApi.list();
+      if (!mountedRef.current) return;
       const measurement = list.find((m) => m.id === current.measurement_id) || list[0];
       setData(measurement.data);
+      setFeatures(measurement.features);
+      setConfidence(measurement.confidence);
       setMeasurementId(measurement.id);
       setStep("review");
     } catch (e) {
+      if (!mountedRef.current) return;
       setError(userMessage(e));
       setStep("capture");
     }
@@ -158,17 +206,39 @@ export default function MeasurementFlow() {
 
   const confirm = async () => {
     if (!measurementId) return;
+    setConfirmError("");
+    setConfirming(true);
     try {
       await MeasurementsApi.patch(measurementId, { data });
-    } catch {
-      /* best effort */
+      router.push({ pathname: "/client/avatar", params: { measurementId } });
+    } catch (e) {
+      // Les corrections tapées en review ne doivent pas se perdre en silence :
+      // on reste sur l'écran, avec l'erreur affichée, plutôt que de continuer
+      // comme si l'enregistrement avait réussi.
+      setConfirmError(userMessage(e));
+    } finally {
+      setConfirming(false);
     }
-    router.push({ pathname: "/client/avatar", params: { measurementId } });
+  };
+
+  const handleBack = () => {
+    if (step === "form") return setStep("intro");
+    if (step === "capture") return setStep("form");
+    if (step === "review") return setStep("capture");
+    router.back();
+  };
+
+  const HEADER_TITLE: Record<Step, string> = {
+    intro: t("measurement.intro.title"),
+    form: t("measurement.intro.title"),
+    capture: t("measurement.headerCapture"),
+    processing: t("measurement.headerProcessing"),
+    review: t("measurement.review.title"),
   };
 
   return (
     <Screen scroll={step !== "processing"}>
-      <Header title={t("measurement.intro.title")} showBack />
+      <Header title={HEADER_TITLE[step]} showBack onBack={handleBack} />
       <View style={{ padding: 20 }}>
         {step === "intro" && (
           <>
@@ -199,7 +269,7 @@ export default function MeasurementFlow() {
                 keyboardType="numeric"
                 value={height}
                 onChangeText={setHeight}
-                placeholder="Ex. 170"
+                placeholder={t("measurement.heightPlaceholder")}
               />
             </Field>
             <Field label={`${t("measurement.weight")} *`}>
@@ -207,20 +277,20 @@ export default function MeasurementFlow() {
                 keyboardType="numeric"
                 value={weight}
                 onChangeText={setWeight}
-                placeholder="Ex. 65"
+                placeholder={t("measurement.weightPlaceholder")}
               />
             </Field>
             <Field label={`${t("measurement.gender")} *`}>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Button variant={gender === "female" ? "primary" : "secondary"} onPress={() => setGender("female")} style={{ flex: 1 }}>
-                  Femme
+                  {t("measurement.gender.female")}
                 </Button>
                 <Button variant={gender === "male" ? "primary" : "secondary"} onPress={() => setGender("male")} style={{ flex: 1 }}>
-                  Homme
+                  {t("measurement.gender.male")}
                 </Button>
               </View>
             </Field>
-            <Button fullWidth disabled={validateForm() !== null} onPress={goToCapture}>
+            <Button fullWidth disabled={formError !== null} onPress={goToCapture}>
               {t("common.next")}
             </Button>
           </>
@@ -230,7 +300,7 @@ export default function MeasurementFlow() {
           <>
             {error ? <ErrorBanner message={error} /> : null}
             <Text style={styles.captureHint}>
-              Prenez une photo ou importez-en une déjà existante depuis votre galerie.
+              {t("measurement.takePhoto")}
             </Text>
             <CapturePicker
               label={t("measurement.capture.front")}
@@ -238,14 +308,14 @@ export default function MeasurementFlow() {
               onPick={() => openPicker("front")}
               onClear={() => setFront(null)}
             />
-            <Text style={styles.poseReminder}>Bras écartés à ~45°</Text>
+            <Text style={styles.poseReminder}>{t("measurement.armsHint")}</Text>
             <CapturePicker
               label={t("measurement.capture.side")}
               file={side}
               onPick={() => openPicker("side")}
               onClear={() => setSide(null)}
             />
-            <Text style={styles.poseReminder}>Mains derrière la tête, coudes vers l'arrière</Text>
+            <Text style={styles.poseReminder}>{t("measurement.handsHint")}</Text>
             <Button fullWidth onPress={submitPhotos} disabled={!front || !side}>
               {t("common.confirm")}
             </Button>
@@ -273,7 +343,7 @@ export default function MeasurementFlow() {
                 onPress={() => router.replace("/client/(tabs)/home")}
                 style={{ marginTop: 4 }}
               >
-                Continuer sans attendre — je serai notifié·e
+                {t("measurement.continueWithoutWaiting")}
               </Button>
             )}
           </>
@@ -286,18 +356,40 @@ export default function MeasurementFlow() {
             {/* Toutes les mesures sont affichées, hauteur totale comprise : le
                 tailleur travaille sur l'ensemble, et masquer une valeur qu'il
                 utilise l'obligerait à la redemander. */}
-            {Object.entries(data)
+            {sortedEntries(data, DATA_ORDER)
               .map(([key, value]) => (
                 <MeasurementRow
                   key={key}
                   measureKey={key}
                   value={value}
                   editable
+                  confidence={confidence?.[key]}
                   onChange={(v) => setData((d) => ({ ...d, [key]: v }))}
                 />
               ))}
+
+            {features && Object.keys(features).length > 0 && (
+              <>
+                <Text style={styles.reviewTitle}>{t("measurement.review.inputsTitle")}</Text>
+                <Text style={styles.reviewNote}>{t("measurement.review.inputsNote")}</Text>
+                {/* Lecture seule : ce sont les entrées du modèle (squelette +
+                    silhouette), pas les mesures finales — les corriger n'aurait
+                    aucun effet, elles ne sont pas renvoyées au serveur. */}
+                {sortedEntries(features, FEATURE_ORDER).map(([key, value]) => (
+                  <MeasurementRow
+                    key={key}
+                    measureKey={key}
+                    value={value}
+                    unit={key === "weight_kg" ? "kg" : "cm"}
+                    labelPrefix="feature"
+                  />
+                ))}
+              </>
+            )}
+
+            {confirmError ? <ErrorBanner message={confirmError} /> : null}
             <View style={{ height: 16 }} />
-            <Button fullWidth onPress={confirm}>
+            <Button fullWidth loading={confirming} onPress={confirm}>
               {t("common.confirm")}
             </Button>
           </>
@@ -314,8 +406,8 @@ export default function MeasurementFlow() {
             <Camera size={18} color={colors.violetPrimary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.sourceLabel}>Prendre une photo guidée</Text>
-            <Text style={styles.sourceHint}>Silhouette à suivre et déclenchement automatique</Text>
+            <Text style={styles.sourceLabel}>{t("measurement.guidedCapture")}</Text>
+            <Text style={styles.sourceHint}>{t("measurement.guidedCaptureHint")}</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.sourceRow} onPress={pickFromLibrary}>
@@ -323,8 +415,8 @@ export default function MeasurementFlow() {
             <ImageUp size={18} color={colors.violetPrimary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.sourceLabel}>Importer depuis la galerie</Text>
-            <Text style={styles.sourceHint}>Choisir une photo déjà existante</Text>
+            <Text style={styles.sourceLabel}>{t("measurement.importFromGallery")}</Text>
+            <Text style={styles.sourceHint}>{t("measurement.importFromGalleryHint")}</Text>
           </View>
         </TouchableOpacity>
       </BottomSheet>
@@ -355,6 +447,7 @@ function CapturePicker({
 }) {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
+  const { t } = useI18n();
 
   if (file) {
     return (
@@ -368,7 +461,7 @@ function CapturePicker({
             </Text>
           </View>
           <TouchableOpacity onPress={onPick} hitSlop={6}>
-            <Text style={styles.captureChange}>Changer la photo</Text>
+            <Text style={styles.captureChange}>{t("measurement.changePhoto")}</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity onPress={onClear} hitSlop={8} style={styles.captureRemove}>

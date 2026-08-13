@@ -8,10 +8,26 @@ type Dict = Record<string, string>;
 const dictionaries: Record<"fr" | "en", Dict> = { fr, en };
 const STORAGE_KEY = "sm_lang";
 
+// `formatFcfa` est appelé depuis ~20 écrans en dehors de tout composant
+// React parfois (utilitaires de tri, etc.) : plutôt que de faire passer
+// `lang` en paramètre partout, on le tient à jour ici — même schéma que
+// `setErrorTranslator` juste en dessous, qui a le même problème pour les
+// messages d'erreur de l'API.
+let currentLang: "fr" | "en" = "fr";
+
+type TranslateParams = Record<string, string | number>;
+
+function interpolate(template: string, params?: TranslateParams): string {
+  if (!params) return template;
+  return template.replace(/\{(\w+)\}/g, (match, name) =>
+    name in params ? String(params[name]) : match
+  );
+}
+
 interface I18nContextValue {
   lang: "fr" | "en";
   setLang: (lang: "fr" | "en") => void;
-  t: (key: string) => string;
+  t: (key: string, params?: TranslateParams) => string;
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -34,7 +50,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     () => ({
       lang,
       setLang,
-      t: (key: string) => dictionaries[lang][key] ?? key,
+      t: (key: string, params?: TranslateParams) => interpolate(dictionaries[lang][key] ?? key, params),
     }),
     [lang]
   );
@@ -44,6 +60,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   // à chaque changement de langue, pour que ses messages suivent l'interface.
   useEffect(() => {
     setErrorTranslator((key) => dictionaries[lang][key] ?? key);
+    currentLang = lang;
   }, [lang]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
@@ -56,5 +73,5 @@ export function useI18n() {
 }
 
 export function formatFcfa(amount: number): string {
-  return `${Math.round(amount).toLocaleString("fr-FR")} FCFA`;
+  return `${Math.round(amount).toLocaleString(currentLang === "fr" ? "fr-FR" : "en-US")} FCFA`;
 }

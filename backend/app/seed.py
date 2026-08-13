@@ -1,31 +1,27 @@
 """Seed data for local development / manual testing.
 
 Run with:  python -m app.seed   (from the backend/ directory, venv active)
+
+Seul le compte administrateur est créé ici. Il n'existe plus aucun compte
+tailleur/client de démonstration : clients et tailleurs s'inscrivent depuis
+l'app. Conséquence directe — `GarmentModel.created_by` et
+`ReadyToWear.tailor_id` exigent un tailleur propriétaire (le second via une
+vraie contrainte FK) : sans tailleur démo, ces deux tables restent vides
+jusqu'à ce qu'un vrai tailleur s'inscrive et publie ses modèles. Tissus et
+accessoires n'ont pas ce besoin (pas de colonne propriétaire obligatoire) et
+restent seedés pour peupler le catalogue dès l'installation.
 """
 
 from app.core.security import hash_password
 from app.db.base import Base, SessionLocal, engine
-from app.models.catalog import Accessory, Fabric, GarmentModel, ReadyToWear
-from app.models.enums import (
-    GarmentCategory,
-    Language,
-    MeasurementMethod,
-    TailorType,
-    UserRole,
-    VerificationStatus,
-)
-from app.models.users import TailorProfile, User
+from app.models.catalog import Accessory, Fabric
+from app.models.enums import GarmentCategory, Language, UserRole
+from app.models.users import User
 from app.services.commission import seed_commission_tiers
-
-DOUALA_LAT, DOUALA_LNG = 4.0511, 9.7679
 
 # Numéro du compte administrateur de la plateforme.
 ADMIN_PHONE = "+237696982953"
 ADMIN_PASSWORD = "dimi11"
-
-# Tailleur "vitrine" qui alimente le catalogue du marché. Aucun compte client
-# démo n'est créé : les clients s'inscrivent.
-MARKET_TAILOR_PHONE = "+237600000002"
 
 
 def get_or_create_user(db, phone, role, full_name, password="password123"):
@@ -56,83 +52,7 @@ def run() -> None:
         get_or_create_user(db, ADMIN_PHONE, UserRole.admin, "Admin Sur-MeZur", password=ADMIN_PASSWORD)
         db.commit()
 
-        # --- Marché "vitrine" ----------------------------------------------
-        # Un seul tailleur alimente le catalogue : il faut un profil tailleur
-        # pour que modèles, tissus et prêt-à-porter aient un vendeur.
-        market_tailor_user = get_or_create_user(
-            db, MARKET_TAILOR_PHONE, UserRole.tailor, "Chez Fatou Couture"
-        )
-        tailor_profile = (
-            db.query(TailorProfile)
-            .filter(TailorProfile.user_id == market_tailor_user.id)
-            .first()
-        )
-        if not tailor_profile:
-            tailor_profile = TailorProfile(
-                user_id=market_tailor_user.id,
-                tailor_type=TailorType.atelier,
-                shop_name="Chez Fatou Couture",
-                bio="Atelier spécialisé prêt-à-porter et sur-mesure, Akwa, Douala.",
-                lat=DOUALA_LAT,
-                lng=DOUALA_LNG,
-                city="Douala",
-                verification_status=VerificationStatus.approved,
-                rating_avg=4.6,
-                completed_orders_count=12,
-                avg_response_minutes=45,
-            )
-            db.add(tailor_profile)
-            db.flush()
-
-        # --- Tailleur en attente de vérification -----------------------------
-        # Pour que l'onglet admin « Vérifications » ait un dossier à traiter
-        # dès le premier seed (aucun profil pending n'existe autrement).
-        pending_tailor_user = get_or_create_user(
-            db, "+237600000003", UserRole.tailor, "Atelier Ngozi (en attente)"
-        )
-        if (
-            not db.query(TailorProfile)
-            .filter(TailorProfile.user_id == pending_tailor_user.id)
-            .first()
-        ):
-            db.add(
-                TailorProfile(
-                    user_id=pending_tailor_user.id,
-                    tailor_type=TailorType.individual,
-                    shop_name="Atelier Ngozi",
-                    bio="Nouveau sur la plateforme, documentation en cours de vérification.",
-                    lat=DOUALA_LAT + 0.05,
-                    lng=DOUALA_LNG + 0.02,
-                    city="Douala",
-                    verification_status=VerificationStatus.pending,
-                )
-            )
-            db.flush()
-
-        db.commit()
-
-        # --- Catalogue -------------------------------------------------------
-        if db.query(GarmentModel).count() == 0:
-            models = [
-                ("Chemise ajustée", GarmentCategory.top, "#7C3AED", ["classique", "bureau"]),
-                ("Robe fourreau", GarmentCategory.dress, "#5B21B6", ["soirée", "élégant"]),
-                ("Pantalon tailleur", GarmentCategory.bottom, "#1F2A44", ["classique"]),
-                ("Boubou brodé", GarmentCategory.traditional, "#D97706", ["traditionnel", "cérémonie"]),
-                ("Kaba ngondo", GarmentCategory.traditional, "#16A34A", ["traditionnel"]),
-            ]
-            for name, category, color, tags in models:
-                db.add(
-                    GarmentModel(
-                        category=category,
-                        name=name,
-                        description=f"Modèle {name.lower()}, personnalisable en tissu et accessoires.",
-                        base_price=15000,
-                        style_tags=tags,
-                        thumbnail_color=color,
-                        created_by=tailor_profile.id,
-                    )
-                )
-
+        # --- Catalogue (sans propriétaire) ------------------------------------
         if db.query(Fabric).count() == 0:
             fabrics = [
                 ("Wax vibrant", "wax", "#DC2626", True),
@@ -155,27 +75,8 @@ def run() -> None:
 
         db.commit()
 
-        if (
-            db.query(ReadyToWear).filter(ReadyToWear.tailor_id == tailor_profile.id).count()
-            == 0
-        ):
-            db.add(
-                ReadyToWear(
-                    tailor_id=tailor_profile.id,
-                    name="Chemise unisexe M",
-                    description="Chemise prête-à-porter, coupe classique.",
-                    price=12000,
-                    item_measurements={"chest": 100, "waist": 88, "hips": 102, "shoulder": 45},
-                    measurement_method=MeasurementMethod.standard,
-                    in_stock=True,
-                )
-            )
-        db.commit()
-
         print("Seed complete.")
-        print(f"Admin    : {ADMIN_PHONE} / {ADMIN_PASSWORD}")
-        print(f"Market   : {MARKET_TAILOR_PHONE} / password123 (verified)")
-        print("Pending  : +237600000003 / password123 (awaiting verification)")
+        print(f"Admin : {ADMIN_PHONE} / {ADMIN_PASSWORD}")
     finally:
         db.close()
 

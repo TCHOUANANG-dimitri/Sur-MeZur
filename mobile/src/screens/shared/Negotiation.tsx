@@ -77,14 +77,14 @@ export function NegotiationScreen({ orderId }: { orderId: string }) {
               />
             </View>
             <Text style={styles.amount}>{formatFcfa(o.amount)}</Text>
-            {o.delay_days ? <Text style={styles.delay}>Délai: {o.delay_days} j</Text> : null}
+            {o.delay_days ? <Text style={styles.delay}>{t("negotiation.delay")}: {o.delay_days} {t("common.day")}</Text> : null}
           </Card>
         ))}
 
         {last?.status === "accepted" && (
           <View style={styles.acceptedRow}>
             <CheckCircle2 size={16} color={colors.success} />
-            <Text style={styles.accepted}>Offre validée</Text>
+            <Text style={styles.accepted}>{t("negotiation.offerValidated")}</Text>
           </View>
         )}
 
@@ -100,7 +100,7 @@ export function NegotiationScreen({ orderId }: { orderId: string }) {
                 <Field label={t("order.priceOffer")}>
                   <Input keyboardType="numeric" value={amount} onChangeText={setAmount} placeholder={String(last.amount)} />
                 </Field>
-                <Field label="Délai (jours)">
+                <Field label={t("negotiation.delayLabel")}>
                   <Input keyboardType="numeric" value={delay} onChangeText={setDelay} />
                 </Field>
                 <Button variant="secondary" fullWidth loading={busy} onPress={counterOffer}>
@@ -108,7 +108,7 @@ export function NegotiationScreen({ orderId }: { orderId: string }) {
                 </Button>
               </>
             ) : (
-              <Text style={styles.hint}>Plafond de 3 propositions atteint (RG-05).</Text>
+              <Text style={styles.hint}>{t("negotiation.maxReached")}</Text>
             )}
           </>
         )}

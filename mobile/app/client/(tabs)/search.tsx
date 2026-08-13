@@ -51,7 +51,7 @@ export default function Search() {
     <Screen>
       <Header title={t("search.title")} />
       <View style={{ padding: 16 }}>
-        <Input placeholder="Rechercher…" value={q} onChangeText={setQ} />
+        <Input placeholder={t("search.placeholder")} value={q} onChangeText={setQ} />
         <View style={styles.row}>
           <Chip label={t("search.tailors")} active={tab === "tailors"} onPress={() => setTab("tailors")} />
           <Chip label={t("search.models")} active={tab === "models"} onPress={() => setTab("models")} />
@@ -64,8 +64,8 @@ export default function Search() {
         ) : (
           <>
             <View style={styles.row}>
-              <Chip label="Récents" active={modelSort === "recent"} onPress={() => setModelSort("recent")} />
-              <Chip label="Plus aimés" active={modelSort === "popular"} onPress={() => setModelSort("popular")} />
+              <Chip label={t("common.recent")} active={modelSort === "recent"} onPress={() => setModelSort("recent")} />
+              <Chip label={t("common.mostLiked")} active={modelSort === "popular"} onPress={() => setModelSort("popular")} />
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} style={{ marginBottom: 12 }}>
               {CATEGORIES.map((c) => (
