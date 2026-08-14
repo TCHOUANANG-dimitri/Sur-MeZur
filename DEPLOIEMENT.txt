@@ -83,15 +83,26 @@ Le projet n'a PAS de systeme de migration (choix d'origine : create_all +
 seed). « Base.metadata.create_all » cree les tables absentes mais n'ajoute
 JAMAIS une colonne a une table existante.
 
-Donc, avant de deployer, verifier si des colonnes ont ete ajoutees :
+A FAIRE APRES CHAQUE MISE A JOUR, sans se demander si c'est necessaire :
 
-  cd /home/sc1jsgw2086/repo-source
-  git diff <ancien_commit>..<nouveau_commit> -- backend/app/models/
+  cd /home/sc1jsgw2086/surmezur-backend
+  python scripts/sync_sqlite_columns.py            # aperçu, ne modifie rien
+  python scripts/sync_sqlite_columns.py --apply    # ajoute ce qui manque
 
-Sortie vide  -> rien a faire.
-Sortie non vide et une COLONNE est ajoutee a une table existante -> il faut
-un « ALTER TABLE ... ADD COLUMN ... » manuel AVANT le redemarrage, sinon
-chaque requete sur cette table echouera (colonne inconnue).
+Le script compare les modeles au schema reel et ajoute les colonnes
+manquantes. Il n'ajoute QUE des colonnes : jamais de suppression, jamais de
+modification, aucune perte de donnees. Le relancer une seconde fois ne fait
+plus rien, donc autant l'executer systematiquement.
+
+Ne pas le faire coute cher et le symptome est trompeur : l'application
+demarre et repond normalement, seules les routes touchant la table concernee
+renvoient 500. Le 14/08/2026, « measurements.features » manquait en
+production : la prise de mesure affichait « Une erreur inattendue est
+survenue pendant l'analyse » alors que le calcul lui-meme fonctionnait.
+
+Ce que le script ne couvre PAS (a traiter a la main, il les signale) :
+une colonne NOT NULL sans valeur par defaut, un type modifie, une colonne
+renommee ou supprimee.
 
 
 -----------------------------------------------------------------------------
