@@ -1,3 +1,11 @@
+# DOIT rester en tout premier : pose les limites de threading avant que quoi
+# que ce soit n'importe torch, NumPy ou OpenCV — une fois OpenMP initialisé,
+# ces variables n'ont plus aucun effet. Voir le module pour la mesure qui a
+# motivé ce garde-fou (3 s en local contre >5 min en production).
+from app.core.thread_limits import set_env_limits
+
+set_env_limits()
+
 import logging
 import os
 import socket

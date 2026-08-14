@@ -1,0 +1,20 @@
+# EAS archive tout le dépôt (monorepo, .git à cette racine) alors que le
+# build Android n'a besoin que de mobile/. Le venv Python, les uploads et les
+# exports Metro laissés par des tests locaux gonflaient l'archive à ~178 Mo,
+# probablement la cause des échecs d'upload (ECONNRESET) — rien à voir avec
+# le contenu réellement nécessaire au build.
+backend/venv/
+backend/uploads/
+backend/**/__pycache__/
+backend/.env
+backend/*.db
+frontend/
+mobile/dist/
+mobile/.expo/
+mobile/node_modules/
+# 2,6 Go, dont 2,2 Go de cache Gradle (app/build/) — reliquat d'un
+# `expo prebuild`/`expo run:android` local du 11/08. EAS le détectait comme
+# projet "bare workflow" et l'incluait entier dans l'archive (1,1 Go au
+# total), d'où les échecs d'upload (ECONNRESET) sur un transfert aussi long.
+mobile/android/
+mobile/ios/

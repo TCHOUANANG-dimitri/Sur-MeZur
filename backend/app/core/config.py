@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     pose_min_visibility: float = 0.5
     pose_min_detection_confidence: float = 0.5
 
+    # Le plafond de threads torch/OpenCV n'est VOLONTAIREMENT pas réglé ici :
+    # il doit être posé avant l'import de ces bibliothèques, donc avant que
+    # cette configuration ne soit chargée. Voir app/core/thread_limits.py, et
+    # la variable d'environnement VISION_MAX_THREADS pour l'ajuster.
+
     # Sur O2Switch, `a2wsgi` (voir passenger_wsgi.py) attend la fin complète
     # d'un `BackgroundTasks` — y compris son propre traitement CPU de 10 à
     # 90 s — avant de rendre la main au worker Passenger : tout le site reste

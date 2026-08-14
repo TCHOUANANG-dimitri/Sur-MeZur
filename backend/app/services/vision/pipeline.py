@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.core.config import settings
+from app.core.thread_limits import apply_runtime_limits
 from app.services import measurement_model
 
 from . import pose as pose_mod
@@ -103,6 +104,11 @@ def warm_up() -> None:
     try:
         ok_pose = pose_mod.warm_up()
         ok_sam = silhouette_mod.warm_up()
+        # torch et OpenCV viennent d'être importés par les deux appels
+        # ci-dessus : c'est le premier moment où leur pool de threads existe
+        # et peut être plafonné (les variables d'environnement posées au
+        # démarrage ne suffisent pas pour tous les backends BLAS).
+        apply_runtime_limits()
         logger.info("Préchauffage vision terminé (mediapipe=%s, sam=%s)", ok_pose, ok_sam)
     except Exception:
         logger.exception("Préchauffage vision en échec (non bloquant)")
