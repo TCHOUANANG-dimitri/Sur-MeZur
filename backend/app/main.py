@@ -22,6 +22,8 @@ logging.basicConfig(
 )
 logging.getLogger("app").setLevel(logging.INFO)
 
+logger = logging.getLogger(__name__)
+
 
 def _lan_ip() -> str:
     """IP de la machine sur le réseau local, telle que la verra le téléphone."""
@@ -114,18 +116,52 @@ app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads"
 app.include_router(api_router, prefix="/api")
 
 
-@app.on_event("startup")
-def on_startup() -> None:
-    Base.metadata.create_all(bind=engine)
+def _boot() -> None:
+    """
+    Initialisation du processus : schéma de base + préchauffage vision.
 
-    # Préchauffage MediaPipe/SAM au démarrage, en tâche de fond.
-    # Chargé en parallèle avec l'ouverture du port : pas de blocage.
-    # warm_up_async() est idempotent (un seul thread de lancé au total).
+    Appelée à l'IMPORT du module, pas seulement depuis l'événement `startup`
+    de FastAPI. Raison : en production, Passenger charge cette application
+    via `passenger_wsgi.py`, qui la convertit en WSGI avec `a2wsgi`. Or
+    `a2wsgi.ASGIMiddleware` ne construit que des scopes `{"type": "http"}` —
+    il n'émet JAMAIS d'événement de cycle de vie ASGI (vérifié dans son code
+    source : la gestion du lifespan n'existe que dans `wsgi.py`, le sens
+    inverse). Tout ce qui vivait dans `on_startup` ne s'exécutait donc jamais
+    sur O2Switch : ni la création du schéma, ni surtout le préchauffage.
+
+    Conséquence mesurée : sans préchauffage, le premier calcul de mesures
+    d'un processus paie l'import de torch + mobile_sam (9 s + 8 s à chaud,
+    jusqu'à ~56 s disque froid) AVANT même de commencer à calculer — pendant
+    que le mobile, lui, abandonne au bout de 90 s et affiche « Échec de
+    l'analyse » alors que rien n'a échoué.
+
+    Idempotente : `create_all` ne recrée pas ce qui existe et
+    `warm_up_async` ne lance qu'un seul thread par processus, donc le double
+    appel (import + éventuel `startup` sous uvicorn) est sans effet.
+    """
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        logger.exception("Création du schéma impossible au démarrage")
+
+    # Préchauffage MediaPipe/SAM en tâche de fond : chargé en parallèle de
+    # l'ouverture du port, sans bloquer le premier client.
     try:
         from app.services import vision
         vision.warm_up_async()
     except Exception:
-        pass
+        logger.exception("Préchauffage vision impossible au démarrage")
+
+
+_boot()
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    # Conservé pour uvicorn (ASGI natif), où le lifespan fonctionne
+    # réellement. Sans effet supplémentaire : `_boot` a déjà tout fait à
+    # l'import, et les deux opérations sont idempotentes.
+    _boot()
 
 
 @app.get("/api/health")
