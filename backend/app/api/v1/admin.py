@@ -14,6 +14,7 @@ from app.schemas.orders import OrderOut
 from app.schemas.payments import CommissionTierIn, CommissionTierOut
 from app.schemas.users import TailorProfileOut, UserOut, VerificationDocumentOut
 from app.services.notify import notify
+from app.services.user_deletion import delete_user_cascade
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_roles("admin"))])
 
@@ -133,6 +134,33 @@ def set_user_active(
     db.commit()
     db.refresh(target)
     return target
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: str,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Suppression DÉFINITIVE d'un compte et de tout ce qui lui appartient
+    (commandes, mesures, avatars, messages, documents de vérification...).
+
+    Contrairement à `/users/{id}/active`, il n'y a pas de retour en arrière —
+    voir `app.services.user_deletion` pour le détail de ce qui est purgé.
+    """
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if target.id == current.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Vous ne pouvez pas supprimer votre propre compte")
+
+    try:
+        delete_user_cascade(db, target)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Échec de la suppression — rien n'a été modifié")
 
 
 @router.get("/orders", response_model=list[OrderOut])
