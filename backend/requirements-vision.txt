@@ -11,6 +11,10 @@
 # --- MediaPipe : les 33 points du squelette -------------------------------
 mediapipe==0.10.14
 opencv-python-headless==4.10.0.84
+# Pillow est requis pour la réduction d'image (pipeline._downscaled).
+# Sans lui, les photos 3000-4000 px sont analysées en pleine résolution
+# (87 s au lieu de 9 s — facteur 9,7x mesuré, voir pipeline.py:113-116).
+Pillow>=10.0
 
 # --- Modèle de mensurations (artefacts .joblib) ---------------------------
 # scikit-learn DOIT correspondre à la version d'entraînement : un artefact

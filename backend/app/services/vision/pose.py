@@ -150,7 +150,7 @@ def _process_rgb_array(rgb, width: int, height: int, min_detection_confidence: f
 
     with mp.solutions.pose.Pose(
         static_image_mode=True,
-        model_complexity=2,
+        model_complexity=1,
         enable_segmentation=False,
         min_detection_confidence=min_detection_confidence,
     ) as pose:

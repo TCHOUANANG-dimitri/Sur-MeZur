@@ -399,14 +399,17 @@ def resolve_clothing_thickness(
     torso_cm = front.torso_px * front_cm_per_pixel
     dh = torso_cm / (_PROFILE_STEPS - 1)
 
+    import numpy as np
+
+    _w = np.array([s[0] for s in slices], dtype=np.float64)
+    _d = np.array([s[1] for s in slices], dtype=np.float64)
+    _dh = dh
+
     def volume_litres(thickness: float) -> float:
         """Volume du torse, tranches elliptiques, silhouette rétrécie de e."""
-        total = 0.0
-        for w, d in slices:
-            a = max(w - 2 * thickness, 1.0) / 2.0
-            b = max(d - 2 * thickness, 1.0) / 2.0
-            total += math.pi * a * b * dh
-        return total / 1000.0
+        a = np.maximum(_w - 2.0 * thickness, 1.0) * 0.5
+        b = np.maximum(_d - 2.0 * thickness, 1.0) * 0.5
+        return float(np.sum(a * b) * math.pi * _dh / 1000.0)
 
     target = weight_kg / _BODY_DENSITY_KG_PER_L * _TRUNK_VOLUME_FRACTION
     lo, hi = _THICKNESS_BOUNDS_CM
