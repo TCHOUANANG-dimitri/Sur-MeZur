@@ -46,7 +46,15 @@ class Avatar(Base, IDMixin, TimestampMixin):
 
     client_id: Mapped[str] = mapped_column(ForeignKey("client_profiles.id"))
     measurement_id: Mapped[str] = mapped_column(ForeignKey("measurements.id"))
+    # Ancien pipeline (un GLB généré par Blender par client) : conservé pour
+    # les avatars déjà en base, mais plus jamais écrit par de nouvelles
+    # générations — voir morph_weights ci-dessous.
     gltf_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Nouveau pipeline : {"gender", "height_cm", "base_height_cm", "weights"},
+    # voir services/avatar/morph_weights.py. Calculé en Python pur (aucun
+    # Blender en production) et appliqué côté mobile sur le maillage de base
+    # embarqué dans l'app (mobile/assets/avatar-base-{gender}.glb).
+    morph_weights: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     skin_tone_hex: Mapped[str] = mapped_column(String(9), default="#C68863")
     status: Mapped[JobStatus] = mapped_column(String(16), default=JobStatus.processing)
 

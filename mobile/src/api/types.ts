@@ -103,6 +103,18 @@ export interface Avatar {
   client_id: string;
   measurement_id: string;
   gltf_url: string | null;
+  /** {gender, height_cm, base_height_cm, weights: {morphTargetName: 0..1}} —
+   *  voir Viewer3D.tsx, qui applique `weights` sur le maillage de base
+   *  embarqué dans l'app plutôt que de charger un GLB par client. */
+  morph_weights: {
+    gender: "male" | "female";
+    height_cm: number;
+    /** Hauteur ESTIMÉE du maillage une fois `weights` appliqué (pas la
+     *  hauteur du maillage neutre) — diviseur correct pour la mise à
+     *  l'échelle, voir Viewer3D.tsx. */
+    reference_height_cm: number;
+    weights: Record<string, number>;
+  } | null;
   skin_tone_hex: string;
   status: JobStatus;
 }

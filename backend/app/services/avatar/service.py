@@ -18,8 +18,20 @@ from app.models.enums import JobStatus
 
 from .body_params import measurements_to_avatar_params, to_json
 from .blender_runner import run_blender, check_blender_available
+from .morph_weights import compute_avatar_morphology
 
 logger = logging.getLogger(__name__)
+
+
+def generate_avatar_morphology(measurement: Measurement) -> dict | None:
+    """
+    Chemin de production actuel : calcule les poids de morph targets en Python
+    pur (voir morph_weights.py), sans jamais lancer Blender. Remplace
+    `generate_avatar` ci-dessous pour toute nouvelle génération — celui-ci est
+    conservé comme outillage (régénérer manuellement un GLB de référence),
+    plus appelé par l'API.
+    """
+    return compute_avatar_morphology(measurement)
 
 
 def generate_avatar(

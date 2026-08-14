@@ -66,5 +66,6 @@ class AvatarOut(ORMModel):
     client_id: str
     measurement_id: str
     gltf_url: str | None
+    morph_weights: dict | None
     skin_tone_hex: str
     status: JobStatus

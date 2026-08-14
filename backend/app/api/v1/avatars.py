@@ -1,13 +1,12 @@
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.deps import get_db, require_roles
-from app.db.base import SessionLocal
 from app.models.enums import JobStatus
 from app.models.measurements import Avatar, Measurement, TryonSession
 from app.models.users import ClientProfile, User
@@ -69,56 +68,6 @@ def _cleanup_superseded_avatars(db: Session, client_id: str, measurement_id: str
         db.delete(old)
 
 
-def _run_avatar_job(avatar_id: str) -> None:
-    """
-    Background task : génère le vrai avatar 3D via Blender + MPFB2.
-
-    En cas d'échec (Blender absent, timeout, etc.), le service se replie
-    sur le mock pour que l'application reste fonctionnelle.
-    """
-    with SessionLocal() as db:
-        avatar = db.get(Avatar, avatar_id)
-        if not avatar:
-            return
-
-        try:
-            measurement = db.get(Measurement, avatar.measurement_id)
-            if not measurement:
-                logger.error("Measurement %s introuvable pour avatar %s", avatar.measurement_id, avatar_id)
-                avatar.gltf_url = generate_avatar_reference(avatar_id)
-                avatar.status = JobStatus.ready
-                db.commit()
-                return
-
-            # Tenter la génération réelle
-            gltf_filename = avatar_service.generate_avatar(
-                measurement=measurement,
-                skin_tone_hex=avatar.skin_tone_hex,
-            )
-
-            if gltf_filename:
-                # Nom de fichier seul, jamais un chemin public — voir
-                # avatar_output_dir dans config.py et get_avatar_glb ci-dessous.
-                avatar.gltf_url = gltf_filename
-                avatar.status = JobStatus.ready
-                logger.info("Avatar %s généré avec succès : %s", avatar_id, gltf_filename)
-            else:
-                # Fallback sur le mock
-                logger.warning("Génération Blender échouée pour avatar %s — repli mock", avatar_id)
-                avatar.gltf_url = generate_avatar_reference(avatar_id)
-                avatar.status = JobStatus.ready
-
-            _cleanup_superseded_avatars(db, avatar.client_id, avatar.measurement_id, avatar.id)
-
-        except Exception:
-            logger.exception("Erreur inattendue lors de la génération de l'avatar %s", avatar_id)
-            # Fallback sur le mock pour ne pas bloquer le client
-            avatar.gltf_url = generate_avatar_reference(avatar_id)
-            avatar.status = JobStatus.ready
-
-        db.commit()
-
-
 @router.get("/capabilities")
 def capabilities():
     """Diagnostic : état du système d'avatar 3D."""
@@ -128,10 +77,20 @@ def capabilities():
 @router.post("", response_model=AvatarOut)
 def create_avatar(
     payload: AvatarCreateIn,
-    background_tasks: BackgroundTasks,
     user: User = Depends(require_roles("client")),
     db: Session = Depends(get_db),
 ):
+    """
+    Calcule les poids de morph targets et répond immédiatement — pas de
+    `BackgroundTasks`.
+
+    Contrairement à l'ancien pipeline (un subprocess Blender par client, sous
+    `BackgroundTasks`), ce calcul est du Python pur de l'ordre de la
+    milliseconde : le déporter en tâche de fond n'aurait plus aucun sens, et
+    évite surtout le blocage a2wsgi qui touchait déjà la prise de mesure —
+    voir DEPLOIEMENT.txt et main.py::_boot pour le détail de ce bug sous
+    Passenger.
+    """
     client = db.query(ClientProfile).filter(ClientProfile.user_id == user.id).first()
     if not client:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Client profile not found")
@@ -139,19 +98,32 @@ def create_avatar(
     if not measurement or measurement.client_id != client.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Measurement not found")
 
+    morphology = avatar_service.generate_avatar_morphology(measurement)
+
     avatar = Avatar(
         client_id=client.id,
         measurement_id=payload.measurement_id,
         skin_tone_hex=payload.skin_tone_hex,
-        status=JobStatus.processing,
+        status=JobStatus.ready if morphology else JobStatus.processing,
     )
+    if morphology:
+        avatar.morph_weights = morphology
+    else:
+        # Mesure sans données exploitables (cas limite, ex. session corrompue) :
+        # repli mock plutôt que de laisser l'avatar bloqué en "processing".
+        logger.warning("Mesure %s sans données exploitables pour avatar — repli mock", payload.measurement_id)
+        avatar.gltf_url = generate_avatar_reference(payload.measurement_id)
+        avatar.status = JobStatus.ready
+
     db.add(avatar)
     if not client.skin_tone_hex:
         client.skin_tone_hex = payload.skin_tone_hex
     db.commit()
     db.refresh(avatar)
 
-    background_tasks.add_task(_run_avatar_job, avatar.id)
+    _cleanup_superseded_avatars(db, avatar.client_id, avatar.measurement_id, avatar.id)
+    db.commit()
+
     return avatar
 
 

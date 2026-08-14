@@ -35,6 +35,19 @@ import os
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from target_map import (  # noqa: E402
+    BREADTH_DEPTH_TARGETS,
+    FAT_TARGET_GAIN,
+    FAT_TARGETS,
+    MEASURE_TARGETS,
+    MUSCLE_TARGETS,
+    PROPORTION_TARGETS,
+    SHAPE_TARGETS,
+    TORSO_DEPTH_TARGET,
+    TORSO_WIDTH_TARGET,
+)
+
 import bpy
 
 
@@ -69,56 +82,11 @@ def _targets_dir() -> Path | None:
     return None
 
 
-# Correspondance entre nos paramètres et les cibles MakeHuman.
-#   param -> (sous-dossier, racine du nom de cible)
-# Les 12 mensurations livrées au client sont toutes couvertes.
-MEASURE_TARGETS = {
-    # --- tronc ---
-    "chest_scale":    ("torso", "measure-bust-circ"),
-    "waist_scale":    ("torso", "measure-waist-circ"),
-    "hip_scale":      ("torso", "measure-hips-circ"),
-    "shoulder_width": ("torso", "measure-shoulder-dist"),
-    "back_factor":    ("torso", "measure-napetowaist-dist"),
-    # --- membres ---
-    "neck_scale":     ("neck",  "measure-neck-circ"),
-    "biceps_scale":   ("arms",  "measure-upperarm-circ"),
-    "wrist_scale":    ("hands", "measure-wrist-circ"),
-    "thigh_scale":    ("legs",  "measure-thigh-circ"),
-    "ankle_scale":    ("feet",  "measure-ankle-circ"),
-    "sleeve_factor":  ("arms",  "measure-upperarm-length"),
-    "leg_ratio":      ("legs",  "measure-upperleg-height"),
-}
-
-# Cibles de forme (non métriques) pilotées par des paramètres dérivés.
-SHAPE_TARGETS = {
-    "buttock_scale": ("buttocks", "buttocks-volume"),
-}
-
-# Largeurs et profondeurs issues de la silhouette SAM. Elles décrivent la même
-# section que les circonférences ci-dessus : les appliquer sur les mêmes cibles
-# écraserait la circonférence. On les dirige donc vers les cibles d'échelle
-# horizontale / en profondeur, qui sont des axes indépendants.
-BREADTH_DEPTH_TARGETS = {
-    "hip_breadth_scale":   ("hip", "hip-scale-horiz"),
-    "buttock_depth_scale": ("hip", "hip-scale-depth"),
-}
-
-# Longueur du torse relative à la taille (torso_ratio, dérivé de
-# sittingheight/height dans body_params.py) : seule cible verticale du tronc
-# disponible côté MakeHuman.
-PROPORTION_TARGETS = {
-    "torso_ratio": ("torso", "torso-scale-vert"),
-}
-
-# Poitrine et taille ont chacune une largeur ET une profondeur issues de SAM
-# (chest_breadth_scale, chest_depth_scale, waist_breadth_scale,
-# waist_depth_scale — voir body_params.py), mais MakeHuman n'expose qu'UNE
-# cible d'échelle horizontale et UNE de profondeur pour tout le tronc
-# (torso-scale-horiz/depth) : il n'y a pas de cible séparée par niveau. On
-# moyenne donc poitrine et taille sur chaque axe plutôt que d'ignorer deux des
-# quatre valeurs mesurées.
-TORSO_WIDTH_TARGET = ("torso", "torso-scale-horiz")
-TORSO_DEPTH_TARGET = ("torso", "torso-scale-depth")
+# Les tables de correspondance param -> cible MakeHuman (MEASURE_TARGETS,
+# SHAPE_TARGETS, BREADTH_DEPTH_TARGETS, PROPORTION_TARGETS,
+# TORSO_WIDTH_TARGET, TORSO_DEPTH_TARGET, FAT_TARGETS, MUSCLE_TARGETS) vivent
+# désormais dans target_map.py, importé plus haut — partagées avec le calcul
+# de poids côté backend (morph_weights.py), qui ne peut pas importer `bpy`.
 
 BASE_HEIGHT_CM = 165.94  # hauteur du maillage MPFB par défaut, mesurée
 
@@ -244,17 +212,15 @@ def _apply_morphology(human, params):
     # Corpulence globale : les cibles de graisse des membres suivent le BMI.
     poids_corps = float(params.get("weight_factor", 0.0) or 0.0)
     if abs(poids_corps) >= 0.02:
-        for sous, racine in (("arms", "l-upperarm-fat"), ("arms", "r-upperarm-fat"),
-                             ("legs", "l-upperleg-fat"), ("legs", "r-upperleg-fat"),
-                             ("stomach", "stomach-pregnant")):
-            if _load_target(targets_dir, sous, racine, poids_corps * 0.6):
+        for sous, racine in FAT_TARGETS:
+            if _load_target(targets_dir, sous, racine, poids_corps * FAT_TARGET_GAIN):
                 appliquees += 1
 
     # Musculature : jusqu'ici calculée (body_params.py) mais jamais lue ici —
     # seul weight_factor pilotait la corpulence, muscle_factor ne faisait rien.
     muscle = float(params.get("muscle_factor", 0.0) or 0.0)
     if abs(muscle) >= 0.02:
-        for sous, racine in (("torso", "torso-muscle-pectoral"), ("torso", "torso-muscle-dorsi")):
+        for sous, racine in MUSCLE_TARGETS:
             if _load_target(targets_dir, sous, racine, muscle):
                 appliquees += 1
 

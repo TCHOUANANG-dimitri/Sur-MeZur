@@ -5,3 +5,8 @@ __pycache__/
 sur_mezur.db
 uploads/
 !uploads/.gitkeep
+
+# Sortie de export_base_mesh.py — les mêmes fichiers sont commités depuis
+# mobile/assets/ (c'est là qu'ils sont réellement utilisés) ; les garder ici
+# aussi doublerait inutilement leur poids dans l'historique git.
+app/services/avatar/base_meshes/

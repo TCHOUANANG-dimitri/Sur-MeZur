@@ -221,6 +221,7 @@ export default function TryOn() {
           ) : (
             <>
               <Viewer3D
+                avatarMorphology={detailAvatar.morph_weights}
                 glbUrl={avatarMeshUrl(detailAvatar)}
                 skinToneHex={detailAvatar.skin_tone_hex}
                 garmentColorHex={fabric?.color_hex}
@@ -277,6 +278,7 @@ export default function TryOn() {
           {catalogError ? <ErrorBanner message={catalogError} /> : null}
           {configError ? <ErrorBanner message={configError} /> : null}
           <Viewer3D
+            avatarMorphology={avatar.morph_weights}
             glbUrl={avatarMeshUrl(avatar)}
             skinToneHex={avatar.skin_tone_hex}
             garmentColorHex={selectedFabric?.color_hex}

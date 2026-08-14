@@ -1,3 +1,4 @@
+import { Asset } from "expo-asset";
 import { GLView, ExpoWebGLRenderingContext } from "expo-gl";
 import React, { useEffect, useRef } from "react";
 import { PanResponder, StyleSheet, View } from "react-native";
@@ -5,6 +6,26 @@ import * as THREE from "three";
 import { authHeaders } from "../api/client";
 import { useThemedStyles } from "../theme/ThemeProvider";
 import { radii, type ThemeColors } from "../theme/tokens";
+
+// Maillages de base (un par sexe), embarqués dans l'app — voir
+// backend/app/services/avatar/export_base_mesh.py, qui les produit une fois
+// pour toutes avec tous les axes de morphologie comme morph targets glTF.
+// `require()` doit rester statique pour que Metro les traite comme assets
+// (voir metro.config.js, qui ajoute .glb à assetExts).
+const BASE_MESHES = {
+  male: require("../../assets/avatar-base-male.glb"),
+  female: require("../../assets/avatar-base-female.glb"),
+} as const;
+
+export interface AvatarMorphology {
+  gender: "male" | "female";
+  height_cm: number;
+  /** Hauteur ESTIMÉE du maillage une fois `weights` appliqué — pas la
+   *  hauteur du maillage neutre, voir morph_weights.py côté backend. */
+  reference_height_cm: number;
+  /** Nom du morph target (ex. "measure-waist-circ-incr") -> influence [0, 1]. */
+  weights: Record<string, number>;
+}
 
 function canvasShim(gl: ExpoWebGLRenderingContext) {
   return {
@@ -20,8 +41,12 @@ function canvasShim(gl: ExpoWebGLRenderingContext) {
 }
 
 export interface Viewer3DProps {
-  /** URL du fichier GLB généré par Blender/MPFB. Si fourni, charge ce modèle
-   *  au lieu du body procédural. Permet la visualisation 360° via drag. */
+  /** Poids de morph targets calculés côté serveur (voir AvatarMorphology
+   *  ci-dessus) — chemin normal depuis que la génération ne passe plus par
+   *  Blender en production. Prioritaire sur `glbUrl` si les deux sont fournis. */
+  avatarMorphology?: AvatarMorphology | null;
+  /** URL d'un GLB déjà entièrement généré (ancien pipeline, un fichier par
+   *  client). Conservé pour les avatars créés avant `avatarMorphology`. */
   glbUrl?: string | null;
   skinToneHex?: string;
   garmentColorHex?: string | null;
@@ -35,6 +60,7 @@ export interface Viewer3DProps {
 }
 
 export function Viewer3D({
+  avatarMorphology = null,
   glbUrl = null,
   skinToneHex = "#C68863",
   garmentColorHex = null,
@@ -129,7 +155,73 @@ export function Viewer3D({
     scene.add(group);
     groupRef.current = group;
 
-    if (glbUrl) {
+    if (avatarMorphology) {
+      // --- Maillage de base embarqué, déformé par morph targets ---
+      // Contrairement au chemin `glbUrl` ci-dessous, ce fichier est local
+      // (require() + expo-asset) : pas de requête réseau, pas d'en-tête
+      // d'authentification, et surtout aucun Blender à faire tourner côté
+      // serveur — voir morph_weights.py.
+      const asset = Asset.fromModule(BASE_MESHES[avatarMorphology.gender]);
+      Promise.all([
+        import("three/examples/jsm/loaders/GLTFLoader.js"),
+        asset.downloadAsync(),
+      ]).then(([{ GLTFLoader }]) => {
+        if (!mountedRef.current || !asset.localUri) return;
+        const loader = new GLTFLoader();
+        loader.load(
+          asset.localUri,
+          (gltf) => {
+            const model = gltf.scene;
+
+            model.traverse((obj) => {
+              const mesh = obj as THREE.Mesh;
+              if (!mesh.morphTargetDictionary || !mesh.morphTargetInfluences) return;
+              for (const [name, weight] of Object.entries(avatarMorphology.weights)) {
+                const idx = mesh.morphTargetDictionary[name];
+                if (idx !== undefined) mesh.morphTargetInfluences[idx] = weight;
+              }
+              const material = mesh.material as THREE.MeshStandardMaterial | undefined;
+              if (material?.color) material.color.set(skinToneHex);
+            });
+
+            // Mise à l'échelle par la taille réelle. `reference_height_cm`
+            // est une ESTIMATION de la hauteur du maillage une fois les
+            // morph targets appliqués (pas la hauteur du maillage neutre) —
+            // voir target_map.estimate_reference_height_cm côté backend :
+            // diviser par la hauteur neutre reproduirait l'erreur de
+            // plusieurs cm déjà documentée dans generator.py::_apply_height.
+            const scaleFactor = avatarMorphology.height_cm / avatarMorphology.reference_height_cm;
+            model.scale.setScalar(scaleFactor);
+
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            model.position.x -= center.x;
+            model.position.z -= center.z;
+            group.add(model);
+            const size = box.getSize(new THREE.Vector3());
+            const focusY = Math.min(size.y, 1.8) * 0.55;
+            camera.lookAt(0, focusY, 0);
+
+            if (garmentColorHex) {
+              const garmentMat = new THREE.MeshStandardMaterial({
+                color: garmentColorHex,
+                roughness: 0.75,
+                metalness: 0.05,
+              });
+              const torsoRadius = Math.max(size.x, size.z) * 0.32;
+              const garment = new THREE.Mesh(
+                new THREE.CylinderGeometry(torsoRadius, torsoRadius * 0.92, size.y * 0.32, 24, 1, true),
+                garmentMat
+              );
+              garment.position.y = size.y * 0.62;
+              group.add(garment);
+            }
+          },
+          undefined,
+          (error) => console.error("Base mesh load error:", error)
+        );
+      });
+    } else if (glbUrl) {
       // --- Chargement GLB via GLTFLoader ---
       // `glbUrl` pointe vers /api/avatars/{id}/glb, une route authentifiée
       // (voir avatarMeshUrl dans api/client.ts) : sans l'en-tête Authorization,

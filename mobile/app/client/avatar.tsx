@@ -30,7 +30,6 @@ export default function AvatarPage() {
   const [avatar, setAvatar] = useState<AvatarT | null>(null);
   const [loading, setLoading] = useState(false);
   const [genError, setGenError] = useState("");
-  const [slow, setSlow] = useState(false);
   const mountedRef = useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
 
@@ -49,24 +48,12 @@ export default function AvatarPage() {
   const generate = async () => {
     if (!measurement) return;
     setGenError("");
-    setSlow(false);
     setLoading(true);
     try {
-      let av = await AvatarsApi.create({ measurement_id: measurement.id, skin_tone_hex: skinTone });
-      // Le subprocess Blender dispose de jusqu'à 120s côté serveur
-      // (avatar_blender_timeout) : un budget de poll à 8s abandonnait bien
-      // avant que le serveur ait pu finir, et affichait l'avatar comme
-      // "mort" alors qu'il continuait de se générer en arrière-plan.
-      const POLL_INTERVAL_MS = 2000;
-      const MAX_ATTEMPTS = 65; // ~130s, au-delà du timeout serveur
-      const SLOW_AFTER_ATTEMPTS = 5; // ~10s
-      for (let i = 0; i < MAX_ATTEMPTS && av.status === "processing"; i++) {
-        if (!mountedRef.current) return;
-        if (i === SLOW_AFTER_ATTEMPTS) setSlow(true);
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-        if (!mountedRef.current) return;
-        av = await AvatarsApi.get(av.id);
-      }
+      // Le calcul des poids de morph targets est du Python pur (voir
+      // morph_weights.py côté backend) : la réponse revient déjà prête,
+      // plus besoin d'attendre un subprocess Blender.
+      const av = await AvatarsApi.create({ measurement_id: measurement.id, skin_tone_hex: skinTone });
       if (!mountedRef.current) return;
       if (av.status === "failed") {
         setGenError(t("avatar.err.generationFailed"));
@@ -106,6 +93,7 @@ export default function AvatarPage() {
       <Header title={t("avatar.title")} showBack />
       <View style={{ padding: 18 }}>
         <Viewer3D
+          avatarMorphology={avatar?.morph_weights}
           glbUrl={avatarMeshUrl(avatar)}
           skinToneHex={skinTone}
           measurements={measurement.data}
@@ -125,7 +113,6 @@ export default function AvatarPage() {
         </View>
 
         {genError ? <ErrorBanner message={genError} /> : null}
-        {loading && slow ? <Text style={styles.slowHint}>{t("avatar.err.stillGenerating")}</Text> : null}
 
         {!avatar || avatar.status !== "ready" ? (
           <Button fullWidth loading={loading} onPress={generate}>
@@ -147,5 +134,4 @@ const makeStyles = (colors: ThemeColors) =>
   swatchRow: { flexDirection: "row", gap: 8, marginBottom: 18 },
   swatch: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
   swatchActive: { borderWidth: 3, borderColor: colors.violetPrimary },
-  slowHint: { fontSize: 12, color: colors.textSecondary, fontFamily: fonts.body, textAlign: "center", marginBottom: 8 },
 });

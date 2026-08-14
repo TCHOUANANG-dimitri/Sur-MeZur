@@ -1,0 +1,146 @@
+=============================================================================
+DEPLOIEMENT DU BACKEND SUR O2SWITCH  (api.gitingeniering.com)
+=============================================================================
+
+POURQUOI CE FICHIER
+-------------------
+Le serveur a DEUX dossiers distincts, et c'est la source d'erreur principale :
+
+  /home/sc1jsgw2086/repo-source        <- le clone git (git pull marche ici)
+  /home/sc1jsgw2086/surmezur-backend   <- ce que Passenger EXECUTE reellement
+                                          (ce n'est PAS un depot git)
+
+Un « git pull » seul ne met donc a jour QUE le clone. Tant que le code n'est
+pas COPIE vers surmezur-backend puis Passenger redemarre, le serveur continue
+d'executer l'ancienne version — meme apres un redemarrage depuis cPanel.
+
+C'est exactement ce qui s'est produit le 14/08/2026 : la production est restee
+figee sur le commit e38c778 pendant deux jours de correctifs, ce qui faisait
+croire que les corrections de performance n'avaient aucun effet.
+
+
+-----------------------------------------------------------------------------
+MISE A JOUR COURANTE  (a utiliser apres chaque « git push »)
+-----------------------------------------------------------------------------
+Se connecter en SSH, puis activer l'environnement (ligne exacte fournie par
+cPanel > Configurer une Application Python) :
+
+  source /home/sc1jsgw2086/virtualenv/surmezur-backend/3.11/bin/activate
+
+Puis coller ce bloc :
+
+  cd /home/sc1jsgw2086/repo-source
+  git pull
+  cp -a backend/app/. /home/sc1jsgw2086/surmezur-backend/app/
+  cp -a backend/passenger_wsgi.py /home/sc1jsgw2086/surmezur-backend/
+  cp -a backend/requirements.txt backend/requirements-vision.txt /home/sc1jsgw2086/surmezur-backend/
+  cp -a backend/scripts/. /home/sc1jsgw2086/surmezur-backend/scripts/
+  find /home/sc1jsgw2086/surmezur-backend -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null
+  rm -f /home/sc1jsgw2086/surmezur-backend/passenger_wsgi.pyc
+  touch /home/sc1jsgw2086/surmezur-backend/tmp/restart.txt
+
+Ne sont JAMAIS touches (donnees et configuration) :
+  surmezur-backend/uploads/   photos des clients
+  surmezur-backend/data/      base de donnees
+  surmezur-backend/ml/        poids des modeles (mobile_sam.pt)
+  surmezur-backend/.env       configuration du serveur
+
+
+-----------------------------------------------------------------------------
+VERIFIER QUE LE DEPLOIEMENT A REELLEMENT PRIS
+-----------------------------------------------------------------------------
+Ne jamais se fier au seul « git pull ». Verifier que le code SERVI a change :
+
+  curl -s http://api.gitingeniering.com/openapi.json | grep -c '"features"'
+
+  0    -> l'ancien code tourne encore (la copie ou le redemarrage a echoue)
+  >=1  -> le nouveau code est bien en place
+
+Ce test marche parce que le champ « features » a ete ajoute au schema
+MeasurementOut. Pour une version ulterieure, choisir un marqueur equivalent :
+n'importe quel nom de champ ou de route introduit par la mise a jour.
+
+Le redemarrage n'est pas instantane : Passenger relance le processus a la
+PREMIERE requete suivante. Si le test renvoie 0, refaire un appel puis
+reessayer avant de conclure a un echec.
+
+
+-----------------------------------------------------------------------------
+SI LES DEPENDANCES ONT CHANGE
+-----------------------------------------------------------------------------
+A faire uniquement quand requirements.txt / requirements-vision.txt evoluent
+(verifiable avec : git diff HEAD@{1} -- backend/requirements*.txt) :
+
+  pip install -r /home/sc1jsgw2086/surmezur-backend/requirements.txt
+  pip install -r /home/sc1jsgw2086/surmezur-backend/requirements-vision.txt
+  touch /home/sc1jsgw2086/surmezur-backend/tmp/restart.txt
+
+
+-----------------------------------------------------------------------------
+SI LE SCHEMA DE BASE A CHANGE
+-----------------------------------------------------------------------------
+Le projet n'a PAS de systeme de migration (choix d'origine : create_all +
+seed). « Base.metadata.create_all » cree les tables absentes mais n'ajoute
+JAMAIS une colonne a une table existante.
+
+Donc, avant de deployer, verifier si des colonnes ont ete ajoutees :
+
+  cd /home/sc1jsgw2086/repo-source
+  git diff <ancien_commit>..<nouveau_commit> -- backend/app/models/
+
+Sortie vide  -> rien a faire.
+Sortie non vide et une COLONNE est ajoutee a une table existante -> il faut
+un « ALTER TABLE ... ADD COLUMN ... » manuel AVANT le redemarrage, sinon
+chaque requete sur cette table echouera (colonne inconnue).
+
+
+-----------------------------------------------------------------------------
+REVENIR EN ARRIERE
+-----------------------------------------------------------------------------
+La procedure de mise a jour cree une sauvegarde datee du code servi :
+
+  ls -d /home/sc1jsgw2086/surmezur-backend/app.backup-*
+
+Pour restaurer :
+
+  rm -rf /home/sc1jsgw2086/surmezur-backend/app
+  cp -a /home/sc1jsgw2086/surmezur-backend/app.backup-MMJJ-HHMM \
+        /home/sc1jsgw2086/surmezur-backend/app
+  touch /home/sc1jsgw2086/surmezur-backend/tmp/restart.txt
+
+Pour creer une sauvegarde avant une mise a jour risquee, ajouter en tete du
+bloc de mise a jour :
+
+  cp -a /home/sc1jsgw2086/surmezur-backend/app \
+        /home/sc1jsgw2086/surmezur-backend/app.backup-$(date +%m%d-%H%M)
+
+
+-----------------------------------------------------------------------------
+LIMITE CONNUE DE LA COPIE
+-----------------------------------------------------------------------------
+« cp » ajoute et remplace, mais ne SUPPRIME pas. Un fichier retire du depot
+reste donc present sur le serveur. Sans consequence dans la plupart des cas
+(un module devenu inutile n'est plus importe), mais si un fichier renomme ou
+supprime pose probleme, remplacer l'etape de copie de app/ par :
+
+  rm -rf /home/sc1jsgw2086/surmezur-backend/app
+  cp -a backend/app /home/sc1jsgw2086/surmezur-backend/app
+
+(Sans danger : app/ ne contient que du code, aucune donnee.)
+
+
+-----------------------------------------------------------------------------
+A SAVOIR SUR CET HEBERGEMENT
+-----------------------------------------------------------------------------
+Passenger execute l'application en WSGI via a2wsgi (voir passenger_wsgi.py),
+et a2wsgi n'emet AUCUN evenement de cycle de vie ASGI. Consequence :
+« @app.on_event("startup") » de FastAPI ne s'execute jamais ici. Tout ce qui
+doit tourner au demarrage du processus doit etre appele a l'IMPORT du module
+— c'est ce que fait « _boot() » dans app/main.py (creation du schema et
+prechauffage MediaPipe/SAM).
+
+Ce prechauffage n'est pas un detail : sans lui, le premier calcul de mesures
+d'un processus paie l'import de torch (~9 s) et de mobile_sam (~8 s), et
+jusqu'a ~56 s quand le disque est froid, AVANT meme de commencer a calculer.
+Le mobile abandonne alors et affiche « Echec de l'analyse » alors que rien
+n'a echoue.
