@@ -26,7 +26,7 @@ type Mode = "list" | "detail" | "new";
 export default function TryOn() {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
-  const params = useLocalSearchParams<{ avatarId?: string; modelId?: string; tailorId?: string }>();
+  const params = useLocalSearchParams<{ avatarId?: string; modelId?: string; tailorId?: string; openAccessories?: string }>();
   const router = useRouter();
   const { t } = useI18n();
 
@@ -90,6 +90,15 @@ export default function TryOn() {
     if (params.modelId) setModelId(params.modelId);
     if (params.avatarId || params.modelId) setMode("new");
   }, [params.avatarId, params.modelId]);
+
+  // Ouvrir directement le sélecteur d'accessoires si demandé depuis l'écran avatar.
+  useEffect(() => {
+    if (params.openAccessories === "1" && mode === "new") {
+      // Petit délai pour laisser le configurateur se monter d'abord
+      const timer = setTimeout(() => setSheetOpen(true), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [params.openAccessories, mode]);
 
   // The configurator needs an avatar: the one passed in, else the one behind
   // the most recent session (AvatarsApi has no list endpoint).
