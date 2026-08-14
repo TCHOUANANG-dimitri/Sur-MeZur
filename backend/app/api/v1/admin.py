@@ -1,19 +1,30 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db, require_roles
+from app.models.catalog import Category, GarmentModel, GarmentModelLike
 from app.models.enums import ModerationStatus, OrderStatus, VerificationStatus
+from app.models.measurements import TryonSession
 from app.models.misc import Review
 from app.models.orders import Order
 from app.models.payments import CommissionTier, PaymentSplit
 from app.models.users import ClientProfile, TailorProfile, User, VerificationDocument
+from app.schemas.catalog import (
+    CategoryCreateIn,
+    CategoryOut,
+    CategoryUpdateIn,
+    GarmentModelCreateIn,
+    GarmentModelOut,
+    GarmentModelUpdateIn,
+)
 from app.schemas.misc import DisputeResolveIn, ReviewOut, VerificationDecideIn
 from app.schemas.orders import OrderOut
 from app.schemas.payments import CommissionTierIn, CommissionTierOut
 from app.schemas.users import TailorProfileOut, UserOut, VerificationDocumentOut
 from app.services.notify import notify
+from app.services.storage import delete_upload, save_upload
 from app.services.user_deletion import delete_user_cascade
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_roles("admin"))])
@@ -265,3 +276,123 @@ def create_commission_tier(payload: CommissionTierIn, db: Session = Depends(get_
     db.commit()
     db.refresh(tier)
     return tier
+
+
+# ---------------------------------------------------------------------------
+# Categories CRUD
+# ---------------------------------------------------------------------------
+
+
+@router.post("/categories", response_model=CategoryOut)
+def create_category(payload: CategoryCreateIn, db: Session = Depends(get_db)):
+    existing = (
+        db.query(Category)
+        .filter(Category.name == payload.name, Category.gender == payload.gender)
+        .first()
+    )
+    if existing:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cette catégorie existe déjà")
+    cat = Category(name=payload.name, gender=payload.gender)
+    db.add(cat)
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+@router.patch("/categories/{cat_id}", response_model=CategoryOut)
+def update_category(cat_id: str, payload: CategoryUpdateIn, db: Session = Depends(get_db)):
+    cat = db.get(Category, cat_id)
+    if not cat:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Catégorie introuvable")
+    if payload.name is not None:
+        cat.name = payload.name
+    if payload.gender is not None:
+        cat.gender = payload.gender
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+@router.delete("/categories/{cat_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_category(cat_id: str, db: Session = Depends(get_db)):
+    cat = db.get(Category, cat_id)
+    if not cat:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Catégorie introuvable")
+    model_count = db.query(func.count(GarmentModel.id)).filter(GarmentModel.category_id == cat_id).scalar()
+    if model_count:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Catégorie utilisée par {model_count} modèle(s) — réaffectez-les avant de supprimer.",
+        )
+    db.delete(cat)
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Garment models CRUD
+# ---------------------------------------------------------------------------
+
+
+def _get_model_or_404(model_id: str, db: Session) -> GarmentModel:
+    model = db.get(GarmentModel, model_id)
+    if not model:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Modèle introuvable")
+    return model
+
+
+@router.post("/models", response_model=GarmentModelOut)
+def admin_create_model(payload: GarmentModelCreateIn, db: Session = Depends(get_db)):
+    if not db.get(Category, payload.category_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Catégorie introuvable")
+    model = GarmentModel(**payload.model_dump())
+    db.add(model)
+    db.commit()
+    db.refresh(model)
+    return model
+
+
+@router.patch("/models/{model_id}", response_model=GarmentModelOut)
+def admin_update_model(model_id: str, payload: GarmentModelUpdateIn, db: Session = Depends(get_db)):
+    model = _get_model_or_404(model_id, db)
+    if payload.category_id is not None and not db.get(Category, payload.category_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Catégorie introuvable")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(model, field, value)
+    db.commit()
+    db.refresh(model)
+    return model
+
+
+@router.post("/models/{model_id}/photos", response_model=GarmentModelOut)
+def admin_upload_model_photos(
+    model_id: str,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+):
+    model = _get_model_or_404(model_id, db)
+    saved = [save_upload(f, "garment-models") for f in files if f is not None]
+    if not saved:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Aucun fichier reçu")
+    model.photos = list(model.photos or []) + saved
+    if not model.photo_url:
+        model.photo_url = model.photos[0]
+    db.commit()
+    db.refresh(model)
+    return model
+
+
+@router.delete("/models/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_model(model_id: str, db: Session = Depends(get_db)):
+    model = _get_model_or_404(model_id, db)
+    # Cascade sûre : supprimer les likes et détacher les sessions tryon
+    db.query(GarmentModelLike).filter(GarmentModelLike.garment_model_id == model_id).delete(
+        synchronize_session=False
+    )
+    db.query(TryonSession).filter(TryonSession.garment_model_id == model_id).update(
+        {"garment_model_id": None}, synchronize_session=False
+    )
+    # Supprimer les fichiers photo
+    for url in [model.photo_url, *(model.photos or [])]:
+        delete_upload(url)
+    db.delete(model)
+    db.commit()

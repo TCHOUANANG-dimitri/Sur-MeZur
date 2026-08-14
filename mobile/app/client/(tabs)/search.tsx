@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CatalogApi, TailorsApi } from "../../../src/api/endpoints";
-import type { GarmentCategory, GarmentModel, TailorProfile } from "../../../src/api/types";
+import type { Category, GarmentModel, TailorProfile } from "../../../src/api/types";
 import { LikeButton, VerificationBadge } from "../../../src/components/Badges";
 import { Card } from "../../../src/components/Card";
 import { Chip } from "../../../src/components/Chip";
@@ -14,8 +14,6 @@ import { useI18n } from "../../../src/i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, gradientColors, radii, type ThemeColors } from "../../../src/theme/tokens";
 
-const CATEGORIES: GarmentCategory[] = ["top", "bottom", "dress", "traditional", "other"];
-
 export default function Search() {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
@@ -24,18 +22,23 @@ export default function Search() {
   const [tab, setTab] = useState<"tailors" | "models">("tailors");
   const [sort, setSort] = useState<"rating" | "proximity">("rating");
   const [modelSort, setModelSort] = useState<"recent" | "popular">("recent");
-  const [category, setCategory] = useState<GarmentCategory | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [tailors, setTailors] = useState<TailorProfile[] | null>(null);
   const [models, setModels] = useState<GarmentModel[] | null>(null);
 
-  const loadModels = () => CatalogApi.models({ q: q || undefined, sort: modelSort, category: category || undefined }).then(setModels);
+  useEffect(() => {
+    CatalogApi.categories().then(setCategories);
+  }, []);
+
+  const loadModels = () => CatalogApi.models({ q: q || undefined, sort: modelSort, category_id: categoryId || undefined }).then(setModels);
 
   useEffect(() => {
     if (tab === "tailors") TailorsApi.search({ sort, q: q || undefined }).then(setTailors);
     else loadModels();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, sort, modelSort, category, q]);
+  }, [tab, sort, modelSort, categoryId, q]);
 
   const toggleLike = async (m: GarmentModel) => {
     setModels((prev) => prev?.map((x) => (x.id === m.id ? { ...x, liked_by_me: !x.liked_by_me, like_count: x.like_count + (x.liked_by_me ? -1 : 1) } : x)) ?? null);
@@ -68,8 +71,8 @@ export default function Search() {
               <Chip label={t("common.mostLiked")} active={modelSort === "popular"} onPress={() => setModelSort("popular")} />
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} style={{ marginBottom: 12 }}>
-              {CATEGORIES.map((c) => (
-                <Chip key={c} label={c} active={category === c} onPress={() => setCategory(category === c ? null : c)} />
+              {categories.map((c) => (
+                <Chip key={c.id} label={c.name} active={categoryId === c.id} onPress={() => setCategoryId(categoryId === c.id ? null : c.id)} />
               ))}
             </ScrollView>
           </>

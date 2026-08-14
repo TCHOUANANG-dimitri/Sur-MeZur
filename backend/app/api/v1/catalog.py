@@ -1,15 +1,16 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.deps import get_current_user_optional, get_db, require_roles
 from app.services.storage import save_upload
-from app.models.catalog import Accessory, Fabric, GarmentModel, GarmentModelLike, ReadyToWear
-from app.models.enums import GarmentCategory, VerificationStatus
+from app.models.catalog import Accessory, Category, Fabric, GarmentModel, GarmentModelLike, ReadyToWear
+from app.models.enums import VerificationStatus
 from app.models.measurements import Measurement
 from app.models.users import ClientProfile, TailorProfile, User
 from app.schemas.catalog import (
     AccessoryOut,
+    CategoryOut,
     CompareIn,
     CompareOut,
     FabricOut,
@@ -59,9 +60,22 @@ def _serialize_models(
     return results
 
 
+# --- Categories (public) --------------------------------------------------
+
+@router.get("/categories", response_model=list[CategoryOut])
+def list_categories(gender: str | None = None, db: Session = Depends(get_db)):
+    query = db.query(Category)
+    if gender:
+        query = query.filter(Category.gender == gender)
+    return query.order_by(Category.name).all()
+
+
+# --- Models ---------------------------------------------------------------
+
 @router.get("/models", response_model=list[GarmentModelOut])
 def list_models(
-    category: GarmentCategory | None = None,
+    category_id: str | None = None,
+    gender: str | None = None,
     q: str | None = None,
     sort: str = "recent",
     liked_only: bool = False,
@@ -70,9 +84,11 @@ def list_models(
     db: Session = Depends(get_db),
 ):
     client = _client_profile_or_none(user, db)
-    query = db.query(GarmentModel)
-    if category:
-        query = query.filter(GarmentModel.category == category)
+    query = db.query(GarmentModel).options(joinedload(GarmentModel.category))
+    if category_id:
+        query = query.filter(GarmentModel.category_id == category_id)
+    if gender:
+        query = query.join(Category).filter(Category.gender == gender)
     if q:
         query = query.filter(GarmentModel.name.ilike(f"%{q}%"))
     if liked_only:
@@ -103,7 +119,12 @@ def get_model(
     user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
-    model = db.get(GarmentModel, model_id)
+    model = (
+        db.query(GarmentModel)
+        .options(joinedload(GarmentModel.category))
+        .filter(GarmentModel.id == model_id)
+        .first()
+    )
     if not model:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Model not found")
     client = _client_profile_or_none(user, db)
@@ -116,7 +137,12 @@ def like_model(
     user: User = Depends(require_roles("client")),
     db: Session = Depends(get_db),
 ):
-    model = db.get(GarmentModel, model_id)
+    model = (
+        db.query(GarmentModel)
+        .options(joinedload(GarmentModel.category))
+        .filter(GarmentModel.id == model_id)
+        .first()
+    )
     if not model:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Model not found")
     client = db.query(ClientProfile).filter(ClientProfile.user_id == user.id).first()
@@ -137,7 +163,12 @@ def unlike_model(
     user: User = Depends(require_roles("client")),
     db: Session = Depends(get_db),
 ):
-    model = db.get(GarmentModel, model_id)
+    model = (
+        db.query(GarmentModel)
+        .options(joinedload(GarmentModel.category))
+        .filter(GarmentModel.id == model_id)
+        .first()
+    )
     if not model:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Model not found")
     client = db.query(ClientProfile).filter(ClientProfile.user_id == user.id).first()
@@ -147,6 +178,8 @@ def unlike_model(
     db.commit()
     return _serialize_models([model], db, client)[0]
 
+
+# --- Fabrics / accessories ------------------------------------------------
 
 @router.get("/fabrics", response_model=list[FabricOut])
 def list_fabrics(type: str | None = None, db: Session = Depends(get_db)):
@@ -160,6 +193,8 @@ def list_fabrics(type: str | None = None, db: Session = Depends(get_db)):
 def list_accessories(db: Session = Depends(get_db)):
     return db.query(Accessory).all()
 
+
+# --- Ready-to-wear --------------------------------------------------------
 
 @router.post("/ready-to-wear", response_model=ReadyToWearOut)
 def create_ready_to_wear(

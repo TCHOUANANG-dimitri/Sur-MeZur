@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CatalogApi, NotificationsApi, TailorsApi } from "../../../src/api/endpoints";
-import type { GarmentCategory, GarmentModel, Notification, TailorProfile } from "../../../src/api/types";
+import type { Category, GarmentModel, Notification, TailorProfile } from "../../../src/api/types";
 import { NotifBell, VerificationBadge } from "../../../src/components/Badges";
 import { Card } from "../../../src/components/Card";
 import { Spinner } from "../../../src/components/Misc";
@@ -15,14 +15,6 @@ import { useAuth } from "../../../src/state/AuthContext";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, gradientColors, radii, type ThemeColors } from "../../../src/theme/tokens";
 
-const CATEGORY_KEYS: { key: GarmentCategory; labelKey: string }[] = [
-  { key: "top", labelKey: "home.category.tops" },
-  { key: "bottom", labelKey: "home.category.bottoms" },
-  { key: "dress", labelKey: "home.category.dresses" },
-  { key: "traditional", labelKey: "home.category.traditional" },
-  { key: "other", labelKey: "home.category.other" },
-];
-
 export default function Home() {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
@@ -31,15 +23,19 @@ export default function Home() {
   const router = useRouter();
   const [popular, setPopular] = useState<GarmentModel[] | null>(null);
   const [byCategory, setByCategory] = useState<Record<string, GarmentModel[]>>({});
+  const [categories, setCategories] = useState<Category[]>([]);
   const [tailors, setTailors] = useState<TailorProfile[] | null>(null);
   const [notifs, setNotifs] = useState<Notification[]>([]);
 
   useEffect(() => {
     CatalogApi.models({ sort: "popular", limit: 10 }).then(setPopular);
-    CATEGORY_KEYS.forEach(({ key }) => {
-      CatalogApi.models({ category: key, limit: 10 }).then((list) =>
-        setByCategory((prev) => ({ ...prev, [key]: list }))
-      );
+    CatalogApi.categories().then((cats) => {
+      setCategories(cats);
+      cats.forEach((cat) => {
+        CatalogApi.models({ category_id: cat.id, limit: 10 }).then((list) =>
+          setByCategory((prev) => ({ ...prev, [cat.id]: list }))
+        );
+      });
     });
     TailorsApi.search({ sort: "rating" }).then(setTailors);
     NotificationsApi.list().then(setNotifs).catch(() => {});
@@ -53,7 +49,7 @@ export default function Home() {
           <Text style={styles.sectionTitle}>{title}</Text>
           <TouchableOpacity
             style={styles.seeMore}
-            onPress={() => router.push({ pathname: "/client/models", params: category ? { category } : {} })}
+            onPress={() => router.push({ pathname: "/client/models", params: category ? { category_id: category } : {} })}
           >
             <Text style={styles.seeMoreText}>{t("home.seeMore")}</Text>
             <ChevronRight size={14} color={colors.violetPrimary} />
@@ -67,7 +63,7 @@ export default function Home() {
               <TouchableOpacity key={m.id} style={{ width: 140 }} onPress={() => router.push(`/client/models/${m.id}`)}>
                 <LinearGradient colors={[m.thumbnail_color, colors.indigoText]} style={styles.modelThumb} />
                 <Text style={styles.modelName}>{m.name}</Text>
-                <Text style={styles.modelCategory}>{m.category}</Text>
+                <Text style={styles.modelCategory}>{m.category.name}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -101,8 +97,8 @@ export default function Home() {
       </TouchableOpacity>
 
       <ModelSection title={t("home.popularModels")} models={popular ?? undefined} />
-      {CATEGORY_KEYS.map(({ key, labelKey }) => (
-        <ModelSection key={key} title={t(labelKey)} models={byCategory[key]} category={key} />
+      {categories.map((cat) => (
+        <ModelSection key={cat.id} title={cat.name} models={byCategory[cat.id]} category={cat.id} />
       ))}
 
       <View style={[styles.section, { paddingHorizontal: 18 }]}>

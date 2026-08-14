@@ -2,6 +2,7 @@ import { api } from "./client";
 import type {
   Accessory,
   Avatar,
+  Category,
   ChatMessage,
   ClientProfile,
   Delivery,
@@ -127,8 +128,12 @@ export const AvatarsApi = {
 
 // --- Catalog -----------------------------------------------------------
 export const CatalogApi = {
+  categories: (gender?: string) => {
+    const qs = gender ? `?gender=${gender}` : "";
+    return api.get<Category[]>(`/categories${qs}`);
+  },
   models: (
-    params: { category?: string; q?: string; sort?: "recent" | "popular"; liked_only?: boolean; limit?: number } = {}
+    params: { category_id?: string; gender?: string; q?: string; sort?: "recent" | "popular"; liked_only?: boolean; limit?: number } = {}
   ) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => v !== undefined && v !== "" && qs.set(k, String(v)));
@@ -273,4 +278,26 @@ export const AdminApi = {
     api.get<{ id: string; min_price: number; max_price: number | null; rate: number }[]>(
       "/admin/commission-tiers"
     ),
+};
+
+// --- Admin catalog (categories + models) ----------------------------------
+export const AdminCatalogApi = {
+  // Categories
+  createCategory: (body: { name: string; gender: string }) =>
+    api.post<Category>("/admin/categories", body),
+  updateCategory: (id: string, body: { name?: string; gender?: string }) =>
+    api.patch<Category>(`/admin/categories/${id}`, body),
+  deleteCategory: (id: string) => api.del<void>(`/admin/categories/${id}`),
+
+  // Models
+  createModel: (body: { name: string; description?: string; category_id: string; base_price?: number; style_tags?: string[]; thumbnail_color?: string }) =>
+    api.post<GarmentModel>("/admin/models", body),
+  updateModel: (id: string, body: { name?: string; description?: string; category_id?: string; base_price?: number; style_tags?: string[]; thumbnail_color?: string }) =>
+    api.patch<GarmentModel>(`/admin/models/${id}`, body),
+  deleteModel: (id: string) => api.del<void>(`/admin/models/${id}`),
+  uploadModelPhotos: (id: string, files: PickedFile[]) => {
+    const form = new FormData();
+    files.forEach((f) => appendFile(form, "files", f));
+    return api.postForm<GarmentModel>(`/admin/models/${id}/photos`, form);
+  },
 };

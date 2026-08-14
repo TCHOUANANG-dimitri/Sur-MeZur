@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { BadgeCheck, LayoutDashboard, Percent, Scale, Users } from "lucide-react-native";
+import { BadgeCheck, LayoutDashboard, Percent, Scale, Shirt, Users } from "lucide-react-native";
 import React from "react";
 import { useI18n } from "../../../src/i18n/I18nProvider";
 import { useTheme } from "../../../src/theme/ThemeProvider";
@@ -25,6 +25,10 @@ export default function AdminTabsLayout() {
       <Tabs.Screen
         name="users"
         options={{ title: t("nav.users"), tabBarIcon: ({ color, size }) => <Users color={color} size={size} /> }}
+      />
+      <Tabs.Screen
+        name="catalog"
+        options={{ title: "Catalogue", tabBarIcon: ({ color, size }) => <Shirt color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="verifications"

@@ -16,6 +16,7 @@ export type MobileMoneyProvider = "mtn_momo" | "orange_money";
 export type PaymentStatus = "pending" | "paid" | "released" | "refunded" | "failed";
 export type EscrowStatus = "held" | "released" | "refunded";
 export type GarmentCategory = "top" | "bottom" | "dress" | "traditional" | "other";
+export type Gender = "male" | "female" | "unisex";
 export type ReceptionMode = "pickup" | "delivery";
 export type MeasurementSource = "ai" | "manual" | "mixed" | "tailor_confirmed";
 
@@ -132,14 +133,22 @@ export interface TryonSession {
 
 export interface GarmentModel {
   id: string;
-  category: GarmentCategory;
+  category: Category;
   name: string;
   description: string | null;
   base_price: number | null;
   style_tags: string[];
   thumbnail_color: string;
+  photo_url: string | null;
+  photos: string[];
   like_count: number;
   liked_by_me: boolean;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  gender: Gender;
 }
 
 export interface Fabric {

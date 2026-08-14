@@ -1,21 +1,46 @@
 from sqlalchemy import Boolean, ForeignKey, JSON, Numeric, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.models.enums import AssetType, GarmentCategory, MeasurementMethod
+from app.models.enums import AssetType, MeasurementMethod
 from app.models.mixins import IDMixin, TimestampMixin
+
+
+class Category(Base, IDMixin, TimestampMixin):
+    """
+    Catégorie de vêtement, propre à un genre — gérée par l'admin (créer,
+    renommer, supprimer), remplace l'ancien enum figé `GarmentCategory`
+    (top/bottom/dress/traditional/other) qui ne pouvait être étendu que par
+    un déploiement de code. Un modèle hérite son genre de sa catégorie plutôt
+    que de porter son propre champ `gender` — évite qu'un modèle et sa
+    catégorie se contredisent.
+    """
+    __tablename__ = "categories"
+    __table_args__ = (UniqueConstraint("name", "gender", name="uq_category_name_gender"),)
+
+    name: Mapped[str] = mapped_column(String(100))
+    gender: Mapped[str] = mapped_column(String(16))  # "male" | "female" | "unisex"
 
 
 class GarmentModel(Base, IDMixin, TimestampMixin):
     __tablename__ = "garment_models"
 
-    category: Mapped[GarmentCategory] = mapped_column(String(20))
+    category_id: Mapped[str] = mapped_column(ForeignKey("categories.id"))
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     base_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     style_tags: Mapped[list] = mapped_column(JSON, default=list)
+    # Vignette de repli tant qu'aucune photo n'est encore associée — voir
+    # photo_url ci-dessous, seule source d'image réelle depuis l'admin.
     thumbnail_color: Mapped[str] = mapped_column(String(9), default="#7C3AED")
+    # Même convention que ReadyToWear.photo_url/photos : `photo_url` est la
+    # couverture (toujours le premier élément de `photos`), `photos` la
+    # galerie complète.
+    photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    photos: Mapped[list] = mapped_column(JSON, default=list)
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+    category: Mapped["Category"] = relationship("Category")
 
 
 class GarmentModelLike(Base, IDMixin, TimestampMixin):

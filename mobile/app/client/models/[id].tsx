@@ -52,7 +52,7 @@ export default function ModelDetail() {
         </View>
       </View>
       <View style={{ padding: 18 }}>
-        <StatusChip status="neutral" label={model.category} />
+        <StatusChip status="neutral" label={model.category.name} />
         <Text style={styles.title}>{model.name}</Text>
         <Text style={styles.description}>{model.description}</Text>
         <View style={styles.tags}>
