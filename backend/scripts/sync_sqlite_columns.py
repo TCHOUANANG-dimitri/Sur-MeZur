@@ -79,9 +79,43 @@ def _default_clause(column) -> str:
     return ""
 
 
+def _describe_target() -> str:
+    """Chemin ABSOLU du fichier reellement ouvert."""
+    url = engine.url
+    if url.database in (None, ":memory:"):
+        return str(url)
+    return str(Path(url.database).resolve())
+
+
 def run(apply: bool) -> int:
+    # Afficher la cible AVANT toute chose, et refuser d'agir sur une base qui
+    # ne contient rien : `database_url` vaut par defaut « sqlite:///./... »,
+    # un chemin RELATIF au dossier courant. Lance depuis le mauvais dossier,
+    # le script ouvrirait un fichier vide (SQLite en cree un a la demande),
+    # n'y trouverait aucune table, et annoncerait « base a jour » alors que
+    # la vraie base n'a pas ete touchee. C'est arrive : il faut que ce cas
+    # soit bruyant, pas silencieux.
+    target = _describe_target()
+    print(f"Base ciblee : {target}\n")
+
     inspector = inspect(engine)
     existing_tables = set(inspector.get_table_names())
+
+    if not existing_tables:
+        print(
+            "AUCUNE TABLE dans cette base — ce n'est pas la bonne.\n"
+            "\n"
+            "Se placer dans le dossier servi par Passenger avant de lancer :\n"
+            "    cd /home/sc1jsgw2086/surmezur-backend\n"
+            "\n"
+            "ou designer explicitement le fichier :\n"
+            "    DATABASE_URL=sqlite:////chemin/absolu/vers/la/base.db \\\n"
+            "        python scripts/sync_sqlite_columns.py\n"
+            "\n"
+            "Pour retrouver le fichier :\n"
+            "    find /home/sc1jsgw2086 -name '*.db' -not -path '*/venv/*' 2>/dev/null"
+        )
+        return 1
 
     statements: list[str] = []
     skipped: list[str] = []
