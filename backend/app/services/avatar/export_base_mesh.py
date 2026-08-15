@@ -95,6 +95,10 @@ def build_base(gender: str, output_path: str) -> None:
     human.select_set(True)
     bpy.context.view_layer.objects.active = human
 
+    # B4: Lissage de base pour un rendu plus naturel (supprime les faces
+    # visibles sur les zones courbes comme les jambes et le tronc).
+    bpy.ops.object.shade_smooth()
+
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     bpy.ops.export_scene.gltf(
         filepath=output_path,
@@ -102,7 +106,7 @@ def build_base(gender: str, output_path: str) -> None:
         use_selection=True,
         export_apply=False,   # pas de fusion des modifiers : on veut garder les shape keys
         export_morph=True,    # <- c'est la seule vraie différence avec generator.py
-        export_morph_normal=False,
+        export_morph_normal=True,   # B4: exporter les normales de morph pour un éclairage correct
         export_morph_tangent=False,
     )
     size = os.path.getsize(output_path)

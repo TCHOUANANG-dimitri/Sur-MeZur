@@ -57,6 +57,10 @@ export interface Viewer3DProps {
   gender?: string | null;
   autoRotate?: boolean;
   height?: number;
+  /** Appelé quand le modèle 3D est réellement rendu dans la scène (après
+   *  téléchargement GLB + application morph targets). Utilisé par le parent
+   *  pour coordonner l'affichage du spinner de chargement. */
+  onReady?: () => void;
 }
 
 export function Viewer3D({
@@ -68,6 +72,7 @@ export function Viewer3D({
   gender = null,
   autoRotate = true,
   height = 320,
+  onReady,
 }: Viewer3DProps) {
   const styles = useThemedStyles(makeStyles);
   const groupRef = useRef<THREE.Group | null>(null);
@@ -77,12 +82,18 @@ export function Viewer3D({
   const mountedRef = useRef(true);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
+  const skinMaterialsRef = useRef<THREE.MeshStandardMaterial[]>([]);
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
+  const skinToneHexRef = useRef(skinToneHex);
+  skinToneHexRef.current = skinToneHex;
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      skinMaterialsRef.current = [];
       // Le renderer WebGL garde géométries, matériaux et programmes shader en
       // mémoire GPU tant qu'on ne les libère pas explicitement — React ne le
       // fait pas pour nous. Sans ça, chaque aller-retour sur un écran avec
@@ -100,6 +111,13 @@ export function Viewer3D({
       sceneRef.current = null;
     };
   }, []);
+
+  // B1: Réactivité du sélecteur de teint — mettre à jour les matériaux peau
+  // déjà en scène quand skinToneHex change (la closure de onContextCreate ne
+  // se relance pas sur un changement de props).
+  useEffect(() => {
+    skinMaterialsRef.current.forEach((m) => m.color.set(skinToneHex));
+  }, [skinToneHex]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -131,11 +149,12 @@ export function Viewer3D({
     const renderer = new THREE.WebGLRenderer({
       canvas: canvasShim(gl),
       context: gl as unknown as WebGLRenderingContext,
-      antialias: true,
+      antialias: false,
     });
     renderer.setSize(width, heightPx, false);
     renderer.setClearColor(0xf4f2f8, 1);
     rendererRef.current = renderer;
+    console.log("[Viewer3D] WebGL2:", renderer.capabilities.isWebGL2);
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
@@ -181,7 +200,10 @@ export function Viewer3D({
                 if (idx !== undefined) mesh.morphTargetInfluences[idx] = weight;
               }
               const material = mesh.material as THREE.MeshStandardMaterial | undefined;
-              if (material?.color) material.color.set(skinToneHex);
+              if (material?.color) {
+                material.color.set(skinToneHexRef.current);
+                skinMaterialsRef.current.push(material);
+              }
             });
 
             // Mise à l'échelle par la taille réelle. `reference_height_cm`
@@ -216,6 +238,7 @@ export function Viewer3D({
               garment.position.y = size.y * 0.62;
               group.add(garment);
             }
+            onReadyRef.current?.();
           },
           undefined,
           (error) => console.error("Base mesh load error:", error)
@@ -249,6 +272,17 @@ export function Viewer3D({
             // calcule désormais cette hauteur au centimètre près.
             model.position.x -= center.x;
             model.position.z -= center.z;
+
+            // B1: collecter les matériaux peau pour mise à jour réactive
+            model.traverse((obj) => {
+              const mesh = obj as THREE.Mesh;
+              const material = mesh.material as THREE.MeshStandardMaterial | undefined;
+              if (material?.color) {
+                material.color.set(skinToneHexRef.current);
+                skinMaterialsRef.current.push(material);
+              }
+            });
+
             group.add(model);
             const size = box.getSize(new THREE.Vector3());
             const focusY = Math.min(size.y, 1.8) * 0.55;
@@ -273,6 +307,7 @@ export function Viewer3D({
               garment.position.y = size.y * 0.62;
               group.add(garment);
             }
+            onReadyRef.current?.();
           },
           undefined,
           (error) => console.error("GLB load error:", error)
@@ -301,6 +336,7 @@ export function Viewer3D({
       const shoulderWidth = (shoulderCm / 100) * 0.9 * shoulderFactor;
 
       const skinMat = new THREE.MeshStandardMaterial({ color: skinToneHex, roughness: 0.6 });
+      skinMaterialsRef.current.push(skinMat);
       group.scale.setScalar(scale);
 
       const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 24), skinMat);
@@ -365,6 +401,7 @@ export function Viewer3D({
       );
       ground.rotation.x = -Math.PI / 2;
       group.add(ground);
+      onReadyRef.current?.();
     }
 
     const render = () => {

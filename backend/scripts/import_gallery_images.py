@@ -76,7 +76,7 @@ def run():
                 # Pas un dossier de genre (debug/, avatars/, etc.) — ignorer
                 continue
 
-            print(f"\n📂 {entry.name}/ (genre: {gender})")
+            print(f"\n[{entry.name}/] (genre: {gender})")
 
             for category_dir in sorted(entry.iterdir()):
                 if not category_dir.is_dir():
@@ -95,7 +95,7 @@ def run():
                     db.add(cat)
                     db.flush()
                     created_categories += 1
-                    print(f"  ✚ Catégorie créée : {category_name} ({gender})")
+                    print(f"  + Categorie creee : {category_name} ({gender})")
 
                 # Parcourir les images
                 for img_file in sorted(category_dir.iterdir()):
@@ -120,11 +120,11 @@ def run():
                     )
                     db.add(model)
                     created_models += 1
-                    print(f"    📷 {model_name} → {rel_path}")
+                    print(f"    - {model_name} -> {rel_path}")
 
         db.commit()
 
-    print(f"\n✅ Terminé : {created_categories} catégorie(s) créée(s), {created_models} modèle(s) importé(s), {skipped} ignoré(s)")
+    print(f"\nTermine : {created_categories} categorie(s) creee(s), {created_models} modele(s) importe(s), {skipped} ignore(s)")
 
 
 if __name__ == "__main__":

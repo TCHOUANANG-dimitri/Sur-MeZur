@@ -28,8 +28,12 @@ export default function AvatarPage() {
   const [avatar, setAvatar] = useState<AvatarT | null>(null);
   const [loading, setLoading] = useState(false);
   const [genError, setGenError] = useState("");
+  const [meshRendered, setMeshRendered] = useState(false);
   const mountedRef = useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
+
+  // Reset meshRendered quand l'avatar change (nouvel avatar = nouveau mesh)
+  useEffect(() => { setMeshRendered(false); }, [avatar?.id]);
 
   // Charger la mensuration
   useEffect(() => {
@@ -81,7 +85,7 @@ export default function AvatarPage() {
       },
     });
 
-  const isReady = avatar?.status === "ready";
+  const isReady = avatar?.status === "ready" && meshRendered;
   const isGenerating = loading || (avatar !== null && avatar?.status !== "ready" && avatar?.status !== "failed");
 
   // État de chargement plein écran (pas de mensuration ou génération en cours)
@@ -118,6 +122,7 @@ export default function AvatarPage() {
           measurements={measurement.data}
           gender={measurement.gender}
           height={SCREEN_H}
+          onReady={() => setMeshRendered(true)}
         />
       </View>
 
@@ -140,7 +145,7 @@ export default function AvatarPage() {
       ) : null}
 
       {/* État de génération en cours (overlay au centre) */}
-      {isGenerating && !isReady && (
+      {(isGenerating || (avatar?.status === "ready" && !meshRendered)) && !isReady && (
         <View style={styles.generatingOverlay}>
           <ActivityIndicator size="large" color={colors.violetPrimary} />
           <Text style={styles.loadingText}>{t("avatar.generating")}</Text>
@@ -170,6 +175,9 @@ export default function AvatarPage() {
           <Button fullWidth variant="secondary" onPress={() => goTryOn(true)}>
             {t("avatar.addAccessories")}
           </Button>
+          <TouchableOpacity onPress={() => router.back()} style={styles.skipLink}>
+            <Text style={styles.skipLinkText}>{t("avatar.saveWithoutDressing")}</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -294,5 +302,15 @@ const makeStyles = (colors: ThemeColors) =>
       paddingBottom: 34,
       gap: 10,
       zIndex: 10,
+    },
+    skipLink: {
+      alignItems: "center",
+      paddingVertical: 6,
+    },
+    skipLinkText: {
+      fontSize: 13,
+      fontFamily: fonts.body,
+      color: "rgba(255,255,255,0.7)",
+      textDecorationLine: "underline",
     },
   });

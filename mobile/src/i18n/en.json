@@ -78,6 +78,7 @@
   "avatar.generate": "Generate my avatar",
   "avatar.confirm": "Confirm",
   "avatar.addAccessories": "Add accessories",
+  "avatar.saveWithoutDressing": "Save without dressing",
   "avatar.generating": "Generating your avatar…",
   "avatar.generatingHint": "This may take up to 2 minutes.",
   "avatar.err.generationFailed": "Avatar generation failed. Try again.",
@@ -567,6 +568,5 @@
   "profile.myMeasurementsEmpty": "You haven't taken your measurements yet.",
   "profile.takeMeasurements": "Take my measurements",
   "profile.createAvatar": "Create my avatar with these measurements",
-  "profile.updateMeasurements": "Update my measurements",
-  "profile.myAccount": "My account"
+  "profile.updateMeasurements": "Update my measurements"
 }

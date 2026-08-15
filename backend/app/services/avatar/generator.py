@@ -268,10 +268,13 @@ def _apply_height(human, height_cm):
 
 
 def _apply_skin(human, skin_tone_hex):
-    """Matériau peau appliqué à TOUS les emplacements du corps.
+    """Matériau peau appliqué uniquement aux emplacements de peau du corps.
 
-    MPFB crée plusieurs emplacements matériau ; n'en remplacer qu'un laissait
-    le reste du corps à la couleur par défaut.
+    MPFB crée plusieurs emplacements matériau (peau, yeux, dents, langue,
+    sourcils, cils…). Remplacer TOUS les emplacements teintait les yeux,
+    dents et cils avec la couleur de peau — donnant un aspect étrange
+    (« semblant de cheveux » sur le front). On ne remplace que les slots
+    dont le nom correspond à la peau.
     """
     h = (skin_tone_hex or "#C68863").lstrip("#")
     if len(h) < 6:
@@ -288,9 +291,17 @@ def _apply_skin(human, skin_tone_hex):
     if "Roughness" in bsdf.inputs:
         bsdf.inputs["Roughness"].default_value = 0.45
 
+    # Noms connus des emplacements de peau MakeHuman/MPFB — on n'imprime
+    # qu'un avertissement pour les slots inconnus au lieu de les peindre.
+    SKIN_SLOT_NAMES = {"skin", "body", "skinbody"}
+
     if human.data.materials:
         for i in range(len(human.data.materials)):
-            human.data.materials[i] = mat
+            slot = human.data.materials[i]
+            if slot and slot.name.lower() in SKIN_SLOT_NAMES:
+                human.data.materials[i] = mat
+            elif slot:
+                print(f"  matériau conservé tel quel : {slot.name}")
     else:
         human.data.materials.append(mat)
     print(f"Peau : {skin_tone_hex}")

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Le backend (api.gitingeniering.com) n'est servi qu'en HTTP pour le moment.
+  Android bloque le trafic en clair par défaut depuis l'API 28 sur les builds
+  release (seul le manifeste debug l'autorise) : sans cette exception ciblée,
+  tout appel réseau échoue silencieusement, y compris la connexion.
+  Restreint au seul domaine concerné plutôt qu'un usesCleartextTraffic global.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">api.gitingeniering.com</domain>
+    </domain-config>
+</network-security-config>
