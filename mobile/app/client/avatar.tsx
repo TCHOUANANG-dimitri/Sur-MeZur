@@ -35,14 +35,36 @@ export default function AvatarPage() {
   // Reset meshRendered quand l'avatar change (nouvel avatar = nouveau mesh)
   useEffect(() => { setMeshRendered(false); }, [avatar?.id]);
 
+  // B2: Filet de sécurité — si onReady n'est pas appelé après 20s, afficher
+  // une erreur explicite au lieu de rester bloqué sur le spinner.
+  useEffect(() => {
+    if (!avatar || meshRendered) return;
+    // Timeout 20s pour le rendu (status "ready" mais mesh pas encore affiché)
+    if (avatar.status === "ready") {
+      const timer = setTimeout(() => {
+        if (!meshRendered) setGenError(t("avatar.err.renderTimeout"));
+      }, 20000);
+      return () => clearTimeout(timer);
+    }
+    // Timeout 30s pour la génération (status "pending" trop long)
+    if (avatar.status !== "failed") {
+      const timer = setTimeout(() => {
+        setGenError(t("avatar.err.renderTimeout"));
+      }, 30000);
+      return () => clearTimeout(timer);
+    }
+  }, [avatar?.status, meshRendered]);
+
   // Charger la mensuration
   useEffect(() => {
     MeasurementsApi.list()
       .then((list) => {
+        if (!mountedRef.current) return;
         const found = params.measurementId ? list.find((m) => m.id === params.measurementId) : list[0];
         setMeasurement(found || null);
       })
       .catch((e) => {
+        if (!mountedRef.current) return;
         setLoadError(userMessage(e));
         setMeasurement(null);
       });
@@ -137,10 +159,18 @@ export default function AvatarPage() {
         </View>
       </SafeAreaView>
 
-      {/* Error overlay */}
+      {/* Error overlay — dismissable avec retry */}
       {genError ? (
         <View style={styles.errorOverlay}>
           <ErrorBanner message={genError} />
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+            <TouchableOpacity onPress={() => setGenError("")} style={styles.errorBtn}>
+              <Text style={styles.errorBtnText}>{t("common.close")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setGenError(""); generate(); }} style={[styles.errorBtn, { backgroundColor: colors.violetPrimary }]}>
+              <Text style={[styles.errorBtnText, { color: "#fff" }]}>{t("common.retry")}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : null}
 
@@ -232,6 +262,18 @@ const makeStyles = (colors: ThemeColors) =>
       left: 18,
       right: 18,
       zIndex: 20,
+    },
+    errorBtn: {
+      flex: 1,
+      alignItems: "center",
+      paddingVertical: 8,
+      borderRadius: 8,
+      backgroundColor: "rgba(255,255,255,0.2)",
+    },
+    errorBtnText: {
+      fontSize: 12,
+      fontFamily: fonts.bodyBold,
+      color: colors.indigoText,
     },
     generatingOverlay: {
       ...StyleSheet.absoluteFillObject,

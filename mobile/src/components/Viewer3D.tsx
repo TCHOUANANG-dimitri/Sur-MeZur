@@ -143,6 +143,22 @@ export function Viewer3D({
   ).current;
 
   const onContextCreate = (gl: ExpoWebGLRenderingContext) => {
+    // Si le contexte GL est recréé (resize, background/foreground), disposer
+    // les anciens objets pour éviter les fuites GPU.
+    if (rendererRef.current || sceneRef.current) {
+      skinMaterialsRef.current = [];
+      sceneRef.current?.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        const mat = mesh.material as THREE.Material | THREE.Material[] | undefined;
+        if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+        else mat?.dispose();
+      });
+      rendererRef.current?.dispose();
+      rendererRef.current = null;
+      sceneRef.current = null;
+    }
+
     const width = gl.drawingBufferWidth;
     const heightPx = gl.drawingBufferHeight;
 
@@ -190,59 +206,71 @@ export function Viewer3D({
         loader.load(
           asset.localUri,
           (gltf) => {
-            const model = gltf.scene;
+            if (!mountedRef.current) return;
+            try {
+              const model = gltf.scene;
 
-            model.traverse((obj) => {
-              const mesh = obj as THREE.Mesh;
-              if (!mesh.morphTargetDictionary || !mesh.morphTargetInfluences) return;
-              for (const [name, weight] of Object.entries(avatarMorphology.weights)) {
-                const idx = mesh.morphTargetDictionary[name];
-                if (idx !== undefined) mesh.morphTargetInfluences[idx] = weight;
-              }
-              const material = mesh.material as THREE.MeshStandardMaterial | undefined;
-              if (material?.color) {
-                material.color.set(skinToneHexRef.current);
-                skinMaterialsRef.current.push(material);
-              }
-            });
-
-            // Mise à l'échelle par la taille réelle. `reference_height_cm`
-            // est une ESTIMATION de la hauteur du maillage une fois les
-            // morph targets appliqués (pas la hauteur du maillage neutre) —
-            // voir target_map.estimate_reference_height_cm côté backend :
-            // diviser par la hauteur neutre reproduirait l'erreur de
-            // plusieurs cm déjà documentée dans generator.py::_apply_height.
-            const scaleFactor = avatarMorphology.height_cm / avatarMorphology.reference_height_cm;
-            model.scale.setScalar(scaleFactor);
-
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            model.position.x -= center.x;
-            model.position.z -= center.z;
-            group.add(model);
-            const size = box.getSize(new THREE.Vector3());
-            const focusY = Math.min(size.y, 1.8) * 0.55;
-            camera.lookAt(0, focusY, 0);
-
-            if (garmentColorHex) {
-              const garmentMat = new THREE.MeshStandardMaterial({
-                color: garmentColorHex,
-                roughness: 0.75,
-                metalness: 0.05,
+              model.traverse((obj) => {
+                const mesh = obj as THREE.Mesh;
+                if (!mesh.morphTargetDictionary || !mesh.morphTargetInfluences) return;
+                for (const [name, weight] of Object.entries(avatarMorphology.weights)) {
+                  const idx = mesh.morphTargetDictionary[name];
+                  if (idx !== undefined) mesh.morphTargetInfluences[idx] = weight;
+                }
+                const material = mesh.material as THREE.MeshStandardMaterial | undefined;
+                if (material?.color) {
+                  material.color.set(skinToneHexRef.current);
+                  skinMaterialsRef.current.push(material);
+                }
               });
-              const torsoRadius = Math.max(size.x, size.z) * 0.32;
-              const garment = new THREE.Mesh(
-                new THREE.CylinderGeometry(torsoRadius, torsoRadius * 0.92, size.y * 0.32, 24, 1, true),
-                garmentMat
-              );
-              garment.position.y = size.y * 0.62;
-              group.add(garment);
+
+              // Mise à l'échelle par la taille réelle. `reference_height_cm`
+              // est une ESTIMATION de la hauteur du maillage une fois les
+              // morph targets appliqués (pas la hauteur du maillage neutre) —
+              // voir target_map.estimate_reference_height_cm côté backend :
+              // diviser par la hauteur neutre reproduirait l'erreur de
+              // plusieurs cm déjà documentée dans generator.py::_apply_height.
+              const scaleFactor = avatarMorphology.height_cm / Math.max(avatarMorphology.reference_height_cm, 0.01);
+              model.scale.setScalar(scaleFactor);
+
+              const box = new THREE.Box3().setFromObject(model);
+              const center = box.getCenter(new THREE.Vector3());
+              model.position.x -= center.x;
+              model.position.z -= center.z;
+              group.add(model);
+              const size = box.getSize(new THREE.Vector3());
+              const focusY = Math.min(size.y, 1.8) * 0.55;
+              camera.lookAt(0, focusY, 0);
+
+              if (garmentColorHex) {
+                const garmentMat = new THREE.MeshStandardMaterial({
+                  color: garmentColorHex,
+                  roughness: 0.75,
+                  metalness: 0.05,
+                });
+                const torsoRadius = Math.max(size.x, size.z) * 0.32;
+                const garment = new THREE.Mesh(
+                  new THREE.CylinderGeometry(torsoRadius, torsoRadius * 0.92, size.y * 0.32, 24, 1, true),
+                  garmentMat
+                );
+                garment.position.y = size.y * 0.62;
+                group.add(garment);
+              }
+            } catch (error) {
+              console.error("[Viewer3D] Erreur post-chargement (morphology):", error);
+            } finally {
+              onReadyRef.current?.();
             }
-            onReadyRef.current?.();
           },
           undefined,
-          (error) => console.error("Base mesh load error:", error)
+          (error) => {
+            console.error("Base mesh load error:", error);
+            onReadyRef.current?.();
+          }
         );
+      }).catch((error) => {
+        console.error("[Viewer3D] Erreur chargement asset:", error);
+        onReadyRef.current?.();
       });
     } else if (glbUrl) {
       // --- Chargement GLB via GLTFLoader ---
@@ -261,57 +289,69 @@ export function Viewer3D({
         loader.load(
           glbUrl,
           (gltf) => {
-            const model = gltf.scene;
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            // Recentre seulement horizontalement : le générateur Blender
-            // exporte l'avatar pieds au sol (y=0), et un précédent recentrage
-            // vertical + une mise à l'échelle fixe à 1,80 m écrasaient la
-            // taille réelle du sujet — un avatar de 1,55 m et un de 1,85 m
-            // rendaient identiques. Voir generator.py::_apply_height, qui
-            // calcule désormais cette hauteur au centimètre près.
-            model.position.x -= center.x;
-            model.position.z -= center.z;
+            if (!mountedRef.current) return;
+            try {
+              const model = gltf.scene;
+              const box = new THREE.Box3().setFromObject(model);
+              const center = box.getCenter(new THREE.Vector3());
+              // Recentre seulement horizontalement : le générateur Blender
+              // exporte l'avatar pieds au sol (y=0), et un précédent recentrage
+              // vertical + une mise à l'échelle fixe à 1,80 m écrasaient la
+              // taille réelle du sujet — un avatar de 1,55 m et un de 1,85 m
+              // rendaient identiques. Voir generator.py::_apply_height, qui
+              // calcule désormais cette hauteur au centimètre près.
+              model.position.x -= center.x;
+              model.position.z -= center.z;
 
-            // B1: collecter les matériaux peau pour mise à jour réactive
-            model.traverse((obj) => {
-              const mesh = obj as THREE.Mesh;
-              const material = mesh.material as THREE.MeshStandardMaterial | undefined;
-              if (material?.color) {
-                material.color.set(skinToneHexRef.current);
-                skinMaterialsRef.current.push(material);
-              }
-            });
-
-            group.add(model);
-            const size = box.getSize(new THREE.Vector3());
-            const focusY = Math.min(size.y, 1.8) * 0.55;
-            camera.lookAt(0, focusY, 0);
-
-            // Le GLB exporté par generator.py est le corps seul, sans
-            // géométrie de vêtement à teinter directement (voir
-            // generator.py::_export_glb) : sans ce recouvrement, choisir un
-            // tissu n'avait aucun effet visible sur un avatar réel — seul le
-            // corps procédural (repli sans GLB) réagissait à cette prop.
-            if (garmentColorHex) {
-              const garmentMat = new THREE.MeshStandardMaterial({
-                color: garmentColorHex,
-                roughness: 0.75,
-                metalness: 0.05,
+              // B1: collecter les matériaux peau pour mise à jour réactive
+              model.traverse((obj) => {
+                const mesh = obj as THREE.Mesh;
+                const material = mesh.material as THREE.MeshStandardMaterial | undefined;
+                if (material?.color) {
+                  material.color.set(skinToneHexRef.current);
+                  skinMaterialsRef.current.push(material);
+                }
               });
-              const torsoRadius = Math.max(size.x, size.z) * 0.32;
-              const garment = new THREE.Mesh(
-                new THREE.CylinderGeometry(torsoRadius, torsoRadius * 0.92, size.y * 0.32, 24, 1, true),
-                garmentMat
-              );
-              garment.position.y = size.y * 0.62;
-              group.add(garment);
+
+              group.add(model);
+              const size = box.getSize(new THREE.Vector3());
+              const focusY = Math.min(size.y, 1.8) * 0.55;
+              camera.lookAt(0, focusY, 0);
+
+              // Le GLB exporté par generator.py est le corps seul, sans
+              // géométrie de vêtement à teinter directement (voir
+              // generator.py::_export_glb) : sans ce recouvrement, choisir un
+              // tissu n'avait aucun effet visible sur un avatar réel — seul le
+              // corps procédural (repli sans GLB) réagissait à cette prop.
+              if (garmentColorHex) {
+                const garmentMat = new THREE.MeshStandardMaterial({
+                  color: garmentColorHex,
+                  roughness: 0.75,
+                  metalness: 0.05,
+                });
+                const torsoRadius = Math.max(size.x, size.z) * 0.32;
+                const garment = new THREE.Mesh(
+                  new THREE.CylinderGeometry(torsoRadius, torsoRadius * 0.92, size.y * 0.32, 24, 1, true),
+                  garmentMat
+                );
+                garment.position.y = size.y * 0.62;
+                group.add(garment);
+              }
+            } catch (error) {
+              console.error("[Viewer3D] Erreur post-chargement (glbUrl):", error);
+            } finally {
+              onReadyRef.current?.();
             }
-            onReadyRef.current?.();
           },
           undefined,
-          (error) => console.error("GLB load error:", error)
+          (error) => {
+            console.error("GLB load error:", error);
+            onReadyRef.current?.();
+          }
         );
+      }).catch((error) => {
+        console.error("[Viewer3D] Erreur chargement GLB:", error);
+        onReadyRef.current?.();
       });
     } else {
       // --- Fallback : body procédural ---
@@ -410,7 +450,14 @@ export function Viewer3D({
       if (autoRotate && !dragging.current) {
         group.rotation.y += 0.006;
       }
-      renderer.render(scene, camera);
+      try {
+        renderer.render(scene, camera);
+      } catch {
+        // WebGL context loss — arrêter la boucle de rendu
+        console.warn("[Viewer3D] WebGL context lost");
+        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+        return;
+      }
       gl.endFrameEXP();
     };
     render();

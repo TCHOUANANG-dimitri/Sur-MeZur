@@ -82,6 +82,7 @@
   "avatar.generating": "Generating your avatar…",
   "avatar.generatingHint": "This may take up to 2 minutes.",
   "avatar.err.generationFailed": "Avatar generation failed. Try again.",
+  "avatar.err.renderTimeout": "Rendering is taking too long. Please try again.",
   "avatar.err.noMeasurement": "No measurements available. Take your measurements first.",
   "avatar.err.stillGenerating": "Still working — first-time generation can take up to 2 minutes.",
   "tryon.title": "Try-on",

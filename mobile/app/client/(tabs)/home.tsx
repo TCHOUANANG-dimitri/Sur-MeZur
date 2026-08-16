@@ -2,7 +2,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { fileUrl } from "../../../src/api/client";
 import { CatalogApi, NotificationsApi, TailorsApi } from "../../../src/api/endpoints";
 import type { Category, GarmentModel, Notification, TailorProfile } from "../../../src/api/types";
 import { NotifBell, VerificationBadge } from "../../../src/components/Badges";
@@ -61,7 +62,11 @@ export default function Home() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 18 }}>
             {models.map((m) => (
               <TouchableOpacity key={m.id} style={{ width: 140 }} onPress={() => router.push(`/client/models/${m.id}`)}>
-                <LinearGradient colors={[m.thumbnail_color, colors.indigoText]} style={styles.modelThumb} />
+                {m.photo_url ? (
+                  <Image source={{ uri: fileUrl(m.photo_url) }} style={styles.modelThumb} resizeMode="cover" />
+                ) : (
+                  <LinearGradient colors={[m.thumbnail_color, colors.indigoText]} style={styles.modelThumb} />
+                )}
                 <Text style={styles.modelName}>{m.name}</Text>
                 <Text style={styles.modelCategory}>{m.category.name}</Text>
               </TouchableOpacity>

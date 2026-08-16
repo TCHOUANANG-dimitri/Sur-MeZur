@@ -82,6 +82,7 @@
   "avatar.generating": "Génération de votre avatar…",
   "avatar.generatingHint": "Cela peut prendre jusqu'à 2 minutes.",
   "avatar.err.generationFailed": "La génération de l'avatar a échoué. Réessayez.",
+  "avatar.err.renderTimeout": "L'affichage prend trop de temps. Réessayez.",
   "avatar.err.noMeasurement": "Aucune mensuration disponible. Prenez d'abord vos mesures.",
   "avatar.err.stillGenerating": "Toujours en cours — la première génération peut prendre jusqu'à 2 minutes.",
   "tryon.title": "Essayage",

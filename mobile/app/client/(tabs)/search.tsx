@@ -1,7 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { fileUrl } from "../../../src/api/client";
 import { CatalogApi, TailorsApi } from "../../../src/api/endpoints";
 import type { Category, GarmentModel, TailorProfile } from "../../../src/api/types";
 import { LikeButton, VerificationBadge } from "../../../src/components/Badges";
@@ -104,7 +105,11 @@ export default function Search() {
             {models.map((m) => (
               <TouchableOpacity key={m.id} style={styles.gridItem} onPress={() => router.push(`/client/models/${m.id}`)}>
                 <View>
-                  <LinearGradient colors={[m.thumbnail_color, colors.indigoText]} style={styles.gridThumb} />
+                  {m.photo_url ? (
+                    <Image source={{ uri: fileUrl(m.photo_url) }} style={styles.gridThumb} resizeMode="cover" />
+                  ) : (
+                    <LinearGradient colors={[m.thumbnail_color, colors.indigoText]} style={styles.gridThumb} />
+                  )}
                   <View style={styles.likeOverlay}>
                     <LikeButton liked={m.liked_by_me} count={m.like_count} onPress={() => toggleLike(m)} />
                   </View>

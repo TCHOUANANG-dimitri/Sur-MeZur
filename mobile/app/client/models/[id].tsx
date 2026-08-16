@@ -1,7 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
+import { fileUrl } from "../../../src/api/client";
 import { CatalogApi } from "../../../src/api/endpoints";
 import type { GarmentModel } from "../../../src/api/types";
 import { Button } from "../../../src/components/Button";
@@ -46,7 +47,11 @@ export default function ModelDetail() {
     <Screen>
       <Header title={model.name} showBack />
       <View>
-        <LinearGradient colors={[model.thumbnail_color, colors.indigoText]} style={styles.hero} />
+        {model.photo_url ? (
+          <Image source={{ uri: fileUrl(model.photo_url) }} style={styles.hero} resizeMode="cover" />
+        ) : (
+          <LinearGradient colors={[model.thumbnail_color, colors.indigoText]} style={styles.hero} />
+        )}
         <View style={styles.likeOverlay}>
           <LikeButton liked={model.liked_by_me} count={model.like_count} onPress={toggleLike} size={20} />
         </View>
