@@ -1,10 +1,15 @@
 # Sur-MeZur — Rapport de réalisation
 
-*Dernière mise à jour : 8 août 2026*
+*Dernière mise à jour : 15 août 2026*
 
 > Ce document décrit l'état réel du projet : ce qui fonctionne, avec quelle
 > précision, et ce qui reste à faire. Les chiffres qui y figurent sont tous
 > mesurés, jamais estimés — quand une valeur est incertaine, c'est écrit.
+
+> Cette mise à jour porte sur l'infrastructure, l'avatar 3D et le catalogue
+> (voir §2, §7, §9). Aucune nouvelle campagne de mesure n'a eu lieu depuis le
+> 8 août : les sections 3 à 6, entièrement dédiées à la précision des
+> mensurations, sont inchangées et restent la référence.
 
 ---
 
@@ -53,8 +58,10 @@ sombre.
 | **Mesure par photo** | ✅ **fonctionnelle — précision 4,2 cm** |
 | Capture guidée (silhouette + minuteur) | ✅ en place, **jamais testée sur le terrain** |
 | Hébergement | ✅ O2Switch |
-| Certificat HTTPS | ❌ absent — tests en HTTP |
-| Avatar 3D, essayage, patrons | ⚠️ simulés |
+| Certificat HTTPS | ❌ absent — tests en HTTP (exception ciblée sur ce seul domaine côté Android, voir §7) |
+| **Avatar 3D** | ⚙️ pipeline réel (morph targets, plus de Blender en production) — **rendu client instable, bug bloquant sur le dernier build, correctif écrit non déployé** (voir §7) |
+| Catalogue (modèles, catégories) | ✅ gestion complète côté admin, 302 photos réelles importées (6 catégories) |
+| Essayage, patrons | ⚠️ simulés |
 | Paiement Mobile Money | ⚠️ simulé (bac à sable) |
 | SMS de vérification | ⚠️ le code s'affiche dans l'application |
 
@@ -75,6 +82,19 @@ Installée en APK sur Android.
 **Serveur** — FastAPI + SQLAlchemy, base SQLite, hébergé chez O2Switch
 (cPanel, Passenger/WSGI). Authentification par jeton d'accès (1 h) et jeton de
 renouvellement (30 jours), renouvelé de façon transparente.
+
+Passenger exécute l'application en WSGI via `a2wsgi`, qui n'émet aucun
+évènement de cycle de vie ASGI : le traitement d'une mesure (10 à 90 s)
+tournait donc en `BackgroundTasks` dans le cycle de requête, bloquant tout le
+site le temps du calcul — pas seulement la requête concernée. Sorti de ce
+cycle depuis le 13 août : un worker dédié (`MEASUREMENT_WORKER_MODE=cron`),
+invoqué par une tâche planifiée, traite les mesures en dehors de Passenger.
+
+Sur le même hébergement, les processus voient 56 cœurs CPU mais n'en ont
+réellement qu'1 à 2 en quota — torch/OpenCV lançaient un thread par cœur
+*visible*, saturant le processeur au point qu'une analyse pourtant instantanée
+en local (~3 s) n'aboutissait jamais en production. Corrigé le 14 août en
+plafonnant explicitement les threads dès l'import du module.
 
 **Intelligence artificielle** — MediaPipe pour le squelette, MobileSAM pour la
 silhouette, modèles Ridge entraînés sur ANSUR II. Tout tourne sur le serveur,
@@ -382,14 +402,40 @@ indicateur (le rapport écartement d'épaules / hauteur de torse, qui vaut 0,68
 de face et 0,05 de profil), mais il n'est pas calibré aux angles
 intermédiaires. Une séance de dix minutes suffirait.
 
+### Priorité 4 — Débloquer le rendu de l'avatar 3D
+
+**Régression trouvée le 15 août, correctif écrit mais non vérifié sur
+appareil.** Le pipeline serveur (poids de morphologie calculés en Python pur)
+est fonctionnel et vérifié en production. Côté client, l'écran de génération
+reste bloqué indéfiniment sur le dernier build (maillages de base
+régénérés avec normales de morph, 4× plus lourds) — probablement une
+exception silencieuse dans le traitement du modèle chargé, jamais
+interceptée, qui empêche l'overlay de chargement de se refermer. Diagnostic
+et correctif détaillés dans `HANDOFF_CATALOG_PHOTOS_AND_AVATAR_HANG.md`
+(section B) : encadrer le chargement d'un `try/finally` et ajouter un
+timeout de repli côté interface. Non vérifié faute d'accès à un appareil
+physique depuis l'environnement de développement.
+
+### Priorité 5 — Afficher les vraies photos du catalogue
+
+302 photos de modèles ont été importées en base (6 catégories, homme/femme),
+mais les quatre écrans qui listent des modèles (accueil, recherche, galerie,
+détail) affichent encore un simple aplat de couleur à la place de la photo
+réelle. Correctif ponctuel, détaillé dans
+`HANDOFF_CATALOG_PHOTOS_AND_AVATAR_HANG.md` (section A) : un utilitaire de
+résolution d'URL existe déjà et est utilisé ailleurs dans l'app, il ne
+manque que sa réutilisation à ces quatre endroits.
+
 ### Autres chantiers
 
 | Sujet | État |
 |---|---|
-| **Certificat HTTPS** | AutoSSL n'a pas émis pour le sous-domaine ; tests en HTTP |
+| **Certificat HTTPS** | AutoSSL n'a pas émis pour le sous-domaine ; tests en HTTP. Contournement ciblé côté Android : exception de trafic en clair limitée au seul domaine de l'API |
 | **Interface sur appareil** | la capture guidée n'a jamais été utilisée en conditions réelles |
 | **Vrai fournisseur Mobile Money** | actuellement simulé |
-| **Avatar 3D et essayage** | actuellement simulés |
+| **Essayage, patrons** | actuellement simulés |
+| **Migration de schéma en production** | `garment_models` (catégories genrées) reste sur l'ancien schéma sur le serveur — nécessite une suppression manuelle de la table pour que `create_all()` la recrée au bon format ; le projet n'a toujours pas de système de migration |
+| **Compte de test** | `+23760000001` (« ZZ Test Diagnostic ») et ses sessions de mesure/avatar associées restent à supprimer en production |
 | **Sauvegarde du dépôt** | l'historique local n'a aucun ancêtre commun avec le dépôt distant |
 
 ---
@@ -486,3 +532,21 @@ Supprimé : l'échec est désormais explicite, avec une consigne de reprise.
 | 7 août | Messages d'erreur nettoyés : plus aucun détail technique affiché |
 | 7 août | Réduction des images avant analyse : 87 s → 17 s (§8.4) |
 | 8 août | **Ligne de hanches descendue** : 7,4 → 5,2 cm (§5.2) |
+| 10 août | Badge de vérification tailleur à trois états, mot de passe à 6 caractères minimum |
+| 10 août | Détection des lignes du tronc et retrait du vêtement affiné : 3,77 → 3,12 cm |
+| 11 août | Compte admin de secours, restriction du prêt-à-porter aux tailleurs vérifiés, timeout explicite sur le pipeline vision |
+| 12 août | Génération d'avatar 3D corrigée : les cibles MPFB2 pilotaient un morphing inexistant |
+| 13 août | **Mesure sortie du cycle de requête Passenger** : un traitement bloquait tout le site 10 à 90 s (voir §2.3) |
+| 13 août | Hotfix : le `PRAGMA WAL` faisait échouer toute connexion à la base sur O2Switch |
+| 13 août | Faille corrigée : l'auto-inscription acceptait `role="admin"` sans restriction |
+| 13 août | Vérification tailleur complète, transparence des mesures côté client, 44 bugs audités et corrigés |
+| 14 août | **Avatar 3D par morph targets** : deux maillages de base embarqués dans l'app, déformés côté client — Blender ne tournant plus en production, un GLB par client n'était plus possible |
+| 14 août | Préchauffage MediaPipe/SAM déplacé à l'import du module — le `startup` FastAPI ne s'exécute jamais sous Passenger/a2wsgi |
+| 14 août | **Threads torch/OpenCV plafonnés** : la mesure ne terminait plus en production (voir §2.3) |
+| 14 août | Colonne manquante en base (`measurements.features`) : script de synchronisation additive créé, déployé |
+| 14 août | **Gestion du catalogue par l'admin** : catégories genrées, modèles avec photos, remplace l'ancien enum figé de catégories |
+| 14 août | Suppression définitive d'un compte côté admin |
+| 15 août | Blocage réseau corrigé : Android bloque par défaut le trafic HTTP en clair sur les builds release, empêchant tout appel API (login compris) |
+| 15 août | Premier test visuel réel de l'avatar 3D : bugs trouvés et corrigés (sélecteur de teint sans effet, chargement peu synchronisé, maillage facetté par absence de normales de morph exportées) |
+| 15 août | Maillages de base régénérés (Blender + MPFB2 réinstallés) avec normales de morph et matériaux corrigés — a introduit une régression de chargement, voir §7 |
+| 15 août | 302 photos de modèles importées en base (6 catégories, homme/femme) — reste à afficher côté app, voir §7 |
