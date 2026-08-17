@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { avatarMeshUrl, userMessage } from "../../src/api/client";
 import { AvatarsApi, MeasurementsApi } from "../../src/api/endpoints";
 import type { Avatar as AvatarT, Measurement } from "../../src/api/types";
@@ -13,9 +13,9 @@ import { fonts, type ThemeColors } from "../../src/theme/tokens";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const SKIN_TONES = ["#F2D0B4", "#E8B584", "#C68863", "#9C6644", "#6B4226", "#3E2723"];
-const { height: SCREEN_H } = Dimensions.get("window");
 
 export default function AvatarPage() {
+  const { height: SCREEN_H } = useWindowDimensions();
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   const params = useLocalSearchParams<{ measurementId?: string; modelId?: string; tailorId?: string }>();
