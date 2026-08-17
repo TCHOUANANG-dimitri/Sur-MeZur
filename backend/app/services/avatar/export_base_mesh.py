@@ -106,7 +106,7 @@ def build_base(gender: str, output_path: str) -> None:
         use_selection=True,
         export_apply=False,   # pas de fusion des modifiers : on veut garder les shape keys
         export_morph=True,    # <- c'est la seule vraie différence avec generator.py
-        export_morph_normal=True,   # B4: exporter les normales de morph pour un éclairage correct
+        export_morph_normal=False,  # sans les normales par cible (≈20 Mo → 4-5 Mo)
         export_morph_tangent=False,
     )
     size = os.path.getsize(output_path)

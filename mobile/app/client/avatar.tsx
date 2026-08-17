@@ -12,7 +12,10 @@ import { useTheme, useThemedStyles } from "../../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../../src/theme/tokens";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const SKIN_TONES = ["#F2D0B4", "#E8B584", "#C68863", "#9C6644", "#6B4226", "#3E2723"];
+// Teinte par défaut appliquée à tous les avatars — le sélecteur manuel a été
+// retiré (l'extraction automatique depuis la photo du client est envisagée
+// séparément, voir HANDOFF_AVATAR_V2_FIXES.md section C).
+const DEFAULT_SKIN_TONE = "#C68863";
 
 export default function AvatarPage() {
   const { height: SCREEN_H } = useWindowDimensions();
@@ -24,7 +27,6 @@ export default function AvatarPage() {
 
   const [measurement, setMeasurement] = useState<Measurement | null | undefined>(undefined);
   const [loadError, setLoadError] = useState("");
-  const [skinTone, setSkinTone] = useState(SKIN_TONES[2]);
   const [avatar, setAvatar] = useState<AvatarT | null>(null);
   const [loading, setLoading] = useState(false);
   const [genError, setGenError] = useState("");
@@ -76,7 +78,7 @@ export default function AvatarPage() {
     setGenError("");
     setLoading(true);
     try {
-      const av = await AvatarsApi.create({ measurement_id: measurement.id, skin_tone_hex: skinTone });
+      const av = await AvatarsApi.create({ measurement_id: measurement.id, skin_tone_hex: DEFAULT_SKIN_TONE });
       if (!mountedRef.current) return;
       if (av.status === "failed") {
         setGenError(t("avatar.err.generationFailed"));
@@ -140,11 +142,12 @@ export default function AvatarPage() {
         <Viewer3D
           avatarMorphology={avatar?.morph_weights}
           glbUrl={avatarMeshUrl(avatar)}
-          skinToneHex={skinTone}
+          skinToneHex={DEFAULT_SKIN_TONE}
           measurements={measurement.data}
           gender={measurement.gender}
           height={SCREEN_H}
           onReady={() => setMeshRendered(true)}
+          onError={() => setGenError(t("avatar.err.renderFailed"))}
         />
       </View>
 
@@ -181,20 +184,6 @@ export default function AvatarPage() {
           <Text style={styles.loadingText}>{t("avatar.generating")}</Text>
         </View>
       )}
-
-      {/* Pastilles de teinte — rangée en bas au-dessus des boutons */}
-      <View style={styles.skinToneOverlay}>
-        <Text style={styles.skinLabel}>{t("avatar.skinTone")}</Text>
-        <View style={styles.swatchRow}>
-          {SKIN_TONES.map((c) => (
-            <TouchableOpacity
-              key={c}
-              onPress={() => setSkinTone(c)}
-              style={[styles.swatch, { backgroundColor: c }, skinTone === c && styles.swatchActive]}
-            />
-          ))}
-        </View>
-      </View>
 
       {/* Boutons ancrés en bas */}
       {isReady && (
@@ -301,37 +290,6 @@ const makeStyles = (colors: ThemeColors) =>
       color: colors.textSecondary,
       marginTop: 6,
       textAlign: "center",
-    },
-    skinToneOverlay: {
-      position: "absolute",
-      bottom: 130,
-      left: 0,
-      right: 0,
-      alignItems: "center",
-      zIndex: 10,
-      backgroundColor: "rgba(0,0,0,0.3)",
-      paddingVertical: 8,
-    },
-    skinLabel: {
-      fontSize: 11,
-      fontFamily: fonts.bodyBold,
-      color: "#fff",
-      marginBottom: 6,
-    },
-    swatchRow: {
-      flexDirection: "row",
-      gap: 10,
-    },
-    swatch: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      borderWidth: 2,
-      borderColor: "rgba(255,255,255,0.4)",
-    },
-    swatchActive: {
-      borderWidth: 3,
-      borderColor: colors.violetPrimary,
     },
     bottomActions: {
       position: "absolute",

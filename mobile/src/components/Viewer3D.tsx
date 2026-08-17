@@ -61,6 +61,10 @@ export interface Viewer3DProps {
    *  téléchargement GLB + application morph targets). Utilisé par le parent
    *  pour coordonner l'affichage du spinner de chargement. */
   onReady?: () => void;
+  /** Appelé si le chargement/traitement du modèle échoue — distinct de
+   *  onReady pour que le parent puisse afficher une vraie erreur au lieu de
+   *  montrer les actions "prêt" sur une scène restée vide. */
+  onError?: (error: unknown) => void;
 }
 
 export function Viewer3D({
@@ -73,6 +77,7 @@ export function Viewer3D({
   autoRotate = true,
   height = 320,
   onReady,
+  onError,
 }: Viewer3DProps) {
   const styles = useThemedStyles(makeStyles);
   const groupRef = useRef<THREE.Group | null>(null);
@@ -85,6 +90,8 @@ export function Viewer3D({
   const skinMaterialsRef = useRef<THREE.MeshStandardMaterial[]>([]);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
   const skinToneHexRef = useRef(skinToneHex);
   skinToneHexRef.current = skinToneHex;
 
@@ -256,21 +263,21 @@ export function Viewer3D({
                 garment.position.y = size.y * 0.62;
                 group.add(garment);
               }
+              onReadyRef.current?.();
             } catch (error) {
               console.error("[Viewer3D] Erreur post-chargement (morphology):", error);
-            } finally {
-              onReadyRef.current?.();
+              onErrorRef.current?.(error);
             }
           },
           undefined,
           (error) => {
             console.error("Base mesh load error:", error);
-            onReadyRef.current?.();
+            onErrorRef.current?.(error);
           }
         );
       }).catch((error) => {
         console.error("[Viewer3D] Erreur chargement asset:", error);
-        onReadyRef.current?.();
+        onErrorRef.current?.(error);
       });
     } else if (glbUrl) {
       // --- Chargement GLB via GLTFLoader ---
@@ -337,21 +344,21 @@ export function Viewer3D({
                 garment.position.y = size.y * 0.62;
                 group.add(garment);
               }
+              onReadyRef.current?.();
             } catch (error) {
               console.error("[Viewer3D] Erreur post-chargement (glbUrl):", error);
-            } finally {
-              onReadyRef.current?.();
+              onErrorRef.current?.(error);
             }
           },
           undefined,
           (error) => {
             console.error("GLB load error:", error);
-            onReadyRef.current?.();
+            onErrorRef.current?.(error);
           }
         );
       }).catch((error) => {
         console.error("[Viewer3D] Erreur chargement GLB:", error);
-        onReadyRef.current?.();
+        onErrorRef.current?.(error);
       });
     } else {
       // --- Fallback : body procédural ---
