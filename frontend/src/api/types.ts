@@ -14,6 +14,12 @@ export type GarmentCategory = "top" | "bottom" | "dress" | "traditional" | "othe
 export type ReceptionMode = "pickup" | "delivery";
 export type MeasurementSource = "ai" | "manual" | "mixed" | "tailor_confirmed";
 
+export interface Category {
+  id: string;
+  name: string;
+  gender: string;
+}
+
 export interface User {
   id: string;
   role: UserRole;

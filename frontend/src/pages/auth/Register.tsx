@@ -59,7 +59,7 @@ export default function Register() {
   };
 
   return (
-    <div className="app-shell" style={{ padding: 24 }}>
+    <div className="app-shell" style={{ padding: 24, overflowY: "auto" }}>
       <h2 style={{ fontFamily: "'Playfair Display', serif", color: colors.indigoText }}>
         {t("auth.register")}
       </h2>

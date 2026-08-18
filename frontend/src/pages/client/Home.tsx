@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CatalogApi, NotificationsApi, TailorsApi } from "../../api/endpoints";
-import type { GarmentModel, Notification, TailorProfile } from "../../api/types";
+import type { Category, GarmentModel, Notification, TailorProfile } from "../../api/types";
 import { useAuth } from "../../state/AuthContext";
 import { useI18n } from "../../i18n/I18nProvider";
 import { Card } from "../../components/Card";
@@ -20,11 +20,16 @@ export default function Home() {
   const [models, setModels] = useState<GarmentModel[] | null>(null);
   const [tailors, setTailors] = useState<TailorProfile[] | null>(null);
   const [notifs, setNotifs] = useState<Notification[]>([]);
-  const [category, setCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
-    CatalogApi.models({ category: category || undefined }).then(setModels);
-  }, [category]);
+    CatalogApi.categories().then(setCategories).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    CatalogApi.models({ category_id: categoryId || undefined }).then(setModels);
+  }, [categoryId]);
 
   useEffect(() => {
     TailorsApi.search({ sort: "rating" }).then(setTailors);
@@ -70,8 +75,8 @@ export default function Home() {
       </div>
 
       <div style={{ display: "flex", gap: 8, padding: "10px 18px", overflowX: "auto" }}>
-        {CATEGORIES.map((c) => (
-          <Chip key={c} label={c} active={category === c} onClick={() => setCategory(category === c ? null : c)} />
+        {categories.map((cat) => (
+          <Chip key={cat.id} label={cat.name} active={categoryId === cat.id} onClick={() => setCategoryId(categoryId === cat.id ? null : cat.id)} />
         ))}
       </div>
 

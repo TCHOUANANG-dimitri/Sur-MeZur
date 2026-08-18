@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db, require_roles
@@ -82,7 +83,14 @@ def search_tailors(
 ):
     query = db.query(TailorProfile)
     if q:
-        query = query.filter(TailorProfile.shop_name.ilike(f"%{q}%"))
+        query = query.filter(
+            or_(
+                TailorProfile.shop_name.ilike(f"%{q}%"),
+                TailorProfile.bio.ilike(f"%{q}%"),
+                TailorProfile.city.ilike(f"%{q}%"),
+                TailorProfile.user.has(User.full_name.ilike(f"%{q}%")),
+            )
+        )
     tailors = query.all()
 
     results = []

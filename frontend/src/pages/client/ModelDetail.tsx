@@ -26,10 +26,10 @@ export default function ModelDetail() {
   const tryonQs = `?modelId=${model.id}${tailorId ? `&tailorId=${tailorId}` : ""}`;
 
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <Header title={model.name} onBack />
-      <div style={{ height: 260, background: `linear-gradient(160deg, ${model.thumbnail_color}, ${colors.indigoText})` }} />
-      <div style={{ padding: 18 }}>
+      <div style={{ flex: 1, minHeight: 200, background: `linear-gradient(160deg, ${model.thumbnail_color}, ${colors.indigoText})` }} />
+      <div style={{ padding: 18, flexShrink: 0 }}>
         <StatusChip status="neutral" label={model.category} />
         <h2 style={{ fontFamily: "'Playfair Display', serif", margin: "10px 0 6px", color: colors.indigoText }}>{model.name}</h2>
         <p style={{ fontSize: 13, color: colors.textSecondary }}>{model.description}</p>

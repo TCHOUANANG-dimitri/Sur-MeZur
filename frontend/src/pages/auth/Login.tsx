@@ -31,7 +31,7 @@ export default function Login() {
   };
 
   return (
-    <div className="app-shell" style={{ padding: 24, justifyContent: "center", display: "flex", flexDirection: "column" }}>
+    <div className="app-shell" style={{ padding: 24, justifyContent: "center", display: "flex", flexDirection: "column", overflowY: "auto" }}>
       <h2 style={{ fontFamily: "'Playfair Display', serif", color: colors.indigoText }}>{t("auth.login")}</h2>
       {error && <ErrorBanner message={error} />}
       <Field label={t("auth.phone")}>

@@ -492,7 +492,96 @@ un vêtement pouvait être taillé dessus.
 
 Supprimé : l'échec est désormais explicite, avec une consigne de reprise.
 
-### 8.4 Le temps d'analyse
+### 8.5 Impossible de scroller sur les pages de connexion
+
+**Le symptôme** : sur mobile, quand le clavier virtuel apparaissait pour saisir
+le mot de passe, le formulaire dépassait vers le bas mais aucun scroll n'était
+possible. Le champ mot de passe était masqué par le clavier et l'utilisateur ne
+pouvait pas voir ce qu'il écrivait.
+
+**La cause** : le container racine des pages `Login.tsx` et `Register.tsx`
+utilisait la classe CSS `app-shell` qui définit `min-height: 100vh` avec
+`display: flex` mais **sans `overflow-y: auto`**. Le formulaire était centré
+verticalement (`justifyContent: "center"`), et quand le clavier réduisait la
+hauteur du viewport, le contenu débordait vers le bas sans possibilité de
+scroller.
+
+**La correction** : ajout de `overflowY: "auto"` en style inline sur le
+container racine de `Login.tsx` (ligne 34) et `Register.tsx` (ligne 62). Le
+`justifyContent: "center"` est conservé pour le centrage normal ; le scroll se
+débloque automatiquement quand le contenu dépasse.
+
+**Fichiers modifiés** : `frontend/src/pages/auth/Login.tsx`,
+`frontend/src/pages/auth/Register.tsx`.
+
+### 8.6 Mise en page de la fiche modèle — vide blanc disproportionné
+
+**Le symptôme** : quand un utilisateur cliquait sur un modèle dans la galerie,
+la page de détail (`ModelDetail.tsx`) affichait un bandeau gradient de 260px
+fixe en haut, puis le nom, la description et les boutons en dessous. Sur les
+grands écrans, cela créait un espace blanc considérable sous le bandeau.
+
+**La cause** : le bandeau avait une hauteur fixe de `260px` quelle que soit la
+taille de l'écran. Il ne s'adaptait pas à l'espace disponible.
+
+**La correction** : passage à un layout `flex` colonne à `100vh` avec le
+bandeau en `flex: 1` (il prend tout l'espace restant) et la zone d'informations
+en `flexShrink: 0` (elle ne rétrécit pas). Le bandeau minimum est fixé à 200px
+pour éviter qu'il ne disparaisse sur les petits écrans.
+
+**Fichier modifié** : `frontend/src/pages/client/ModelDetail.tsx` (3 styles
+inline modifiés, aucune logique changée).
+
+### 8.7 Recherche ne fonctionnait ni par catégorie, ni par mot-clé
+
+**Le symptôme** : la barre de recherche (`Search.tsx`) ne retournait aucun
+résultat, que ce soit par nom de modèle, par catégorie ou par nom de tailleur.
+Les chips de catégories sur l'écran d'accueil ne filtraient rien non plus.
+
+**Les causes** (multiples, couche frontend et backend) :
+
+| # | Couche | Problème |
+|---|---|---|
+| 1 | Backend | La recherche tailleurs ne cherchait que dans `shop_name` — pas de bio, ville ni nom complet |
+| 2 | Backend | La recherche modèles ne cherchait que dans `name` — pas de description, tags ni catégorie |
+| 3 | Frontend | Pas de debounce : chaque frappe déclenchait un appel API immédiat (4 requêtes pour "robe") |
+| 4 | Frontend | Pas de `.catch()` : une erreur API (token expiré, 500) laissait un spinner infini sans feedback |
+| 5 | Frontend | Pas d'AbortController : les réponses lentes écrasaient les résultats plus récents (race condition) |
+| 6 | Frontend | Pas d'état "vide" : zéro résultat affichait… rien du tout |
+| 7 | Frontend | `CatalogApi.models` envoyait `category` comme paramètre, mais l'API attend `category_id` (UUID) |
+| 8 | Frontend | Les chips de catégories sur l'accueil utilisaient une liste hardcodée `["top", "bottom", ...]` au lieu des vraies catégories de l'API |
+
+**La correction** :
+
+- **Backend `tailors.py`** : recherche élargie avec `or_()` sur `shop_name`,
+  `bio`, `city` et `User.full_name` (via relationship `TailorProfile.user`)
+- **Backend `catalog.py`** : recherche élargie avec `or_()` sur `name`,
+  `description`, `style_tags` (cast JSON→String pour LIKE sur SQLite) et
+  `Category.name` (via relationship `GarmentModel.category`)
+- **Frontend `Search.tsx`** : debounce de 300ms, AbortController pour annuler
+  les requêtes précédentes, `.catch()` avec affichage d'erreur, message
+  « Aucun résultat pour « … » »
+- **Frontend `endpoints.ts`** : renommage `category` → `category_id`,
+  ajout de `CatalogApi.categories()`
+- **Frontend `types.ts`** : ajout de l'interface `Category { id, name, gender }`
+- **Frontend `Home.tsx`** : catégories fetchées depuis l'API au lieu de la liste
+  hardcodée, filtre par `category_id`
+- **Frontend `Gallery.tsx`** : même correction que Home.tsx (fetch catégories
+  réelles)
+
+**Difficulté** : le bug le plus subtil était l'incohérence `category` vs
+`category_id`. L'ancien enum figé `GarmentCategory` (`"top" | "bottom" | ...`)
+était encore utilisé comme clé de filtre alors que le backend attendait un UUID
+depuis la migration vers les catégories gérées par l'admin. Le filtre ne
+produisait aucune erreur visible — il envoyait simplement une valeur que le
+backend ignorait silencieusement.
+
+**Fichiers modifiés** : `backend/app/api/v1/tailors.py`,
+`backend/app/api/v1/catalog.py`, `frontend/src/pages/client/Search.tsx`,
+`frontend/src/pages/client/Home.tsx`, `frontend/src/pages/client/Gallery.tsx`,
+`frontend/src/api/endpoints.ts`, `frontend/src/api/types.ts`.
+
+### 8.8 Le temps d'analyse
 
 | Étape | Durée |
 |---|---|
@@ -530,7 +619,7 @@ Supprimé : l'échec est désormais explicite, avec une consigne de reprise.
 | 7 août | **Modèle v3** : un estimateur par cible, géométrie pour le tronc (§4.3) |
 | 7 août | **Carrure distinguée de la largeur biacromiale** (§8.2) |
 | 7 août | Messages d'erreur nettoyés : plus aucun détail technique affiché |
-| 7 août | Réduction des images avant analyse : 87 s → 17 s (§8.4) |
+| 7 août | Réduction des images avant analyse : 87 s → 17 s (§8.8) |
 | 8 août | **Ligne de hanches descendue** : 7,4 → 5,2 cm (§5.2) |
 | 10 août | Badge de vérification tailleur à trois états, mot de passe à 6 caractères minimum |
 | 10 août | Détection des lignes du tronc et retrait du vêtement affiné : 3,77 → 3,12 cm |
@@ -550,3 +639,6 @@ Supprimé : l'échec est désormais explicite, avec une consigne de reprise.
 | 15 août | Premier test visuel réel de l'avatar 3D : bugs trouvés et corrigés (sélecteur de teint sans effet, chargement peu synchronisé, maillage facetté par absence de normales de morph exportées) |
 | 15 août | Maillages de base régénérés (Blender + MPFB2 réinstallés) avec normales de morph et matériaux corrigés — a introduit une régression de chargement, voir §7 |
 | 15 août | 302 photos de modèles importées en base (6 catégories, homme/femme) — reste à afficher côté app, voir §7 |
+| 18 août | **Scroll des pages de connexion corrigé** : `overflowY: "auto"` ajouté sur Login.tsx et Register.tsx (§8.5) |
+| 18 août | **Fiche modèle redessinée** : layout flex proportionnel au lieu de bandeau fixe 260px (§8.6) |
+| 18 août | **Recherche fonctionnelle** : debounce, gestion d'erreurs, état vide, recherche multi-champs backend, catégories dynamiques (§8.7) |

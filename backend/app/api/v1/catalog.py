@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.deps import get_current_user_optional, get_db, require_roles
@@ -90,7 +90,14 @@ def list_models(
     if gender:
         query = query.join(Category).filter(Category.gender == gender)
     if q:
-        query = query.filter(GarmentModel.name.ilike(f"%{q}%"))
+        query = query.filter(
+            or_(
+                GarmentModel.name.ilike(f"%{q}%"),
+                GarmentModel.description.ilike(f"%{q}%"),
+                GarmentModel.style_tags.cast(db.String).ilike(f"%{q}%"),
+                GarmentModel.category.has(Category.name.ilike(f"%{q}%")),
+            )
+        )
     if liked_only:
         if not client:
             return []

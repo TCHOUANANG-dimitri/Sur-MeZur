@@ -2,6 +2,7 @@ import { api } from "./client";
 import type {
   Accessory,
   Avatar,
+  Category,
   ChatMessage,
   ClientProfile,
   Delivery,
@@ -86,12 +87,13 @@ export const AvatarsApi = {
 
 // --- Catalog -----------------------------------------------------------
 export const CatalogApi = {
-  models: (params: { category?: string; q?: string } = {}) => {
+  models: (params: { category_id?: string; q?: string } = {}) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => v && qs.set(k, v));
     return api.get<GarmentModel[]>(`/models?${qs.toString()}`);
   },
   model: (id: string) => api.get<GarmentModel>(`/models/${id}`),
+  categories: () => api.get<Category[]>("/categories"),
   fabrics: () => api.get<Fabric[]>("/fabrics"),
   accessories: () => api.get<Accessory[]>("/accessories"),
   readyToWear: (tailorId?: string) =>

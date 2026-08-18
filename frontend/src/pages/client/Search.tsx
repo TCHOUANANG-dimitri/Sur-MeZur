@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CatalogApi, TailorsApi } from "../../api/endpoints";
 import type { GarmentModel, TailorProfile } from "../../api/types";
@@ -10,19 +10,53 @@ import { Stars } from "../../components/Stars";
 import { VerifiedBadge } from "../../components/Badges";
 import { colors, gradient, radii } from "../../theme/tokens";
 
+const DEBOUNCE_MS = 300;
+
 export default function Search() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [tab, setTab] = useState<"tailors" | "models">("tailors");
   const [sort, setSort] = useState<"rating" | "proximity">("rating");
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [tailors, setTailors] = useState<TailorProfile[] | null>(null);
   const [models, setModels] = useState<GarmentModel[] | null>(null);
+  const [error, setError] = useState("");
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (tab === "tailors") TailorsApi.search({ sort, q: q || undefined }).then(setTailors);
-    else CatalogApi.models({ q: q || undefined }).then(setModels);
-  }, [tab, sort, q]);
+    const timer = setTimeout(() => setDebouncedQ(q), DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [q]);
+
+  useEffect(() => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setError("");
+
+    const params = { sort, q: debouncedQ || undefined };
+    const promise = tab === "tailors"
+      ? TailorsApi.search(params)
+      : CatalogApi.models({ q: debouncedQ || undefined });
+
+    promise
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          if (tab === "tailors") setTailors(data as TailorProfile[]);
+          else setModels(data as GarmentModel[]);
+        }
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      });
+
+    return () => controller.abort();
+  }, [tab, sort, debouncedQ]);
+
+  const isEmpty = (tab === "tailors" && tailors?.length === 0) || (tab === "models" && models?.length === 0);
 
   return (
     <div>
@@ -43,6 +77,10 @@ export default function Search() {
             <Chip label={t("search.sortProximity")} active={sort === "proximity"} onClick={() => setSort("proximity")} />
             <Chip label={t("search.sortRating")} active={sort === "rating"} onClick={() => setSort("rating")} />
           </div>
+        )}
+
+        {error && (
+          <p style={{ fontSize: 13, color: "#DC2626", textAlign: "center", margin: "12px 0" }}>{error}</p>
         )}
 
         {tab === "tailors" ? (
@@ -81,6 +119,12 @@ export default function Search() {
               </div>
             ))}
           </div>
+        )}
+
+        {!error && isEmpty && (
+          <p style={{ fontSize: 13, color: colors.textSecondary, textAlign: "center", margin: "24px 0" }}>
+            Aucun résultat pour « {debouncedQ || q} »
+          </p>
         )}
       </div>
     </div>
