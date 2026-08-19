@@ -18,7 +18,7 @@ import { Button } from "./Button";
 
 export type CaptureTarget = "front" | "side";
 
-const COUNTDOWN_SECONDS = 5;
+const COUNTDOWN_SECONDS = 3;
 const SILHOUETTE_HEIGHT_RATIO = 0.78;
 
 const CONSIGNES: Record<CaptureTarget, string[]> = {
@@ -49,25 +49,31 @@ function SilhouetteFace({ color }: { color: string }) {
 
 function SilhouetteProfil({ color }: { color: string }) {
   const CORPS =
-    "M56 8 C64 8 69 14 69 22 C69 27 67 31 64 34 L64 40" +
-    " C72 43 78 49 79 58 L80 78 C80 96 78 110 76 124" +
-    " L74 140 C74 152 73 160 72 168 L70 214 L68 248 L56 248" +
-    " L57 214 L56 172 L50 172 L49 214 L48 248 L36 248 L38 214" +
-    " L40 168 C39 160 38 152 38 140 L36 124 C34 110 33 96 34 78" +
-    " L36 58 C38 48 44 42 52 40 L52 34 C49 31 47 27 47 22" +
-    " C47 14 49 8 56 8 Z";
-  const BRAS =
-    "M64 44 C74 40 82 30 80 20 C79 15 74 12 70 14";
+    "M54 8 C62 8 67 14 67 22 C67 27 65 31 62 34 L62 40" +
+    " C70 43 76 48 78 56 L80 74 C81 90 80 106 78 120" +
+    " L76 138 C76 150 75 158 74 166 L72 200 L70 248 L58 248" +
+    " L59 200 L58 172 L52 172 L51 200 L50 248 L38 248 L40 200" +
+    " L42 166 C41 158 40 150 40 138 L38 120 C36 106 35 90 36 74" +
+    " L38 56 C40 46 46 42 52 40 L52 34 C49 31 47 27 47 22" +
+    " C47 14 49 8 54 8 Z";
+  const BRAS_AVANT =
+    "M62 48 C66 56 68 68 67 80 C66 90 64 98 62 104";
+  const BRAS_ARRIERE =
+    "M38 48 C34 56 32 68 33 80 C34 90 36 98 38 104";
   return (
     <Svg viewBox="0 0 100 260" width="100%" height="100%">
       <Path d={CORPS} stroke={color} strokeWidth={2.4} fill={color} fillOpacity={0.12}
             strokeLinejoin="round" />
-      <Path d={BRAS} stroke={color} strokeWidth={2.4} fill="none"
-            strokeLinecap="round" opacity={0.9} />
-      <Line x1="32" y1="88" x2="82" y2="88" stroke={color} strokeWidth={1}
+      <Path d={BRAS_AVANT} stroke={color} strokeWidth={2.2} fill="none"
+            strokeLinecap="round" opacity={0.8} />
+      <Path d={BRAS_ARRIERE} stroke={color} strokeWidth={2.2} fill="none"
+            strokeLinecap="round" opacity={0.8} />
+      <Line x1="30" y1="88" x2="86" y2="88" stroke={color} strokeWidth={1}
             strokeDasharray="4 4" opacity={0.5} />
-      <Line x1="33" y1="122" x2="79" y2="122" stroke={color} strokeWidth={1}
+      <Line x1="31" y1="122" x2="83" y2="122" stroke={color} strokeWidth={1}
             strokeDasharray="4 4" opacity={0.5} />
+      <Line x1="55" y1="16" x2="55" y2="244" stroke={color} strokeWidth={0.8}
+            strokeDasharray="6 6" opacity={0.35} />
     </Svg>
   );
 }
