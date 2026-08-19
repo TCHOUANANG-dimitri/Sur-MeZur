@@ -1,6 +1,12 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { AuthApi, UsersApi } from "../api/endpoints";
-import { getToken, setToken } from "../api/client";
+import {
+  getToken,
+  setTokens,
+  setOnAuthFailure,
+  startAuthTimer,
+  stopAuthTimer,
+} from "../api/client";
 import type { User } from "../api/types";
 
 interface AuthContextValue {
@@ -25,6 +31,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const logout = useCallback(() => {
+    setTokens(null, null);
+    stopAuthTimer();
+    setUser(null);
+  }, []);
+
+  useEffect(() => {
+    setOnAuthFailure(logout);
+    return () => setOnAuthFailure(null);
+  }, [logout]);
+
   const refreshUser = async () => {
     if (!getToken()) {
       setUser(null);
@@ -34,8 +51,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const me = await UsersApi.me();
       setUser(me);
+      startAuthTimer();
     } catch {
-      setToken(null);
+      setTokens(null, null);
+      stopAuthTimer();
       setUser(null);
     } finally {
       setLoading(false);
@@ -49,7 +68,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (phone: string, password: string) => {
     const tok = await AuthApi.login(phone, password);
-    setToken(tok.access_token);
+    setTokens(tok.access_token, tok.refresh_token);
+    startAuthTimer();
     const me = await UsersApi.me();
     setUser(me);
     return me;
@@ -57,15 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register: AuthContextValue["register"] = async (body) => {
     const tok = await AuthApi.register(body);
-    setToken(tok.access_token);
+    setTokens(tok.access_token, tok.refresh_token);
+    startAuthTimer();
     const me = await UsersApi.me();
     setUser(me);
     return me;
-  };
-
-  const logout = () => {
-    setToken(null);
-    setUser(null);
   };
 
   return (
