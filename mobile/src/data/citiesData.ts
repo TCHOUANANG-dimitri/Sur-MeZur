@@ -1,0 +1,27 @@
+export const CITIES_DATA: Record<string, string[]> = {
+  "Douala": ["Akwa", "Bonapriso", "Deido", "Bonabéri", "Logbessou", "Bassa", "Makepe", "New Bell", "Kotto", "Bépanda", "CDC", "Yassa", "Nsimalen"],
+  "Yaoundé": ["Bastos", "Centre-ville", "Biyem-Assi", "Mokolo", "Nlongkak", "Efoulan", "Kondengui", "Bastos Extension", "Essos", "Mimboman", "Nkolbisson"],
+  "Bafoussam": ["Marché A", "Marché B", "Tougang", "Famla", "Bafoussam Centre", "Bamougoum"],
+  "Bamenda": ["Up-Station", "Commercial Avenue", "Nkwen", "Mankon", "Ndundong", "Akwa"],
+  "Garoua": ["Centre-ville", "Yelwa", "Ribadou", "Djamboutou"],
+  "Maroua": ["Djamboutou", "Foulouré", "Kolafata", "Maroua Centre"],
+  "Kumba": ["Mantlré", "Fiango", "Lundu", "Kossala", "Kumba Centre"],
+  "Bertoua": ["Centre-ville", "Bangué", "Bertoua Sud"],
+  "Ebolowa": ["Centre-ville", "Mvog-Ada", "Ebolowa Sud"],
+  "Kribi": ["Centre-ville", "Lobé", "Eboundja", "Kribi Sud"],
+  "Limbe": ["Down Beach", "Batoke", "Tiko", "Limbe Centre"],
+  "Buéa": ["Molyko", "Commercial Avenue", "Checkpoint", "Buéa Centre"],
+  "Ngaoundéré": ["Centre-ville", "Tchadji", "Yeloua"],
+  "Nkongsamba": ["Centre-ville", "Balessing", "Nkongsamba Sud"],
+  "Edéa": ["Centre-ville", "Édéa Nord"],
+  "Ambam": ["Centre-ville", "Ambam Sud"],
+  "Mbalmayo": ["Centre-ville", "Mbalmayo Nord"],
+  "Obala": ["Centre-ville", "Obala Sud"],
+  "Loum": ["Centre-ville", "Loum Nord"],
+  "Penja": ["Centre-ville", "Penja Sud"],
+  "Dschang": ["Centre-ville", "Dschang Nord"],
+  "Bangante": ["Centre-ville", "Bangante Sud"],
+  "Mezam": ["Centre-ville", "Mezam Nord"],
+};
+
+export const CITY_NAMES = Object.keys(CITIES_DATA).sort();

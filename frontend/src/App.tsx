@@ -36,6 +36,7 @@ import TailorFinances from "./pages/tailor/Finances";
 import TailorProfileSelf from "./pages/tailor/Profile";
 
 import AdminVerifications from "./pages/admin/Verifications";
+import AdminCatalog from "./pages/admin/AdminCatalog";
 import AdminDisputes from "./pages/admin/Disputes";
 import AdminReviewModeration from "./pages/admin/ReviewModeration";
 import AdminCommissionSettings from "./pages/admin/CommissionSettings";
@@ -97,6 +98,7 @@ export default function App() {
         <Route element={<ProtectedRoute role="admin" />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin/verifications" element={<AdminVerifications />} />
+            <Route path="/admin/catalog" element={<AdminCatalog />} />
             <Route path="/admin/disputes" element={<AdminDisputes />} />
             <Route path="/admin/reviews" element={<AdminReviewModeration />} />
             <Route path="/admin/commission" element={<AdminCommissionSettings />} />

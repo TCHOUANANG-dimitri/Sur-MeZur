@@ -58,6 +58,7 @@ export interface TailorProfile {
   lat: number | null;
   lng: number | null;
   city: string | null;
+  quartier: string | null;
   verification_status: VerificationStatus;
   rating_avg: number;
   completed_orders_count: number;

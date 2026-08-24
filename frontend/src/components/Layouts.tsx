@@ -53,6 +53,7 @@ export function AdminLayout() {
       <TabBar
         items={[
           { to: "/admin/verifications", label: t("admin.verifications"), icon: <span>✅</span> },
+          { to: "/admin/catalog", label: t("admin.catalog"), icon: <span>📁</span> },
           { to: "/admin/disputes", label: t("admin.disputes"), icon: <span>⚖️</span> },
           { to: "/admin/reviews", label: t("admin.reviews"), icon: <span>⭐</span> },
           { to: "/admin/commission", label: t("admin.commission"), icon: <span>%</span> },
