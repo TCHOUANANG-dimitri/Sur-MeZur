@@ -1,0 +1,377 @@
+{
+  "_lisez_moi": [
+    "Verite terrain de la campagne terrain : 13 adultes photographies (face + profil)",
+    "puis mesures au metre ruban. C'est le SEUL jeu de donnees qui permette de",
+    "chiffrer la precision reelle de la chaine de mesure.",
+    "",
+    "Ce fichier a failli etre perdu : les chiffres n'existaient que dans un script",
+    "jetable d'une session de travail. Ils sont desormais versionnes ici.",
+    "",
+    "Photos associees : backend/uploads/measurement_photos/ (26 fichiers, 2 par sujet).",
+    "L'appariement photo -> sujet est fige dans `photos` : il a ete etabli une fois",
+    "(tri par horodatage WhatsApp, puis face/profil departages par le rapport",
+    "largeur d'epaules / hauteur de torse) et ne doit plus etre recalcule, sinon",
+    "deux executions du banc ne compareraient pas les memes images.",
+    "",
+    "Unites : taille en cm, poids en kg, toutes les mensurations en cm."
+  ],
+  "tours": [
+    "neck",
+    "chest",
+    "waist",
+    "hips",
+    "biceps",
+    "thigh",
+    "wrist",
+    "ankle"
+  ],
+  "longueurs": [
+    "shoulder",
+    "sleeve_length",
+    "inseam",
+    "back_length"
+  ],
+  "sujets": [
+    {
+      "id": 1,
+      "height_cm": 182,
+      "weight_kg": 68.0,
+      "gender": "male",
+      "tours": [
+        37,
+        84,
+        71,
+        91,
+        32.6,
+        54.3,
+        17.3,
+        27
+      ],
+      "longueurs": [
+        33,
+        66,
+        77,
+        57
+      ]
+    },
+    {
+      "id": 2,
+      "height_cm": 180,
+      "weight_kg": 93.8,
+      "gender": "male",
+      "tours": [
+        44.5,
+        107,
+        98,
+        111,
+        37,
+        64,
+        18.7,
+        29
+      ],
+      "longueurs": [
+        36,
+        59,
+        70,
+        61
+      ]
+    },
+    {
+      "id": 3,
+      "height_cm": 182,
+      "weight_kg": 60.0,
+      "gender": "male",
+      "tours": [
+        36,
+        83,
+        74,
+        91,
+        32,
+        52,
+        17.1,
+        22.6
+      ],
+      "longueurs": [
+        32,
+        54,
+        77.9,
+        59
+      ]
+    },
+    {
+      "id": 4,
+      "height_cm": 193,
+      "weight_kg": 70.0,
+      "gender": "male",
+      "tours": [
+        37.4,
+        88.2,
+        74.9,
+        89,
+        34.7,
+        54.4,
+        18.5,
+        25.1
+      ],
+      "longueurs": [
+        32,
+        66,
+        87,
+        58
+      ]
+    },
+    {
+      "id": 5,
+      "height_cm": 175,
+      "weight_kg": 83.0,
+      "gender": "male",
+      "tours": [
+        42,
+        94,
+        92,
+        99,
+        34,
+        64,
+        19,
+        25
+      ],
+      "longueurs": [
+        54,
+        59,
+        80,
+        54
+      ],
+      "note": "carrure relevee a 54 cm : valeur aberrante, exclue des stats de carrure"
+    },
+    {
+      "id": 6,
+      "height_cm": 178,
+      "weight_kg": 67.0,
+      "gender": "male",
+      "tours": [
+        40.7,
+        83.1,
+        78.4,
+        100.2,
+        33.3,
+        56.7,
+        19,
+        27.2
+      ],
+      "longueurs": [
+        33,
+        58.7,
+        85,
+        54
+      ]
+    },
+    {
+      "id": 7,
+      "height_cm": 193,
+      "weight_kg": 71.0,
+      "gender": "male",
+      "tours": [
+        36.3,
+        87.1,
+        71.2,
+        91,
+        29.4,
+        54.5,
+        18.7,
+        24.5
+      ],
+      "longueurs": [
+        32,
+        67,
+        83.5,
+        55
+      ]
+    },
+    {
+      "id": 8,
+      "height_cm": 166,
+      "weight_kg": 62.0,
+      "gender": "female",
+      "tours": [
+        34.5,
+        62,
+        93,
+        98,
+        28.5,
+        60,
+        17,
+        23.5
+      ],
+      "longueurs": [
+        28.5,
+        53,
+        70,
+        44
+      ]
+    },
+    {
+      "id": 9,
+      "height_cm": 170,
+      "weight_kg": 59.0,
+      "gender": "male",
+      "tours": [
+        36.7,
+        85.8,
+        75.4,
+        91.2,
+        28.6,
+        52,
+        17.8,
+        23.7
+      ],
+      "longueurs": [
+        32,
+        59.9,
+        69.2,
+        53.6
+      ]
+    },
+    {
+      "id": 10,
+      "height_cm": 159,
+      "weight_kg": 49.0,
+      "gender": "female",
+      "tours": [
+        32,
+        77,
+        77,
+        89,
+        27.3,
+        54.9,
+        15,
+        21
+      ],
+      "longueurs": [
+        28,
+        54,
+        67,
+        44
+      ]
+    },
+    {
+      "id": 11,
+      "height_cm": 165,
+      "weight_kg": 66.0,
+      "gender": "female",
+      "tours": [
+        33.5,
+        89,
+        75.8,
+        107,
+        28,
+        63,
+        16.5,
+        25.2
+      ],
+      "longueurs": [
+        32.5,
+        59.3,
+        75,
+        45
+      ]
+    },
+    {
+      "id": 12,
+      "height_cm": 175,
+      "weight_kg": 78.0,
+      "gender": "female",
+      "tours": [
+        37.7,
+        93,
+        90,
+        109,
+        32.5,
+        65,
+        19,
+        26
+      ],
+      "longueurs": [
+        33,
+        57,
+        73.3,
+        50
+      ]
+    },
+    {
+      "id": 13,
+      "height_cm": 160,
+      "weight_kg": 54.0,
+      "gender": "female",
+      "tours": [
+        31,
+        84,
+        65,
+        99,
+        28,
+        60,
+        15.4,
+        22
+      ],
+      "longueurs": [
+        33,
+        50,
+        66,
+        44
+      ]
+    }
+  ],
+  "photos": {
+    "1": {
+      "face": "WhatsApp Image 2026-08-06 at 9.44.11 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 9.44.12 AM.jpeg"
+    },
+    "2": {
+      "face": "WhatsApp Image 2026-08-06 at 9.45.04 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 9.45.05 AM.jpeg"
+    },
+    "3": {
+      "face": "WhatsApp Image 2026-08-06 at 9.46.17 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 9.46.18 AM.jpeg"
+    },
+    "4": {
+      "face": "WhatsApp Image 2026-08-06 at 9.47.25 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 9.47.25 AM1.jpeg"
+    },
+    "5": {
+      "face": "WhatsApp Image 2026-08-06 at 9.48.08 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 9.48.09 AM.jpeg"
+    },
+    "6": {
+      "face": "WhatsApp Image 2026-08-06 at 10.01.53 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 10.01.55 AM.jpeg"
+    },
+    "7": {
+      "face": "WhatsApp Image 2026-08-06 at 10.22.50 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 10.22.50 AM1.jpeg"
+    },
+    "8": {
+      "face": "WhatsApp Image 2026-08-06 at 10.42.09 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 10.42.09 AM1.jpeg"
+    },
+    "9": {
+      "face": "WhatsApp Image 2026-08-06 at 10.52.34 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 10.52.34 AM1.jpeg"
+    },
+    "10": {
+      "face": "WhatsApp Image 2026-08-06 at 11.10.06 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 11.10.05 AM.jpeg"
+    },
+    "11": {
+      "face": "WhatsApp Image 2026-08-06 at 11.29.04 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 11.29.04 AM1.jpeg"
+    },
+    "12": {
+      "face": "WhatsApp Image 2026-08-06 at 11.58.13 AM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 11.58.14 AM.jpeg"
+    },
+    "13": {
+      "face": "WhatsApp Image 2026-08-06 at 12.22.15 PM.jpeg",
+      "profil": "WhatsApp Image 2026-08-06 at 12.22.14 PM.jpeg"
+    }
+  }
+}
