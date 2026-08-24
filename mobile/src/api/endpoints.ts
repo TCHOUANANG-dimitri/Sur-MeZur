@@ -79,7 +79,7 @@ export const UsersApi = {
 
 export const TailorsApi = {
   me: () => api.get<TailorProfile | null>("/tailors/me"),
-  search: (params: { lat?: number; lng?: number; sort?: string; q?: string } = {}) => {
+  search: (params: { lat?: number; lng?: number; sort?: string; q?: string; city?: string; quartier?: string } = {}) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => v !== undefined && qs.set(k, String(v)));
     return api.get<TailorProfile[]>(`/tailors?${qs.toString()}`);
@@ -91,6 +91,7 @@ export const TailorsApi = {
     shop_name: string;
     bio?: string;
     city?: string;
+    quartier?: string;
     lat?: number;
     lng?: number;
   }, files: { self_photo: PickedFile; id_card: PickedFile; atelier_photo: PickedFile }) => {

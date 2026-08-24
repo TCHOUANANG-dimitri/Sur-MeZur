@@ -43,6 +43,7 @@ class TailorVerificationIn(BaseModel):
     lat: float | None = None
     lng: float | None = None
     city: str | None = None
+    quartier: str | None = None
 
 
 class TailorProfileOut(ORMModel):
@@ -54,6 +55,7 @@ class TailorProfileOut(ORMModel):
     lat: float | None
     lng: float | None
     city: str | None
+    quartier: str | None
     verification_status: VerificationStatus
     rating_avg: float
     completed_orders_count: int

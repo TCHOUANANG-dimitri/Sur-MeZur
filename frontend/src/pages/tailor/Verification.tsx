@@ -7,6 +7,7 @@ import { Button } from "../../components/Button";
 import { Header, Field, inputStyle, ErrorBanner, Spinner } from "../../components/Misc";
 import { StatusChip } from "../../components/Chip";
 import { colors } from "../../theme/tokens";
+import { CITIES_DATA, CITY_NAMES } from "../../data/citiesData";
 
 export default function Verification() {
   const { t } = useI18n();
@@ -14,7 +15,8 @@ export default function Verification() {
   const [profile, setProfile] = useState<TailorProfile | null | undefined>(undefined);
   const [shopName, setShopName] = useState("");
   const [bio, setBio] = useState("");
-  const [city, setCity] = useState("Douala");
+  const [city, setCity] = useState("");
+  const [quartier, setQuartier] = useState("");
   const [tailorType, setTailorType] = useState<"individual" | "atelier">("individual");
   const [portfolio, setPortfolio] = useState<File | null>(null);
   const [idCard, setIdCard] = useState<File | null>(null);
@@ -23,9 +25,14 @@ export default function Verification() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    TailorsApi.me()
-      .then((p) => setProfile(p))
-      .catch(() => setProfile(null));
+    TailorsApi.me().then((p) => {
+      setProfile(p);
+      if (p?.city) setCity(p.city);
+      if (p?.quartier) setQuartier(p.quartier);
+      if (p?.shop_name) setShopName(p.shop_name);
+      if (p?.bio) setBio(p.bio);
+      if (p?.tailor_type) setTailorType(p.tailor_type);
+    }).catch(() => setProfile(null));
   }, []);
 
   const submit = async () => {
@@ -37,6 +44,7 @@ export default function Verification() {
       form.append("shop_name", shopName);
       form.append("bio", bio);
       form.append("city", city);
+      form.append("quartier", quartier);
       navigator.geolocation?.getCurrentPosition(
         (pos) => {
           form.append("lat", String(pos.coords.latitude));
@@ -81,6 +89,8 @@ export default function Verification() {
     );
   }
 
+  const quartiers = city ? CITIES_DATA[city] || [] : [];
+
   return (
     <div>
       <Header title={t("tailor.verification.title")} />
@@ -102,13 +112,35 @@ export default function Verification() {
         <Field label="Bio">
           <textarea style={{ ...inputStyle, minHeight: 70 }} value={bio} onChange={(e) => setBio(e.target.value)} />
         </Field>
-        <Field label="Ville">
-          <input style={inputStyle} value={city} onChange={(e) => setCity(e.target.value)} />
+        <Field label={t("tailor.verification.city")}>
+          <select
+            style={inputStyle}
+            value={city}
+            onChange={(e) => { setCity(e.target.value); setQuartier(""); }}
+          >
+            <option value="">-- Choisir une ville --</option>
+            {CITY_NAMES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("tailor.verification.quartier")}>
+          <select
+            style={inputStyle}
+            value={quartier}
+            onChange={(e) => setQuartier(e.target.value)}
+            disabled={!city}
+          >
+            <option value="">-- Choisir un quartier --</option>
+            {quartiers.map((q) => (
+              <option key={q} value={q}>{q}</option>
+            ))}
+          </select>
         </Field>
         <FileField label="Portfolio" onPick={setPortfolio} />
         <FileField label="Pièce d'identité" onPick={setIdCard} />
         <FileField label="Photo de l'atelier" onPick={setAtelierPhoto} />
-        <Button fullWidth disabled={busy || !shopName} onClick={submit} style={{ marginTop: 8 }}>
+        <Button fullWidth disabled={busy || !shopName || !city} onClick={submit} style={{ marginTop: 8 }}>
           {t("common.send")}
         </Button>
       </div>

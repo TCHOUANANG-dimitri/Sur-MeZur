@@ -1,19 +1,16 @@
 # Sur-MeZur — Rapport de réalisation
 
-<<<<<<< HEAD
-*Dernière mise à jour : 24 août 2026*
-=======
-*Dernière mise à jour : 17 août 2026*
->>>>>>> f4b8949d26bb8e19250a2b9c00d514be78abe641
+*Dernière mise à jour : 25 août 2026*
 
 > Ce document décrit l'état réel du projet : ce qui fonctionne, avec quelle
 > précision, et ce qui reste à faire. Les chiffres qui y figurent sont tous
 > mesurés, jamais estimés — quand une valeur est incertaine, c'est écrit.
 
-> Cette mise à jour porte sur l'infrastructure, l'avatar 3D et le catalogue
-> (voir §2, §7, §9). Aucune nouvelle campagne de mesure n'a eu lieu depuis le
-> 8 août : les sections 3 à 6, entièrement dédiées à la précision des
-> mensurations, sont inchangées et restent la référence.
+> Cette mise à jour porte sur l'infrastructure, l'avatar 3D, le catalogue
+> et le système de géolocalisation des tailleurs (voir §2, §7, §8.13, §9).
+> Aucune nouvelle campagne de mesure n'a eu lieu depuis le 8 août : les
+> sections 3 à 6, entièrement dédiées à la précision des mensurations, sont
+> inchangées et restent la référence.
 
 ---
 
@@ -440,13 +437,12 @@ morphologie. Historique complet des trois blocages trouvés et corrigés :
    (`onReady` / `onError`), avec un vrai message et un bouton "Réessayer"
    en cas d'échec.
 
-<<<<<<< HEAD
 **✅ Corrigé le 24 août** (§8.8). Les pages `ModelDetail.tsx`, `Home.tsx` et
 `Gallery.tsx` affichent désormais `photo_url` avec `background: url(...) center/cover`,
 en fallback sur le dégradé `thumbnail_color` si pas de photo. Le type TypeScript
 `GarmentModel` a été corrigé pour inclure `photo_url`, `photos`, `like_count` et
 `liked_by_me`.
-=======
+
 **Nouvelle architecture de rendu, en cours d'intégration.** Le compromis
 entre poids de fichier (sans normales, chargement correct mais éclairage
 figé sur la forme neutre) et fidélité d'éclairage (avec normales, GPU
@@ -464,7 +460,6 @@ chose que cette vérification ne peut pas remplacer.
 
 Brief complet des contraintes, de l'architecture actuelle et des options
 évaluées : `BRIEF_MODELE_CORPOREL_AVATAR.md`.
->>>>>>> f4b8949d26bb8e19250a2b9c00d514be78abe641
 
 ### Autres chantiers
 
@@ -474,12 +469,8 @@ Brief complet des contraintes, de l'architecture actuelle et des options
 | **Pare-feu applicatif O2Switch (Tiger Protect)** | a bloqué tout le trafic API (y compris l'app mobile, incapable de résoudre le défi JavaScript exigé) le 16 août, sans réglage en libre-service trouvé dans cPanel ; résolu depuis, cause exacte non confirmée par le support |
 | **Interface sur appareil** | la capture guidée n'a jamais été utilisée en conditions réelles |
 | **Vrai fournisseur Mobile Money** | actuellement simulé |
-<<<<<<< HEAD
 | **Essayage, patrons** | actuellement simulés — **essayage 3D fonctionnel** avec sélection modèle/tissu/accessoires, création d'avatar possible depuis mesures existantes (§8.9) |
-| **Migration de schéma en production** | `garment_models` (catégories genrées) reste sur l'ancien schéma sur le serveur — nécessite une suppression manuelle de la table pour que `create_all()` la recrée au bon format ; le projet n'a toujours pas de système de migration |
-=======
-| **Essayage, patrons** | actuellement simulés |
->>>>>>> f4b8949d26bb8e19250a2b9c00d514be78abe641
+| **Migration de schéma en production** | `garment_models` (catégories genrées) reste sur l'ancien schéma sur le serveur — nécessite une suppression manuelle de la table pour que `create_all()` la recrée au bon format ; le projet n'a toujours pas de système de migration. De plus, la colonne `quartier` ajoutée à `tailor_profiles` nécessitera `sync_sqlite_columns.py --apply` en production |
 | **Compte de test** | `+23760000001` (« ZZ Test Diagnostic ») et ses sessions de mesure/avatar associées restent à supprimer en production |
 | **Sauvegarde du dépôt** | l'historique local n'a aucun ancêtre commun avec le dépôt distant |
 
@@ -698,7 +689,79 @@ trié par `created_at desc`).
 `frontend/src/pages/client/UseExistingMeasurements.tsx` (nouveau),
 `frontend/src/App.tsx`, `frontend/src/i18n/fr.json`, `frontend/src/i18n/en.json`.
 
-### 8.10 Le temps d'analyse
+### 8.10 Page vérification admin : informations insuffisantes
+
+**Le symptôme** : l'administrateur devait approuver ou rejeter des tailleurs sans
+pouvoir voir leurs pièces justificatives. La page n'affichait que le nom de
+boutique, le type, la ville et la bio — aucune photo, aucun document, aucune
+identité.
+
+**Les causes** :
+
+| # | Problème | Impact |
+|---|---|---|
+| 1 | L'endpoint `GET /admin/verifications/{tailor_id}/documents` existait côté backend mais **n'était pas câblé** côté frontend | Aucun document affiché |
+| 2 | Le type `VerificationDocument` n'existait pas dans `types.ts` | Impossible de typer les documents |
+| 3 | Pas de photo atelier affichée malgré `atelier_photo_url` disponible | Pas de visuel sur l'atelier |
+| 4 | Pas d'identité du tailleur (nom, téléphone) | Impossible de vérifier l'identité |
+| 5 | Les `StatusChip` utilisaient des couleurs de fond trop pâles | Rendu peu lisible |
+
+**La correction** :
+
+- **`types.ts`** : ajout du type `VerificationDocument { id, user_id, type, file_url, status }`
+- **`endpoints.ts`** : ajout de `AdminApi.getVerificationDocuments(tailorId)` → `GET /admin/verifications/{id}/documents`
+- **`Verifications.tsx`** : redesign complet (52 → 207 lignes) :
+  - Photo atelier en haut de chaque carte
+  - Badge type (Atelier/Individuel) avec couleur
+  - Note moyenne et nombre de commandes
+  - Bouton "Voir les documents" → affiche CNI, portfolio, photo atelier avec lien "Ouvrir"
+  - Badge statut par document (en attente/approuvé/rejeté)
+  - Layout scrollable (`overflowY: "auto"`)
+  - Boutons Rejeter/Approuver en bas
+
+**Difficulté** : le principal obstacle était l'absence de câblage entre le frontend
+et l'endpoint backend existant. L'API retournait déjà les documents, mais aucun
+appel API ni type TypeScript ne permettait de les récupérer. La difficulté était
+minore car le backend était complet.
+
+**Fichiers modifiés** : `frontend/src/api/types.ts`, `frontend/src/api/endpoints.ts`,
+`frontend/src/pages/admin/Verifications.tsx`.
+
+### 8.11 Page catalogue admin inexistante
+
+**Le symptôme** : l'administrateur n'avait aucune interface pour gérer les
+catégories et modèles du catalogue. Les 302 photos importées ne pouvaient être
+ni vues ni supprimées depuis l'interface.
+
+**La cause** : le backend disposait d'endpoints CRUD complets (`/admin/categories`,
+`/admin/models`, `/admin/models/{id}/photos`) mais aucun fichier frontend, aucune
+route et aucun appel API n'étaient câblés.
+
+**La correction** :
+
+- **`endpoints.ts`** : ajout de 8 méthodes dans `AdminApi` :
+  `categories()`, `createCategory()`, `updateCategory()`, `deleteCategory()`,
+  `models()`, `createModel()`, `updateModel()`, `deleteModel()`
+- **`client.ts`** : ajout de `api.delete()` (manquait)
+- **`AdminCatalog.tsx`** (nouveau, 136 lignes) : page avec chips de catégories
+  cliquables, grid 2 colonnes des modèles avec photo réelle ou dégradé, prix,
+  bouton suppression
+- **`App.tsx`** : route `/admin/catalog` ajoutée
+- **`Layouts.tsx`** : onglet "📁 Catalogue" ajouté à la TabBar admin
+- **`fr.json` / `en.json`** : clé `admin.catalog` ajoutée
+
+**Difficulté** : le endpoint `DELETE` n'existait pas dans le client HTTP (`api.delete()`).
+Il a fallu l'ajouter. Aussi, le type `Partial<GarmentModel>` utilisé pour
+`createModel`/`updateModel` est incohérent avec le backend qui attend `category_id`
+(string) au lieu de `category` (objet) — ce sera à corriger si une interface de
+création de modèles est ajoutée.
+
+**Fichiers modifiés** : `frontend/src/api/client.ts`, `frontend/src/api/endpoints.ts`,
+`frontend/src/pages/admin/AdminCatalog.tsx` (nouveau), `frontend/src/App.tsx`,
+`frontend/src/components/Layouts.tsx`, `frontend/src/i18n/fr.json`,
+`frontend/src/i18n/en.json`.
+
+### 8.12 Le temps d'analyse
 
 | Étape | Durée |
 |---|---|
@@ -706,6 +769,71 @@ trié par `created_at desc`).
 | Après arrêt d'un appel devenu inutile | 30,6 s |
 | Après passage à MobileSAM | 14,7 s |
 | Après réduction des images à 1600 px | **17 s** *(sur photos 4000 px, contre 87 s)* |
+
+### 8.13 Champ ville/quartier : dropdowns et recherche filtrée
+
+**Le symptôme** : le champ « Ville » du formulaire de vérification tailleur était
+un input texte libre — aucune normalisation, aucune validation, et la plupart des
+tailleurs écrivaient « Douala » par défaut. Il n'existait pas de champ quartier
+pour affiner la recherche géographique. La recherche tailleurs ne filtrait que
+par texte libre (nom, bio), pas par zone géographique.
+
+**Les causes** :
+
+| # | Problème | Impact |
+|---|---|---|
+| 1 | Champ ville = input texte libre, aucune validation | Données incohérentes en base (« douala », « DOUALA », « Douala City ») |
+| 2 | Pas de champ quartier dans le modèle `TailorProfile` | Impossible de localiser un tailleur dans un quartier précis |
+| 3 | Recherche tailleurs sans filtre géographique | Un client à « Makepe » ne trouvait que des tailleurs en « Douala » sans distinction |
+| 4 | Le même problème existait côté mobile | UX incohérente entre web et mobile |
+
+**La correction** :
+
+- **`citiesData.ts`** (nouveau, frontend + mobile) : base de données de 23 villes
+  camerounaises avec leurs quartiers respectifs (`Record<string, string[]>`), plus
+  un tableau trié `CITY_NAMES`
+- **Backend `models/users.py`** : colonne `quartier: String(120)` ajoutée à
+  `TailorProfile`
+- **Backend `schemas/users.py`** : champ `quartier` ajouté à `TailorVerificationIn`
+  (input) et `TailorProfileOut` (output, hérité par `TailorProfilePublicOut`)
+- **Backend `api/v1/tailors.py`** :
+  - `submit_verification()` : paramètre `quartier: Form(None)` et
+    `profile.quartier = quartier`
+  - `search_tailors()` : paramètres query `city` et `quartier` ajoutés, filtres
+    `ilike` sur les deux champs, `quartier` ajouté à la recherche texte `q`
+- **Frontend `Verification.tsx`** : `<input>` remplacé par deux `<select>` (ville +
+  quartier), le quartier est réinitialisé quand la ville change, bouton submit
+  désactivé si pas de ville
+- **Mobile `verification.tsx`** : même logique avec des chips scrollables (pas de
+  `<select>` natif sur React Native), `ScrollView` ajouté pour le scroll vertical
+- **Frontend + Mobile `Search.tsx`** : chips de filtres par ville et quartier,
+  affichage de la ville et du quartier sur chaque carte de tailleur dans les
+  résultats
+- **`endpoints.ts`** (frontend + mobile) : params `city` et `quartier` ajoutés à
+  `TailorsApi.search()`, paramètre `quartier` ajouté à `submitVerification()` mobile
+- **`types.ts`** (frontend + mobile) : champ `quartier: string | null` ajouté à
+  `TailorProfile`
+- **i18n** : clés `tailor.verification.city` et `tailor.verification.quartier`
+  ajoutées dans les 4 fichiers (fr/en × web/mobile)
+
+**Vérification** : `tsc --noEmit` = 0 erreurs frontend. Vérification complète
+de cohérence backend/frontend/mobile via agents parallèles : 19/19 checks passent.
+
+**Difficulté** : leprincipal défi était la portée transversale — le même champ
+devait être ajouté simultanément au modèle SQLAlchemy, aux schémas Pydantic, aux
+endpoints FastAPI, aux types TypeScript, aux formulaires web et mobile, et aux
+deux écrans de recherche. L'absence de migration automatisée en production
+(`sync_sqlite_columns.py` pour la colonne `quartier`) est une contrainte connue
+et documentée.
+
+**Fichiers modifiés** : `backend/app/models/users.py`, `backend/app/schemas/users.py`,
+`backend/app/api/v1/tailors.py`, `frontend/src/data/citiesData.ts` (nouveau),
+`mobile/src/data/citiesData.ts` (nouveau), `frontend/src/api/types.ts`,
+`mobile/src/api/types.ts`, `frontend/src/api/endpoints.ts`,
+`mobile/src/api/endpoints.ts`, `frontend/src/pages/tailor/Verification.tsx`,
+`mobile/app/tailor/verification.tsx`, `frontend/src/pages/client/Search.tsx`,
+`mobile/app/client/(tabs)/search.tsx`, `frontend/src/i18n/fr.json`,
+`frontend/src/i18n/en.json`, `mobile/src/i18n/fr.json`, `mobile/src/i18n/en.json`.
 
 ---
 
@@ -767,12 +895,13 @@ trié par `created_at desc`).
 | 18 août | **Scroll des pages de connexion corrigé** : `overflowY: "auto"` ajouté sur Login.tsx et Register.tsx (§8.5) |
 | 18 août | **Fiche modèle redessinée** : layout flex proportionnel au lieu de bandeau fixe 260px (§8.6) |
 | 18 août | **Recherche fonctionnelle** : debounce, gestion d'erreurs, état vide, recherche multi-champs backend, catégories dynamiques (§8.7) |
-<<<<<<< HEAD
+| 22 août | **Calcul de morphologie recalibré** (`muscle_factor` neutralisé, fessiers dérivés du profil, matrice de sensibilité/optimisation ajoutée) — bug bloquant corrigé au passage : les poids générés ne correspondaient à aucune cible réelle du maillage, rendant tout avatar sans déformation |
+| 22 août | Galerie de modèles : affichage plein écran zoomable des photos (`react-native-image-viewing`), swipe entre modèles |
 | 24 août | **Type `GarmentModel.category` corrigé** : objet `{ id, name, gender }` au lieu de string — corrige `[object Object]` sur toutes les pages (§8.8) |
 | 24 août | **Photos réelles affichées** dans le catalogue et la fiche modèle, avec fallback gradient si pas de `photo_url` (§8.8) |
 | 24 août | **Fiche modèle redessinée** : image en haut (min 260px), contenu scrollable, gestion d'erreur API (§8.8) |
 | 24 août | **Essayage : mesure existante réutilisable** : nouveau parcours permettant de créer un avatar sans repasser par les photos, en sélectionnant une mesure déjà enregistrée — gain de temps significatif (§8.9) |
-=======
-| 22 août | **Calcul de morphologie recalibré** (`muscle_factor` neutralisé, fessiers dérivés du profil, matrice de sensibilité/optimisation ajoutée) — bug bloquant corrigé au passage : les poids générés ne correspondaient à aucune cible réelle du maillage, rendant tout avatar sans déformation |
-| 22 août | Galerie de modèles : affichage plein écran zoomable des photos (`react-native-image-viewing`), swipe entre modèles |
->>>>>>> f4b8949d26bb8e19250a2b9c00d514be78abe641
+| 24 août | **Page vérification admin redesignée** : photo atelier, documents vérifiables (CNI, portfolio), identité du tailleur, layout scrollable (§8.10) |
+| 24 août | **Page catalogue admin créée** : catégories cliquables, grid de modèles avec photos, suppression (§8.11) |
+| 24 août | **API admin étendue** : endpoint documents de vérification câblé, CRUD catégories/modèles ajouté, `api.delete()` ajouté au client HTTP (§8.10, §8.11) |
+| 25 août | **Champ quartier ajouté** : dropdowns ville/quartier sur vérification tailleur (web + mobile), recherche tailleurs filtrable par ville et quartier, colonne `quartier` en base (§8.13) |

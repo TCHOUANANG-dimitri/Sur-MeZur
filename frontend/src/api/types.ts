@@ -56,12 +56,21 @@ export interface TailorProfile {
   lat: number | null;
   lng: number | null;
   city: string | null;
+  quartier: string | null;
   verification_status: VerificationStatus;
   rating_avg: number;
   completed_orders_count: number;
   avg_response_minutes: number;
   atelier_photo_url: string | null;
   distance_km?: number | null;
+}
+
+export interface VerificationDocument {
+  id: string;
+  user_id: string;
+  type: string;
+  file_url: string;
+  status: VerificationStatus;
 }
 
 export interface MeasurementSession {

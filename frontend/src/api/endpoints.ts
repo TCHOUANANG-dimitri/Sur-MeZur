@@ -24,6 +24,7 @@ import type {
   TokenResponse,
   TryonSession,
   User,
+  VerificationDocument,
 } from "./types";
 
 // --- Auth --------------------------------------------------------------
@@ -54,7 +55,7 @@ export const UsersApi = {
 
 export const TailorsApi = {
   me: () => api.get<TailorProfile | null>("/tailors/me"),
-  search: (params: { lat?: number; lng?: number; sort?: string; q?: string } = {}) => {
+  search: (params: { lat?: number; lng?: number; sort?: string; q?: string; city?: string; quartier?: string } = {}) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => v !== undefined && qs.set(k, String(v)));
     return api.get<TailorProfile[]>(`/tailors?${qs.toString()}`);
@@ -183,6 +184,8 @@ export const NotificationsApi = {
 // --- Admin ---------------------------------------------------------------
 export const AdminApi = {
   pendingVerifications: () => api.get<TailorProfile[]>("/admin/verifications"),
+  getVerificationDocuments: (tailorId: string) =>
+    api.get<VerificationDocument[]>(`/admin/verifications/${tailorId}/documents`),
   decideVerification: (tailorId: string, status: "approved" | "rejected") =>
     api.post<TailorProfile>(`/admin/verifications/${tailorId}/decide`, { status }),
   disputes: () => api.get<Order[]>("/admin/disputes"),
@@ -195,4 +198,22 @@ export const AdminApi = {
     api.get<{ id: string; min_price: number; max_price: number | null; rate: number }[]>(
       "/admin/commission-tiers"
     ),
+  categories: () => api.get<Category[]>("/categories"),
+  createCategory: (body: { name: string; gender: string }) =>
+    api.post<Category>("/admin/categories", body),
+  updateCategory: (catId: string, body: { name?: string; gender?: string }) =>
+    api.patch<Category>(`/admin/categories/${catId}`, body),
+  deleteCategory: (catId: string) =>
+    api.delete(`/admin/categories/${catId}`),
+  models: (params: { category_id?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.category_id) qs.set("category_id", params.category_id);
+    return api.get<GarmentModel[]>(`/models?${qs.toString()}`);
+  },
+  createModel: (body: Partial<GarmentModel>) =>
+    api.post<GarmentModel>("/admin/models", body),
+  updateModel: (modelId: string, body: Partial<GarmentModel>) =>
+    api.patch<GarmentModel>(`/admin/models/${modelId}`, body),
+  deleteModel: (modelId: string) =>
+    api.delete(`/admin/models/${modelId}`),
 };

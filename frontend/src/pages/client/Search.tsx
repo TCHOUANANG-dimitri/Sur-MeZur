@@ -9,6 +9,7 @@ import { Header, Spinner, inputStyle } from "../../components/Misc";
 import { Stars } from "../../components/Stars";
 import { VerifiedBadge } from "../../components/Badges";
 import { colors, gradient, radii } from "../../theme/tokens";
+import { CITIES_DATA, CITY_NAMES } from "../../data/citiesData";
 
 const DEBOUNCE_MS = 300;
 
@@ -22,6 +23,8 @@ export default function Search() {
   const [tailors, setTailors] = useState<TailorProfile[] | null>(null);
   const [models, setModels] = useState<GarmentModel[] | null>(null);
   const [error, setError] = useState("");
+  const [city, setCity] = useState<string | null>(null);
+  const [quartier, setQuartier] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -35,7 +38,12 @@ export default function Search() {
     abortRef.current = controller;
     setError("");
 
-    const params = { sort, q: debouncedQ || undefined };
+    const params: { sort?: string; q?: string; city?: string; quartier?: string } = {
+      sort,
+      q: debouncedQ || undefined,
+      city: city || undefined,
+      quartier: quartier || undefined,
+    };
     const promise = tab === "tailors"
       ? TailorsApi.search(params)
       : CatalogApi.models({ q: debouncedQ || undefined });
@@ -54,9 +62,10 @@ export default function Search() {
       });
 
     return () => controller.abort();
-  }, [tab, sort, debouncedQ]);
+  }, [tab, sort, debouncedQ, city, quartier]);
 
   const isEmpty = (tab === "tailors" && tailors?.length === 0) || (tab === "models" && models?.length === 0);
+  const quartiers = city ? CITIES_DATA[city] || [] : [];
 
   return (
     <div>
@@ -73,10 +82,26 @@ export default function Search() {
           <Chip label={t("search.models")} active={tab === "models"} onClick={() => setTab("models")} />
         </div>
         {tab === "tailors" && (
-          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            <Chip label={t("search.sortProximity")} active={sort === "proximity"} onClick={() => setSort("proximity")} />
-            <Chip label={t("search.sortRating")} active={sort === "rating"} onClick={() => setSort("rating")} />
-          </div>
+          <>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <Chip label={t("search.sortProximity")} active={sort === "proximity"} onClick={() => setSort("proximity")} />
+              <Chip label={t("search.sortRating")} active={sort === "rating"} onClick={() => setSort("rating")} />
+            </div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+              <Chip label="Toutes" active={!city} onClick={() => { setCity(null); setQuartier(null); }} />
+              {CITY_NAMES.map((c) => (
+                <Chip key={c} label={c} active={city === c} onClick={() => { setCity(c); setQuartier(null); }} />
+              ))}
+            </div>
+            {city && quartiers.length > 0 && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                <Chip label="Tous" active={!quartier} onClick={() => setQuartier(null)} />
+                {quartiers.map((q) => (
+                  <Chip key={q} label={q} active={quartier === q} onClick={() => setQuartier(q)} />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {error && (
@@ -103,6 +128,11 @@ export default function Search() {
                       )}
                     </div>
                     <Stars value={tl.rating_avg} />
+                    {tl.city && (
+                      <span style={{ fontSize: 11, color: colors.textSecondary }}>
+                        {tl.city}{tl.quartier ? ` · ${tl.quartier}` : ""}
+                      </span>
+                    )}
                   </div>
                 </div>
               </Card>

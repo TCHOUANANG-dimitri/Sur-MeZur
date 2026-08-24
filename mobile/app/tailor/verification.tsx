@@ -4,7 +4,7 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { CheckCircle2, Paperclip } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { TailorsApi } from "../../src/api/endpoints";
 import type { PickedFile } from "../../src/api/endpoints";
 import type { TailorProfile } from "../../src/api/types";
@@ -15,6 +15,7 @@ import { StatusChip } from "../../src/components/Chip";
 import { useI18n } from "../../src/i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../../src/theme/ThemeProvider";
 import { fonts, type ThemeColors } from "../../src/theme/tokens";
+import { CITIES_DATA, CITY_NAMES } from "../../src/data/citiesData";
 
 export default function Verification() {
   const styles = useThemedStyles(makeStyles);
@@ -23,7 +24,8 @@ export default function Verification() {
   const [profile, setProfile] = useState<TailorProfile | null | undefined>(undefined);
   const [shopName, setShopName] = useState("");
   const [bio, setBio] = useState("");
-  const [city, setCity] = useState("Douala");
+  const [city, setCity] = useState("");
+  const [quartier, setQuartier] = useState("");
   const [tailorType, setTailorType] = useState<"individual" | "atelier">("individual");
   const [selfPhoto, setSelfPhoto] = useState<PickedFile | null>(null);
   const [idCard, setIdCard] = useState<PickedFile | null>(null);
@@ -38,6 +40,7 @@ export default function Verification() {
         if (p?.shop_name) setShopName(p.shop_name);
         if (p?.bio) setBio(p.bio);
         if (p?.city) setCity(p.city);
+        if (p?.quartier) setQuartier(p.quartier);
         if (p?.tailor_type) setTailorType(p.tailor_type);
       })
       .catch(() => setProfile(null));
@@ -70,7 +73,7 @@ export default function Verification() {
         /* geolocation optional */
       }
       const result = await TailorsApi.submitVerification(
-        { tailor_type: tailorType, shop_name: shopName, bio, city, lat, lng },
+        { tailor_type: tailorType, shop_name: shopName, bio, city, quartier, lat, lng },
         { self_photo: selfPhoto, id_card: idCard, atelier_photo: atelierPhoto }
       );
       setProfile(result);
@@ -83,10 +86,6 @@ export default function Verification() {
 
   if (profile === undefined) return null;
 
-  // Le statut vaut "pending" dès l'inscription, avant toute soumission : sans
-  // ce signal (le seul document toujours présent après un premier envoi),
-  // impossible de distinguer "vient de s'inscrire" de "dossier en cours
-  // d'examen" — les deux affichaient le même écran d'attente sans issue.
   const hasSubmitted = !!profile?.atelier_photo_url;
 
   if (hasSubmitted && profile!.verification_status !== "rejected") {
@@ -111,12 +110,13 @@ export default function Verification() {
   }
 
   const rejected = hasSubmitted && profile!.verification_status === "rejected";
-  const canSubmit = !!shopName && !!selfPhoto && !!idCard && !!atelierPhoto;
+  const canSubmit = !!shopName && !!selfPhoto && !!idCard && !!atelierPhoto && !!city;
+  const quartiers = city ? CITIES_DATA[city] || [] : [];
 
   return (
     <Screen>
       <Header title={t("tailor.verification.title")} />
-      <View style={{ padding: 18 }}>
+      <ScrollView style={{ padding: 18 }} contentContainerStyle={{ paddingBottom: 40 }}>
         {rejected && (
           <View style={styles.rejectedBanner}>
             <Text style={styles.rejectedText}>{t("tailor.verification.rejectedBanner")}</Text>
@@ -141,8 +141,33 @@ export default function Verification() {
           <Input value={bio} onChangeText={setBio} multiline style={{ minHeight: 70, textAlignVertical: "top" }} />
         </Field>
         <Field label={t("tailor.verification.city")}>
-          <Input value={city} onChangeText={setCity} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+            {CITY_NAMES.map((c) => (
+              <TouchableOpacity
+                key={c}
+                style={[styles.chip, city === c && styles.chipActive]}
+                onPress={() => { setCity(c); setQuartier(""); }}
+              >
+                <Text style={[styles.chipText, city === c && styles.chipTextActive]}>{c}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </Field>
+        {city ? (
+          <Field label={t("tailor.verification.quartier")}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+              {quartiers.map((q) => (
+                <TouchableOpacity
+                  key={q}
+                  style={[styles.chip, quartier === q && styles.chipActive]}
+                  onPress={() => setQuartier(q)}
+                >
+                  <Text style={[styles.chipText, quartier === q && styles.chipTextActive]}>{q}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Field>
+        ) : null}
         <FilePickerField label={t("tailor.verification.selfPhoto")} file={selfPhoto} onPick={() => pick(setSelfPhoto)} />
         <FilePickerField label={t("tailor.verification.identity")} file={idCard} onPick={() => pick(setIdCard)} />
         <FilePickerField label={t("tailor.verification.workshopPhoto")} file={atelierPhoto} onPick={() => pick(setAtelierPhoto)} />
@@ -153,7 +178,7 @@ export default function Verification() {
         <Button variant="text" fullWidth onPress={goToDashboard} style={{ marginTop: 6 }}>
           {t("tailor.verification.later")}
         </Button>
-      </View>
+      </ScrollView>
     </Screen>
   );
 }
@@ -195,4 +220,19 @@ const makeStyles = (colors: ThemeColors) =>
     padding: 12,
   },
   fileLabel: { fontSize: 12, color: colors.indigoText, fontFamily: fonts.body },
+  chipRow: { gap: 8, paddingVertical: 4 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  chipActive: {
+    backgroundColor: colors.indigo,
+    borderColor: colors.indigo,
+  },
+  chipText: { fontSize: 12, color: colors.textSecondary, fontFamily: fonts.body },
+  chipTextActive: { color: "#fff", fontFamily: fonts.bodySemiBold },
 });

@@ -48,6 +48,7 @@ class TailorProfile(Base, IDMixin, TimestampMixin):
     lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     lng: Mapped[float | None] = mapped_column(Float, nullable=True)
     city: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    quartier: Mapped[str | None] = mapped_column(String(120), nullable=True)
     verification_status: Mapped[VerificationStatus] = mapped_column(
         String(16), default=VerificationStatus.pending
     )

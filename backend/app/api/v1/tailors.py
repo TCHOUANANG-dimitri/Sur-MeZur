@@ -19,6 +19,7 @@ def submit_verification(
     shop_name: str = Form(...),
     bio: str | None = Form(None),
     city: str | None = Form(None),
+    quartier: str | None = Form(None),
     lat: float | None = Form(None),
     lng: float | None = Form(None),
     self_photo: UploadFile = File(...),
@@ -36,6 +37,7 @@ def submit_verification(
     profile.shop_name = shop_name
     profile.bio = bio
     profile.city = city
+    profile.quartier = quartier
     if lat is not None and lng is not None and profile.lat is None:
         # RG-13: geolocation captured once, at registration.
         profile.lat, profile.lng = lat, lng
@@ -79,15 +81,22 @@ def search_tailors(
     lng: float | None = None,
     sort: str = "rating",
     q: str | None = None,
+    city: str | None = None,
+    quartier: str | None = None,
     db: Session = Depends(get_db),
 ):
     query = db.query(TailorProfile)
+    if city:
+        query = query.filter(TailorProfile.city.ilike(f"%{city}%"))
+    if quartier:
+        query = query.filter(TailorProfile.quartier.ilike(f"%{quartier}%"))
     if q:
         query = query.filter(
             or_(
                 TailorProfile.shop_name.ilike(f"%{q}%"),
                 TailorProfile.bio.ilike(f"%{q}%"),
                 TailorProfile.city.ilike(f"%{q}%"),
+                TailorProfile.quartier.ilike(f"%{q}%"),
                 TailorProfile.user.has(User.full_name.ilike(f"%{q}%")),
             )
         )

@@ -14,6 +14,7 @@ import { Stars } from "../../../src/components/Stars";
 import { useI18n } from "../../../src/i18n/I18nProvider";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, gradientColors, radii, type ThemeColors } from "../../../src/theme/tokens";
+import { CITIES_DATA, CITY_NAMES } from "../../../src/data/citiesData";
 
 export default function Search() {
   const { colors } = useTheme();
@@ -28,6 +29,8 @@ export default function Search() {
   const [q, setQ] = useState("");
   const [tailors, setTailors] = useState<TailorProfile[] | null>(null);
   const [models, setModels] = useState<GarmentModel[] | null>(null);
+  const [city, setCity] = useState<string | null>(null);
+  const [quartier, setQuartier] = useState<string | null>(null);
 
   useEffect(() => {
     CatalogApi.categories().then(setCategories);
@@ -36,10 +39,9 @@ export default function Search() {
   const loadModels = () => CatalogApi.models({ q: q || undefined, sort: modelSort, category_id: categoryId || undefined }).then(setModels);
 
   useEffect(() => {
-    if (tab === "tailors") TailorsApi.search({ sort, q: q || undefined }).then(setTailors);
+    if (tab === "tailors") TailorsApi.search({ sort, q: q || undefined, city: city || undefined, quartier: quartier || undefined }).then(setTailors);
     else loadModels();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, sort, modelSort, categoryId, q]);
+  }, [tab, sort, modelSort, categoryId, q, city, quartier]);
 
   const toggleLike = async (m: GarmentModel) => {
     setModels((prev) => prev?.map((x) => (x.id === m.id ? { ...x, liked_by_me: !x.liked_by_me, like_count: x.like_count + (x.liked_by_me ? -1 : 1) } : x)) ?? null);
@@ -51,6 +53,8 @@ export default function Search() {
     }
   };
 
+  const quartiers = city ? CITIES_DATA[city] || [] : [];
+
   return (
     <Screen>
       <Header title={t("search.title")} />
@@ -61,10 +65,26 @@ export default function Search() {
           <Chip label={t("search.models")} active={tab === "models"} onPress={() => setTab("models")} />
         </View>
         {tab === "tailors" ? (
-          <View style={styles.row}>
-            <Chip label={t("search.sortProximity")} active={sort === "proximity"} onPress={() => setSort("proximity")} />
-            <Chip label={t("search.sortRating")} active={sort === "rating"} onPress={() => setSort("rating")} />
-          </View>
+          <>
+            <View style={styles.row}>
+              <Chip label={t("search.sortProximity")} active={sort === "proximity"} onPress={() => setSort("proximity")} />
+              <Chip label={t("search.sortRating")} active={sort === "rating"} onPress={() => setSort("rating")} />
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow} style={{ marginBottom: 4 }}>
+              <Chip label="Toutes" active={!city} onPress={() => { setCity(null); setQuartier(null); }} />
+              {CITY_NAMES.map((c) => (
+                <Chip key={c} label={c} active={city === c} onPress={() => { setCity(c); setQuartier(null); }} />
+              ))}
+            </ScrollView>
+            {city && quartiers.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow} style={{ marginBottom: 8 }}>
+                <Chip label="Tous" active={!quartier} onPress={() => setQuartier(null)} />
+                {quartiers.map((q) => (
+                  <Chip key={q} label={q} active={quartier === q} onPress={() => setQuartier(q)} />
+                ))}
+              </ScrollView>
+            )}
+          </>
         ) : (
           <>
             <View style={styles.row}>
@@ -87,12 +107,17 @@ export default function Search() {
               <Card key={tl.id} onPress={() => router.push(`/client/tailors/${tl.id}`)} style={{ marginBottom: 10 }}>
                 <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
                   <LinearGradient colors={gradientColors} style={styles.avatar} />
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
                       <Text style={styles.tailorName}>{tl.shop_name}</Text>
                       <VerificationBadge status={tl.verification_status} />
                     </View>
                     <Stars value={tl.rating_avg} />
+                    {tl.city ? (
+                      <Text style={styles.locationText}>
+                        {tl.city}{tl.quartier ? ` · ${tl.quartier}` : ""}
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
               </Card>
@@ -140,8 +165,10 @@ export default function Search() {
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
   row: { flexDirection: "row", gap: 8, marginVertical: 12 },
+  chipRow: { gap: 8, paddingVertical: 4 },
   avatar: { width: 44, height: 44, borderRadius: 12 },
   tailorName: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.indigoText },
+  locationText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body, marginTop: 2 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   gridItem: { width: "47%" },
   gridThumb: { height: 120, borderRadius: radii.card },
