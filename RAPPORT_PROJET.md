@@ -1,6 +1,10 @@
 # Sur-MeZur — Rapport de réalisation
 
-*Dernière mise à jour : 15 août 2026*
+<<<<<<< HEAD
+*Dernière mise à jour : 24 août 2026*
+=======
+*Dernière mise à jour : 17 août 2026*
+>>>>>>> f4b8949d26bb8e19250a2b9c00d514be78abe641
 
 > Ce document décrit l'état réel du projet : ce qui fonctionne, avec quelle
 > précision, et ce qui reste à faire. Les chiffres qui y figurent sont tous
@@ -59,8 +63,8 @@ sombre.
 | Capture guidée (silhouette + minuteur) | ✅ en place, **jamais testée sur le terrain** |
 | Hébergement | ✅ O2Switch |
 | Certificat HTTPS | ❌ absent — tests en HTTP (exception ciblée sur ce seul domaine côté Android, voir §7) |
-| **Avatar 3D** | ⚙️ pipeline réel (morph targets, plus de Blender en production) — **rendu client instable, bug bloquant sur le dernier build, correctif écrit non déployé** (voir §7) |
-| Catalogue (modèles, catégories) | ✅ gestion complète côté admin, 302 photos réelles importées (6 catégories) |
+| **Avatar 3D** | ⚙️ pipeline serveur fonctionnel et vérifié en production — **rendu client toujours non confirmé visuellement sur appareil**, nouvelle architecture écrite et vérifiée hors device, pas encore buildée (voir §7) |
+| Catalogue (modèles, catégories) | ✅ gestion complète côté admin, 302 photos réelles en production, **affichées dans l'app** (accueil, recherche, galerie, détail) |
 | Essayage, patrons | ⚠️ simulés |
 | Paiement Mobile Money | ⚠️ simulé (bac à sable) |
 | SMS de vérification | ⚠️ le code s'affiche dans l'application |
@@ -402,39 +406,80 @@ indicateur (le rapport écartement d'épaules / hauteur de torse, qui vaut 0,68
 de face et 0,05 de profil), mais il n'est pas calibré aux angles
 intermédiaires. Une séance de dix minutes suffirait.
 
-### Priorité 4 — Débloquer le rendu de l'avatar 3D
+### Priorité 4 — Confirmer visuellement le rendu de l'avatar 3D sur appareil
 
-**Régression trouvée le 15 août, correctif écrit mais non vérifié sur
-appareil.** Le pipeline serveur (poids de morphologie calculés en Python pur)
-est fonctionnel et vérifié en production. Côté client, l'écran de génération
-reste bloqué indéfiniment sur le dernier build (maillages de base
-régénérés avec normales de morph, 4× plus lourds) — probablement une
-exception silencieuse dans le traitement du modèle chargé, jamais
-interceptée, qui empêche l'overlay de chargement de se refermer. Diagnostic
-et correctif détaillés dans `HANDOFF_CATALOG_PHOTOS_AND_AVATAR_HANG.md`
-(section B) : encadrer le chargement d'un `try/finally` et ajouter un
-timeout de repli côté interface. Non vérifié faute d'accès à un appareil
-physique depuis l'environnement de développement.
+**Aucun avatar n'a encore été validé visuellement de bout en bout sur un
+téléphone réel**, malgré plusieurs correctifs successifs — chaque test a
+jusqu'ici révélé un nouveau blocage avant même de pouvoir juger de la
+morphologie. Historique complet des trois blocages trouvés et corrigés :
 
-### Priorité 5 — Afficher les vraies photos du catalogue
+1. **Écran totalement vide** (16-17 août) : `Dimensions.get("window")`
+   appelé une seule fois au chargement du module plutôt qu'à chaque rendu —
+   sur certains démarrages, la valeur capturée figeait la hauteur du
+   visualiseur 3D à 0, rendant tout le composant invisible quel que soit
+   l'état du modèle. Corrigé (hook `useWindowDimensions()`, réévalué à
+   chaque rendu).
+2. **Plantage au chargement** (17 août) : les maillages de base réexportés
+   avec les normales de morphologie par cible pesaient ~20-21 Mo (contre
+   4,7-4,8 Mo) — sur le téléphone testé, l'allocation mémoire GPU pour ce
+   volume de données échouait silencieusement, laissant un écran sans
+   erreur ni modèle. Un premier correctif s'est avéré n'avoir *rien*
+   changé : les fichiers avaient été restaurés depuis un ancien commit,
+   sans relancer réellement l'export Blender (vérifié par hash de contenu
+   identique à l'octet près). Réexporté pour de bon depuis, retour à
+   4,7-4,8 Mo. Au passage, deux hypothèses précédentes sur la cause de
+   l'aspect "carré" du maillage ont été formellement invalidées par
+   inspection directe de la scène Blender : le maillage est déjà lissé à
+   100 % dès sa création par MPFB2, et ne porte qu'un seul matériau — ni le
+   lissage manuel ni le filtrage des matériaux tentés n'avaient donc
+   d'effet réel.
+3. **Échec silencieux masqué en état "prêt"** : un échec de chargement
+   appelait le même callback qu'un succès, affichant les boutons de
+   confirmation sur une scène vide sans aucune indication d'erreur.
+   Corrigé — succès et échec sont maintenant deux callbacks distincts
+   (`onReady` / `onError`), avec un vrai message et un bouton "Réessayer"
+   en cas d'échec.
 
-302 photos de modèles ont été importées en base (6 catégories, homme/femme),
-mais les quatre écrans qui listent des modèles (accueil, recherche, galerie,
-détail) affichent encore un simple aplat de couleur à la place de la photo
-réelle. Correctif ponctuel, détaillé dans
-`HANDOFF_CATALOG_PHOTOS_AND_AVATAR_HANG.md` (section A) : un utilitaire de
-résolution d'URL existe déjà et est utilisé ailleurs dans l'app, il ne
-manque que sa réutilisation à ces quatre endroits.
+<<<<<<< HEAD
+**✅ Corrigé le 24 août** (§8.8). Les pages `ModelDetail.tsx`, `Home.tsx` et
+`Gallery.tsx` affichent désormais `photo_url` avec `background: url(...) center/cover`,
+en fallback sur le dégradé `thumbnail_color` si pas de photo. Le type TypeScript
+`GarmentModel` a été corrigé pour inclure `photo_url`, `photos`, `like_count` et
+`liked_by_me`.
+=======
+**Nouvelle architecture de rendu, en cours d'intégration.** Le compromis
+entre poids de fichier (sans normales, chargement correct mais éclairage
+figé sur la forme neutre) et fidélité d'éclairage (avec normales, GPU
+saturé) a été soumis à quatre analyses techniques externes indépendantes,
+converge sur la même solution : appliquer les poids de morphologie **une
+seule fois côté client**, directement sur les positions du maillage
+(plutôt que de les laisser recombinés par le GPU à chaque image, alors
+qu'ils ne changent jamais après génération), puis recalculer les normales
+sur la forme réellement déformée et jeter les données de morphologie
+devenues inutiles. Implémenté (`bakeMorphTargets()` dans `Viewer3D.tsx`) et
+vérifié hors device par un test isolé rejouant le vrai fichier `.glb` et de
+vrais poids : 48 ms de calcul, aucune position ni normale aberrante. **Pas
+encore confirmé visuellement sur un appareil physique** — c'est la seule
+chose que cette vérification ne peut pas remplacer.
+
+Brief complet des contraintes, de l'architecture actuelle et des options
+évaluées : `BRIEF_MODELE_CORPOREL_AVATAR.md`.
+>>>>>>> f4b8949d26bb8e19250a2b9c00d514be78abe641
 
 ### Autres chantiers
 
 | Sujet | État |
 |---|---|
 | **Certificat HTTPS** | AutoSSL n'a pas émis pour le sous-domaine ; tests en HTTP. Contournement ciblé côté Android : exception de trafic en clair limitée au seul domaine de l'API |
+| **Pare-feu applicatif O2Switch (Tiger Protect)** | a bloqué tout le trafic API (y compris l'app mobile, incapable de résoudre le défi JavaScript exigé) le 16 août, sans réglage en libre-service trouvé dans cPanel ; résolu depuis, cause exacte non confirmée par le support |
 | **Interface sur appareil** | la capture guidée n'a jamais été utilisée en conditions réelles |
 | **Vrai fournisseur Mobile Money** | actuellement simulé |
-| **Essayage, patrons** | actuellement simulés |
+<<<<<<< HEAD
+| **Essayage, patrons** | actuellement simulés — **essayage 3D fonctionnel** avec sélection modèle/tissu/accessoires, création d'avatar possible depuis mesures existantes (§8.9) |
 | **Migration de schéma en production** | `garment_models` (catégories genrées) reste sur l'ancien schéma sur le serveur — nécessite une suppression manuelle de la table pour que `create_all()` la recrée au bon format ; le projet n'a toujours pas de système de migration |
+=======
+| **Essayage, patrons** | actuellement simulés |
+>>>>>>> f4b8949d26bb8e19250a2b9c00d514be78abe641
 | **Compte de test** | `+23760000001` (« ZZ Test Diagnostic ») et ses sessions de mesure/avatar associées restent à supprimer en production |
 | **Sauvegarde du dépôt** | l'historique local n'a aucun ancêtre commun avec le dépôt distant |
 
@@ -581,7 +626,79 @@ backend ignorait silencieusement.
 `frontend/src/pages/client/Home.tsx`, `frontend/src/pages/client/Gallery.tsx`,
 `frontend/src/api/endpoints.ts`, `frontend/src/api/types.ts`.
 
-### 8.8 Le temps d'analyse
+### 8.8 Fiche modèle : type `category` incohérent et images absentes
+
+**Le symptôme** : la page de détail d'un modèle (`ModelDetail.tsx`) affichait
+`[object Object]` à la place du nom de catégorie. Les images réelles du catalogue
+(302 photos importées) n'étaient jamais affichées — seuls des dégradés colorés
+apparaissaient. L'espace blanc sous l'image était disproportionné.
+
+**Les causes** (multiples) :
+
+| # | Problème | Impact |
+|---|---|---|
+| 1 | Le type TypeScript `GarmentModel.category` était déclaré comme `string` (`GarmentCategory`) alors que le backend renvoie un **objet** `{ id, name, gender }` | `[object Object]` affiché partout |
+| 2 | Les champs `photo_url`, `photos`, `like_count`, `liked_by_me` existaient côté backend mais **absents du type frontend** | Photos réelles jamais affichées |
+| 3 | Pas de gestion d'erreur sur `CatalogApi.model()` | Spinner infini si l'API échoue |
+| 4 | Le layout utilisait `flex: 1` sur l'image et `flexShrink: 0` sur le contenu, sans scroll | Espace blanc sous le contenu |
+
+**La correction** :
+
+- **`types.ts`** : `category` remplacé par `{ id: string; name: string; gender: string }`,
+  champs `photo_url`, `photos`, `like_count`, `liked_by_me` ajoutés
+- **`ModelDetail.tsx`** : `model.category` → `model.category.name`, image affichée via
+  `url(photo_url) center/cover` avec fallback gradient, gestion d'erreur avec message,
+  contenu scrollable (`overflowY: "auto"`)
+- **`Home.tsx`** : `m.category` → `m.category.name`, image carte avec `photo_url`
+- **`Gallery.tsx`** : idem
+
+**Difficulté** : le bug était invisible en l'absence de données — TypeScript ne
+signalait pas l'erreur car l'ancien enum `GarmentCategory` est un alias de `string`.
+La mismatch entre le type frontend (string) et la réponse backend (objet) ne
+provoquait aucune erreur de compilation, seulement un rendu incorrect.
+
+**Fichiers modifiés** : `frontend/src/api/types.ts`,
+`frontend/src/pages/client/ModelDetail.tsx`, `frontend/src/pages/client/Home.tsx`,
+`frontend/src/pages/client/Gallery.tsx`.
+
+### 8.9 Essayage : réutilisation des mesures existantes
+
+**Le symptôme** : un client qui avait déjà pris ses mesures mais n'avait pas encore
+d'avatar était forcé de refaire tout le parcours photo + analyse IA pour créer un
+avatar. Le bouton unique "Prendre mes mesures" redirigeait vers
+`/client/measurements`, ignorant les mesures déjà enregistrées en base.
+
+**La cause** : `TryOn.tsx` n'offrait qu'un seul chemin quand `avatarId` était absent.
+Or l'API `POST /avatars` accepte directement un `measurement_id` existant — la
+génération d'avatar (morph weights) est instantanée (~1 ms, calcul Python pur, pas
+de Blender ni de pipeline IA). Le gros traitement (photos → mesures via MediaPipe +
+SAM + ML) n'est nécessaire qu'une seule fois.
+
+**La correction** :
+
+- **`TryOn.tsx`** : deux boutons affichés quand pas d'avatar :
+  - "Prendre mes mesures" → `/client/measurements` (parcours complet)
+  - "Utiliser mes mesures existantes" → `/client/tryon/pick-measurement`
+- **`UseExistingMeasurements.tsx`** (nouveau) : page qui appelle `GET /measurements`,
+  affiche la liste des mesures existantes (taille, poids, source, score de confiance),
+  permet de choisir le teint de peau, puis appelle `POST /avatars` (~1 ms) et
+  redirige vers `/client/tryon?avatarId=xxx`
+- **`App.tsx`** : route ajoutée `/client/tryon/pick-measurement`
+- **`fr.json` / `en.json`** : clés i18n ajoutées (`tryon.noAvatar`,
+  `tryon.takeMeasurements`, `tryon.useExisting`, `tryon.useMeasurement`,
+  `measurement.pickExisting`, `measurement.pickExisting.subtitle`,
+  `measurement.noExisting`, `measurement.confidence`)
+
+**Difficulté** : aucune — le backend supportait déjà le cas d'usage. La seule
+vérification nécessaire était de s'assurer que `MeasurementsApi.list()` retourne
+bien toutes les mesures du client (ce qui est le cas, endpoint `GET /measurements`
+trié par `created_at desc`).
+
+**Fichiers modifiés** : `frontend/src/pages/client/TryOn.tsx`,
+`frontend/src/pages/client/UseExistingMeasurements.tsx` (nouveau),
+`frontend/src/App.tsx`, `frontend/src/i18n/fr.json`, `frontend/src/i18n/en.json`.
+
+### 8.10 Le temps d'analyse
 
 | Étape | Durée |
 |---|---|
@@ -639,6 +756,23 @@ backend ignorait silencieusement.
 | 15 août | Premier test visuel réel de l'avatar 3D : bugs trouvés et corrigés (sélecteur de teint sans effet, chargement peu synchronisé, maillage facetté par absence de normales de morph exportées) |
 | 15 août | Maillages de base régénérés (Blender + MPFB2 réinstallés) avec normales de morph et matériaux corrigés — a introduit une régression de chargement, voir §7 |
 | 15 août | 302 photos de modèles importées en base (6 catégories, homme/femme) — reste à afficher côté app, voir §7 |
+| 16 août | Pare-feu O2Switch (Tiger Protect) bloquant tout le trafic API découvert et diagnostiqué, résolu depuis (voir §7) |
+| 16 août | Migration du schéma `garment_models` appliquée en production ; 302 photos transférées et importées en base réelle |
+| 17 août | Écran avatar totalement invisible corrigé : `Dimensions.get()` figé au chargement du module remplacé par `useWindowDimensions()` |
+| 17 août | Deux hypothèses sur l'aspect "carré" du maillage invalidées par inspection directe (déjà lissé à 100 %, un seul matériau dès sa création) — le vrai réexport Blender (le précédent n'avait fait que restaurer un ancien fichier) ramène le poids à 4,7-4,8 Mo |
+| 17 août | Échec de chargement du modèle 3D distingué du succès (`onReady`/`onError`) — n'affiche plus les boutons "prêt" sur une scène vide |
+| 17 août | **Vraies photos affichées dans l'app** : accueil, recherche, galerie et détail montrent désormais la photo réelle du modèle au lieu d'un aplat de couleur |
+| 17 août | Consultation externe sur le modèle corporel de l'avatar (SMPL/STAR écarté — licence, biais de population, risque de calcul serveur ; MakeHuman conservé) — voir `BRIEF_MODELE_CORPOREL_AVATAR.md` |
+| 17 août | Nouvelle architecture de rendu (« cuisson » unique des poids côté client, recalcul des normales) implémentée et vérifiée hors device (48 ms, aucune donnée aberrante) — non encore confirmée sur appareil |
 | 18 août | **Scroll des pages de connexion corrigé** : `overflowY: "auto"` ajouté sur Login.tsx et Register.tsx (§8.5) |
 | 18 août | **Fiche modèle redessinée** : layout flex proportionnel au lieu de bandeau fixe 260px (§8.6) |
 | 18 août | **Recherche fonctionnelle** : debounce, gestion d'erreurs, état vide, recherche multi-champs backend, catégories dynamiques (§8.7) |
+<<<<<<< HEAD
+| 24 août | **Type `GarmentModel.category` corrigé** : objet `{ id, name, gender }` au lieu de string — corrige `[object Object]` sur toutes les pages (§8.8) |
+| 24 août | **Photos réelles affichées** dans le catalogue et la fiche modèle, avec fallback gradient si pas de `photo_url` (§8.8) |
+| 24 août | **Fiche modèle redessinée** : image en haut (min 260px), contenu scrollable, gestion d'erreur API (§8.8) |
+| 24 août | **Essayage : mesure existante réutilisable** : nouveau parcours permettant de créer un avatar sans repasser par les photos, en sélectionnant une mesure déjà enregistrée — gain de temps significatif (§8.9) |
+=======
+| 22 août | **Calcul de morphologie recalibré** (`muscle_factor` neutralisé, fessiers dérivés du profil, matrice de sensibilité/optimisation ajoutée) — bug bloquant corrigé au passage : les poids générés ne correspondaient à aucune cible réelle du maillage, rendant tout avatar sans déformation |
+| 22 août | Galerie de modèles : affichage plein écran zoomable des photos (`react-native-image-viewing`), swipe entre modèles |
+>>>>>>> f4b8949d26bb8e19250a2b9c00d514be78abe641

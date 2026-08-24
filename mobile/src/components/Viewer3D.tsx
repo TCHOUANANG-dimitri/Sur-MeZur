@@ -27,6 +27,50 @@ export interface AvatarMorphology {
   weights: Record<string, number>;
 }
 
+/**
+ * Applique les poids de morph targets UNE SEULE FOIS, directement sur les
+ * positions du maillage, plutôt que de laisser le GPU recombiner les 60
+ * cibles à chaque frame via `morphTargetInfluences`.
+ *
+ * Les poids d'un avatar donné ne changent jamais après sa génération —
+ * payer un morphing GPU dynamique en continu pour un résultat qui ne
+ * bouge plus n'a aucune justification, et c'est le volume de données
+ * (jusqu'à 60 cibles en mémoire GPU) qui faisait échouer le chargement
+ * dès qu'on y ajoutait les normales par cible (voir
+ * BRIEF_MODELE_CORPOREL_AVATAR.md §5.4). En "cuisant" les poids ici :
+ *  - les données de cibles sont jetées juste après usage (rien à garder
+ *    en mémoire GPU) ;
+ *  - les normales sont recalculées sur la forme RÉELLEMENT déformée
+ *    (`computeVertexNormals`), au lieu de rester celles du maillage
+ *    neutre — c'est cette désynchronisation qui donnait l'aspect
+ *    facetté/anguleux signalé lors des premiers tests visuels.
+ */
+function bakeMorphTargets(mesh: THREE.Mesh, weights: Record<string, number>) {
+  const geometry = mesh.geometry;
+  const dict = mesh.morphTargetDictionary;
+  const morphPositions = geometry.morphAttributes?.position;
+  if (!dict || !morphPositions || !morphPositions.length) return;
+
+  const position = geometry.attributes.position as THREE.BufferAttribute;
+  const base = position.array as Float32Array;
+  for (const [name, weight] of Object.entries(weights)) {
+    if (!weight) continue;
+    const idx = dict[name];
+    const target = morphPositions[idx];
+    if (!target) continue;
+    const delta = target.array as Float32Array;
+    for (let i = 0; i < base.length; i++) {
+      base[i] += delta[i] * weight;
+    }
+  }
+  position.needsUpdate = true;
+
+  delete geometry.morphAttributes.position;
+  mesh.morphTargetInfluences = [];
+  mesh.morphTargetDictionary = {};
+  geometry.computeVertexNormals();
+}
+
 function canvasShim(gl: ExpoWebGLRenderingContext) {
   return {
     width: gl.drawingBufferWidth,
@@ -219,10 +263,8 @@ export function Viewer3D({
 
               model.traverse((obj) => {
                 const mesh = obj as THREE.Mesh;
-                if (!mesh.morphTargetDictionary || !mesh.morphTargetInfluences) return;
-                for (const [name, weight] of Object.entries(avatarMorphology.weights)) {
-                  const idx = mesh.morphTargetDictionary[name];
-                  if (idx !== undefined) mesh.morphTargetInfluences[idx] = weight;
+                if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
+                  bakeMorphTargets(mesh, avatarMorphology.weights);
                 }
                 const material = mesh.material as THREE.MeshStandardMaterial | undefined;
                 if (material?.color) {

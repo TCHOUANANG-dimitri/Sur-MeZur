@@ -107,12 +107,16 @@ export interface TryonSession {
 
 export interface GarmentModel {
   id: string;
-  category: GarmentCategory;
+  category: { id: string; name: string; gender: string };
   name: string;
   description: string | null;
   base_price: number | null;
   style_tags: string[];
   thumbnail_color: string;
+  photo_url: string | null;
+  photos: string[];
+  like_count: number;
+  liked_by_me: boolean;
 }
 
 export interface Fabric {

@@ -40,9 +40,9 @@ export default function Gallery() {
               onClick={() => navigate(`/client/models/${m.id}${tailorId ? `?tailorId=${tailorId}` : ""}`)}
               style={{ cursor: "pointer" }}
             >
-              <div style={{ height: 150, borderRadius: radii.card, background: `linear-gradient(160deg, ${m.thumbnail_color}, ${colors.indigoText})` }} />
+              <div style={{ height: 150, borderRadius: radii.card, background: m.photo_url ? `url(${m.photo_url}) center/cover` : `linear-gradient(160deg, ${m.thumbnail_color}, ${colors.indigoText})` }} />
               <p style={{ fontSize: 12, fontWeight: 600, margin: "8px 0 0" }}>{m.name}</p>
-              <p style={{ fontSize: 11, color: colors.textSecondary, margin: 0 }}>{m.category}</p>
+              <p style={{ fontSize: 11, color: colors.textSecondary, margin: 0 }}>{m.category.name}</p>
             </div>
           ))
         )}

@@ -82,14 +82,28 @@ export default function TryOn() {
   };
 
   if (!avatarId) {
+    const qs = new URLSearchParams();
+    if (modelId) qs.set("modelId", modelId);
+    const tailorParam = params.get("tailorId");
+    if (tailorParam) qs.set("tailorId", tailorParam);
+
     return (
       <div>
         <Header title={t("tryon.title")} />
         <div style={{ padding: 24, textAlign: "center" }}>
-          <p style={{ color: colors.textSecondary, fontSize: 13 }}>
-            Prenez d'abord vos mesures pour générer votre avatar.
+          <p style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20 }}>
+            {t("tryon.noAvatar")}
           </p>
-          <Button onClick={() => navigate("/client/measurements")}>{t("measurement.intro.title")}</Button>
+          <Button onClick={() => navigate("/client/measurements")} style={{ marginBottom: 10 }}>
+            {t("tryon.takeMeasurements")}
+          </Button>
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => navigate(`/client/tryon/pick-measurement?${qs.toString()}`)}
+          >
+            {t("tryon.useExisting")}
+          </Button>
         </div>
       </div>
     );

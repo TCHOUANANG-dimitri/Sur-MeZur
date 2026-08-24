@@ -61,7 +61,16 @@ export default function Home() {
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 18 }}>
             {models.map((m) => (
-              <TouchableOpacity key={m.id} style={{ width: 140 }} onPress={() => router.push(`/client/models/${m.id}`)}>
+              <TouchableOpacity
+                key={m.id}
+                style={{ width: 140 }}
+                onPress={() =>
+                  router.push({
+                    pathname: `/client/models/${m.id}`,
+                    params: category ? { category_id: category } : { sort: "popular" },
+                  })
+                }
+              >
                 {m.photo_url ? (
                   <Image source={{ uri: fileUrl(m.photo_url) }} style={styles.modelThumb} resizeMode="cover" />
                 ) : (

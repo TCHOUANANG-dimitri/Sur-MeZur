@@ -96,7 +96,7 @@ export default function Home() {
                   }}
                 />
                 <p style={{ fontSize: 12, fontWeight: 600, margin: "8px 0 0", color: colors.indigoText }}>{m.name}</p>
-                <p style={{ fontSize: 11, color: colors.textSecondary, margin: 0 }}>{m.category}</p>
+                <p style={{ fontSize: 11, color: colors.textSecondary, margin: 0 }}>{m.category.name}</p>
               </div>
             ))}
           </div>

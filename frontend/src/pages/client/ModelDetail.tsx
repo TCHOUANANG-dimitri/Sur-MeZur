@@ -16,11 +16,15 @@ export default function ModelDetail() {
   const navigate = useNavigate();
   const { t } = useI18n();
   const [model, setModel] = useState<GarmentModel | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    CatalogApi.model(id).then(setModel);
+    CatalogApi.model(id)
+      .then(setModel)
+      .catch(() => setError("Impossible de charger ce modèle."));
   }, [id]);
 
+  if (error) return <div style={{ padding: 40, textAlign: "center", color: colors.textSecondary }}>{error}</div>;
   if (!model) return <Spinner />;
 
   const tryonQs = `?modelId=${model.id}${tailorId ? `&tailorId=${tailorId}` : ""}`;
@@ -28,9 +32,16 @@ export default function ModelDetail() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <Header title={model.name} onBack />
-      <div style={{ flex: 1, minHeight: 200, background: `linear-gradient(160deg, ${model.thumbnail_color}, ${colors.indigoText})` }} />
-      <div style={{ padding: 18, flexShrink: 0 }}>
-        <StatusChip status="neutral" label={model.category} />
+      <div
+        style={{
+          minHeight: 260,
+          background: model.photo_url
+            ? `url(${model.photo_url}) center/cover`
+            : `linear-gradient(160deg, ${model.thumbnail_color}, ${colors.indigoText})`,
+        }}
+      />
+      <div style={{ flex: 1, overflowY: "auto", padding: 18 }}>
+        <StatusChip status="neutral" label={model.category.name} />
         <h2 style={{ fontFamily: "'Playfair Display', serif", margin: "10px 0 6px", color: colors.indigoText }}>{model.name}</h2>
         <p style={{ fontSize: 13, color: colors.textSecondary }}>{model.description}</p>
         {model.base_price && (

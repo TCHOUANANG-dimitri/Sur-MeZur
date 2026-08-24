@@ -103,7 +103,20 @@ export default function Search() {
         ) : (
           <View style={styles.grid}>
             {models.map((m) => (
-              <TouchableOpacity key={m.id} style={styles.gridItem} onPress={() => router.push(`/client/models/${m.id}`)}>
+              <TouchableOpacity
+                key={m.id}
+                style={styles.gridItem}
+                onPress={() =>
+                  router.push({
+                    pathname: `/client/models/${m.id}`,
+                    params: {
+                      sort: modelSort,
+                      ...(categoryId ? { category_id: categoryId } : {}),
+                      ...(q ? { q } : {}),
+                    },
+                  })
+                }
+              >
                 <View>
                   {m.photo_url ? (
                     <Image source={{ uri: fileUrl(m.photo_url) }} style={styles.gridThumb} resizeMode="cover" />

@@ -1,7 +1,19 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import {
+  FlatList,
+  Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import ImageView from "react-native-image-viewing";
 import { fileUrl } from "../../../src/api/client";
 import { CatalogApi } from "../../../src/api/endpoints";
 import type { GarmentModel } from "../../../src/api/types";
@@ -16,62 +28,125 @@ import { fonts, radii, type ThemeColors } from "../../../src/theme/tokens";
 export default function ModelDetail() {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
-  const { id, tailorId } = useLocalSearchParams<{ id: string; tailorId?: string }>();
+  const { width } = useWindowDimensions();
+  const params = useLocalSearchParams<{
+    id: string;
+    tailorId?: string;
+    category_id?: string;
+    sort?: "recent" | "popular";
+    q?: string;
+    liked_only?: string;
+  }>();
   const router = useRouter();
-  const [model, setModel] = useState<GarmentModel | null>(null);
+  const [models, setModels] = useState<GarmentModel[] | null>(null);
+  const [index, setIndex] = useState(0);
+  const [zoomTarget, setZoomTarget] = useState<GarmentModel | null>(null);
 
   useEffect(() => {
-    if (id) CatalogApi.model(id).then(setModel);
-  }, [id]);
-
-  if (!model) return <Spinner />;
-
-  const goTryOn = () =>
-    router.push({
-      pathname: "/client/(tabs)/tryon",
-      params: { modelId: model.id, ...(tailorId ? { tailorId } : {}) },
+    let cancelled = false;
+    const query = {
+      category_id: params.category_id || undefined,
+      sort: params.sort || undefined,
+      q: params.q || undefined,
+      liked_only: params.liked_only === "true" ? true : undefined,
+    };
+    CatalogApi.models(query).then((list) => {
+      if (cancelled) return;
+      const startIndex = list.findIndex((m) => m.id === params.id);
+      if (startIndex >= 0) {
+        setModels(list);
+        setIndex(startIndex);
+      } else {
+        // La liste filtrée ne contient plus cet identifiant (lien direct,
+        // filtres périmés...) : on retombe sur le modèle seul.
+        CatalogApi.model(params.id).then((m) => {
+          if (!cancelled) {
+            setModels([m]);
+            setIndex(0);
+          }
+        });
+      }
     });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
 
-  const toggleLike = async () => {
-    const wasLiked = model.liked_by_me;
-    setModel({ ...model, liked_by_me: !wasLiked, like_count: model.like_count + (wasLiked ? -1 : 1) });
+  const toggleLike = async (m: GarmentModel) => {
+    setModels((prev) => prev?.map((x) => (x.id === m.id ? { ...x, liked_by_me: !x.liked_by_me, like_count: x.like_count + (x.liked_by_me ? -1 : 1) } : x)) ?? null);
     try {
-      const updated = wasLiked ? await CatalogApi.unlike(model.id) : await CatalogApi.like(model.id);
-      setModel(updated);
+      if (m.liked_by_me) await CatalogApi.unlike(m.id);
+      else await CatalogApi.like(m.id);
     } catch {
-      CatalogApi.model(model.id).then(setModel);
+      CatalogApi.model(m.id).then((updated) => setModels((prev) => prev?.map((x) => (x.id === m.id ? updated : x)) ?? null));
     }
   };
 
-  return (
-    <Screen>
-      <Header title={model.name} showBack />
-      <View>
-        {model.photo_url ? (
-          <Image source={{ uri: fileUrl(model.photo_url) }} style={styles.hero} resizeMode="cover" />
-        ) : (
-          <LinearGradient colors={[model.thumbnail_color, colors.indigoText]} style={styles.hero} />
-        )}
-        <View style={styles.likeOverlay}>
-          <LikeButton liked={model.liked_by_me} count={model.like_count} onPress={toggleLike} size={20} />
-        </View>
-      </View>
-      <View style={{ padding: 18 }}>
-        <StatusChip status="neutral" label={model.category.name} />
-        <Text style={styles.title}>{model.name}</Text>
-        <Text style={styles.description}>{model.description}</Text>
-        <View style={styles.tags}>
-          {model.style_tags.map((tag) => (
-            <Text key={tag} style={styles.tag}>
-              {tag}
-            </Text>
-          ))}
-        </View>
+  const goTryOn = (item: GarmentModel) =>
+    router.push({
+      pathname: "/client/(tabs)/tryon",
+      params: { modelId: item.id, ...(params.tailorId ? { tailorId: params.tailorId } : {}) },
+    });
 
-        <Button fullWidth onPress={goTryOn}>
-          Essayer sur mon avatar
-        </Button>
-      </View>
+  const onMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setIndex(Math.round(e.nativeEvent.contentOffset.x / width));
+  };
+
+  if (!models) return <Spinner />;
+
+  return (
+    <Screen scroll={false} edges={["top", "left", "right"]}>
+      <Header title={models[index]?.name ?? ""} showBack />
+      <FlatList
+        data={models}
+        keyExtractor={(m) => m.id}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        initialScrollIndex={index}
+        getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+        style={{ flex: 1 }}
+        renderItem={({ item }) => (
+          <ScrollView style={{ width }} showsVerticalScrollIndicator={false}>
+            <View>
+              <TouchableOpacity activeOpacity={0.92} disabled={!item.photo_url} onPress={() => setZoomTarget(item)}>
+                {item.photo_url ? (
+                  <Image source={{ uri: fileUrl(item.photo_url) }} style={styles.hero} resizeMode="cover" />
+                ) : (
+                  <LinearGradient colors={[item.thumbnail_color, colors.indigoText]} style={styles.hero} />
+                )}
+              </TouchableOpacity>
+              <View style={styles.likeOverlay}>
+                <LikeButton liked={item.liked_by_me} count={item.like_count} onPress={() => toggleLike(item)} size={20} />
+              </View>
+            </View>
+            <View style={{ padding: 18 }}>
+              <StatusChip status="neutral" label={item.category.name} />
+              <Text style={styles.title}>{item.name}</Text>
+              <Text style={styles.description}>{item.description}</Text>
+              <View style={styles.tags}>
+                {item.style_tags.map((tag) => (
+                  <Text key={tag} style={styles.tag}>
+                    {tag}
+                  </Text>
+                ))}
+              </View>
+
+              <Button fullWidth onPress={() => goTryOn(item)}>
+                Essayer sur mon avatar
+              </Button>
+            </View>
+          </ScrollView>
+        )}
+      />
+      <ImageView
+        images={zoomTarget?.photo_url ? [{ uri: fileUrl(zoomTarget.photo_url) }] : []}
+        imageIndex={0}
+        visible={!!zoomTarget}
+        onRequestClose={() => setZoomTarget(null)}
+      />
     </Screen>
   );
 }

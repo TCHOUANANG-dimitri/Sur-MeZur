@@ -65,7 +65,16 @@ export default function Gallery() {
             <TouchableOpacity
               key={m.id}
               style={styles.item}
-              onPress={() => router.push({ pathname: `/client/models/${m.id}`, params: params.tailorId ? { tailorId: params.tailorId } : {} })}
+              onPress={() =>
+                router.push({
+                  pathname: `/client/models/${m.id}`,
+                  params: {
+                    ...(params.tailorId ? { tailorId: params.tailorId } : {}),
+                    ...(categoryId ? { category_id: categoryId } : {}),
+                    sort,
+                  },
+                })
+              }
             >
               <View>
                 {m.photo_url ? (

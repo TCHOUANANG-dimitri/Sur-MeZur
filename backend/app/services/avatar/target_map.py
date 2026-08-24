@@ -113,6 +113,22 @@ def _clamp01(v: float) -> float:
     return max(0.0, min(1.0, v))
 
 
+# Traduction paramètre -> racine de cible, pour les usages qui construisent
+# un nom de cible sans passer par `compute_target_weights` (actuellement :
+# optimize_weights.py, qui doit nommer ses poids optimisés avec les mêmes
+# noms que le maillage attend). Volontairement limitée aux cibles à
+# convention incr/decr directe (un paramètre -> une cible) — les cibles
+# composites (torso-scale-horiz/depth, dérivées d'une moyenne de plusieurs
+# paramètres) et `breast_size` (convention -up/-down séparée, voir
+# BREAST_TARGET) n'y figurent pas volontairement.
+PARAM_TO_TARGET: dict[str, str] = {
+    **{p: racine for p, (_, racine) in MEASURE_TARGETS.items()},
+    **{p: racine for p, (_, racine) in SHAPE_TARGETS.items()},
+    **{p: racine for p, (_, racine) in BREADTH_DEPTH_TARGETS.items()},
+    **{p: racine for p, (_, racine) in PROPORTION_TARGETS.items()},
+}
+
+
 def compute_target_weights(params) -> dict[str, float]:
     """
     Convertit un `AvatarParams` (voir body_params.py) en poids de morph

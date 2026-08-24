@@ -19,6 +19,7 @@ import ReadyToWearDetail from "./pages/client/ReadyToWearDetail";
 import MeasurementFlow from "./pages/client/MeasurementFlow";
 import AvatarPage from "./pages/client/Avatar";
 import TryOn from "./pages/client/TryOn";
+import UseExistingMeasurements from "./pages/client/UseExistingMeasurements";
 import OrderCreate from "./pages/client/OrderCreate";
 import OrderList from "./pages/client/OrderList";
 import Payment from "./pages/client/Payment";
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/client/ready-to-wear/:id" element={<ReadyToWearDetail />} />
           <Route path="/client/measurements" element={<MeasurementFlow />} />
           <Route path="/client/avatar" element={<AvatarPage />} />
+          <Route path="/client/tryon/pick-measurement" element={<UseExistingMeasurements />} />
           <Route path="/client/orders/new" element={<OrderCreate />} />
           <Route path="/client/orders/:id" element={<OrderDetail />} />
           <Route path="/client/orders/:id/negotiation" element={<Negotiation />} />

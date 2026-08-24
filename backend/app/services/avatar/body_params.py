@@ -200,7 +200,12 @@ def measurements_to_avatar_params(
         # utilisateurs vers un facteur de corpulence négatif.
         bmi_ref = 27.7 if not sex else 25.6
         params.weight_factor = _clamp((bmi - bmi_ref) / 15.0)
-        params.muscle_factor = _clamp(params.weight_factor * 0.6)
+        # muscle_factor neutralisé : l'IMC ne mesure pas la composition
+        # corporelle (muscle vs graisse). Rien dans le pipeline de vision
+        # ne mesure la musculature — piloter ces cibles depuis l'IMC
+        # produisait un signal systématiquement faux.
+        # TODO: réactiver quand un signal réel de musculature sera disponible.
+        params.muscle_factor = 0.0
         notes.append(f"bmi={bmi:.1f} -> wf={params.weight_factor:.2f}")
 
     # --- Circonférences (8 tours du modèle Ridge) ---
@@ -221,9 +226,46 @@ def measurements_to_avatar_params(
             setattr(params, param_name, z)
             notes.append(f"{key}={value:.1f} -> {param_name}={z:.2f}")
 
-    # --- Fessiers : dérivé des hanches ---
-    params.buttock_scale = _clamp(params.hip_scale * 0.85 + 0.05)
-    notes.append(f"buttock={params.buttock_scale:.2f}")
+    # --- Largeurs/Profondeurs du torse (depuis features SAM) ---
+    # Calculé AVANT les fessiers car ceux-ci en dépendent quand le signal
+    # SAM est disponible.
+    if features:
+        breadth_depth_map = {
+            "chestbreadth": ("chest_breadth_scale", "chestbreadth"),
+            "chestdepth": ("chest_depth_scale", "chestdepth"),
+            "waistbreadth": ("waist_breadth_scale", "waistbreadth"),
+            "waistdepth": ("waist_depth_scale", "waistdepth"),
+            "hipbreadth": ("hip_breadth_scale", "hipbreadth"),
+            "buttockdepth": ("buttock_depth_scale", "buttockdepth"),
+        }
+        for feat_key, (param_name, ref_key) in breadth_depth_map.items():
+            value = features.get(feat_key)
+            if value is not None and ref_key in ref:
+                z = _z_score(value, ref[ref_key], std[ref_key])
+                setattr(params, param_name, z)
+                notes.append(f"{feat_key}={value:.1f} -> {param_name}={z:.2f}")
+
+    # --- Fessiers ---
+    # Le tour de hanches seul ne distingue pas largeur osseuse vs volume
+    # de projection (deux personnes au même tour peuvent avoir des profils
+    # très différents). Quand les largeurs/profondeurs SAM sont disponibles,
+    # on les utilise comme signal direct plutôt que de dériver du tour.
+    # La profondeur de fessiers est le meilleur proxy de la saillie —
+    # c'est exactement ce qu'un tailleur évalue de profil.
+    if params.hip_breadth_scale != 0.0 or params.buttock_depth_scale != 0.0:
+        # Signal SAM disponible : profondeur pèse plus que largeur
+        # (la saillie des fessiers est principalement une question de
+        # profondeur, pas de largeur latérale).
+        params.buttock_scale = _clamp(
+            params.buttock_depth_scale * 0.7 + params.hip_breadth_scale * 0.3
+        )
+        notes.append(f"buttock={params.buttock_scale:.2f} "
+                     f"(SAM: depth={params.buttock_depth_scale:.2f}, "
+                     f"breadth={params.hip_breadth_scale:.2f})")
+    else:
+        # Pas de signal SAM : repli sur le tour de hanches ( moindre qualité )
+        params.buttock_scale = _clamp(params.hip_scale * 0.85 + 0.05)
+        notes.append(f"buttock={params.buttock_scale:.2f} (fallback hanches)")
 
     # --- Seins (femme) : dérivé de la poitrine ---
     if sex:
@@ -261,23 +303,6 @@ def measurements_to_avatar_params(
         ratio_ref = ref["crotchheight"] / ref["height"]
         params.leg_ratio = _clamp((ratio - ratio_ref) / 0.1)
         notes.append(f"leg_ratio={ratio:.3f} -> {params.leg_ratio:.2f}")
-
-    # --- Largeurs/Profondeurs du torse (depuis features SAM) ---
-    if features:
-        breadth_depth_map = {
-            "chestbreadth": ("chest_breadth_scale", "chestbreadth"),
-            "chestdepth": ("chest_depth_scale", "chestdepth"),
-            "waistbreadth": ("waist_breadth_scale", "waistbreadth"),
-            "waistdepth": ("waist_depth_scale", "waistdepth"),
-            "hipbreadth": ("hip_breadth_scale", "hipbreadth"),
-            "buttockdepth": ("buttock_depth_scale", "buttockdepth"),
-        }
-        for feat_key, (param_name, ref_key) in breadth_depth_map.items():
-            value = features.get(feat_key)
-            if value is not None and ref_key in ref:
-                z = _z_score(value, ref[ref_key], std[ref_key])
-                setattr(params, param_name, z)
-                notes.append(f"{feat_key}={value:.1f} -> {param_name}={z:.2f}")
 
     # --- Épaisseur de vêtement ---
     params.clothing_thickness_cm = features.get("clothing_thickness_cm") if features else None

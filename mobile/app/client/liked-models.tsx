@@ -48,7 +48,11 @@ export default function LikedModels() {
         ) : (
           <View style={styles.grid}>
             {models.map((m) => (
-              <TouchableOpacity key={m.id} style={styles.item} onPress={() => router.push(`/client/models/${m.id}`)}>
+              <TouchableOpacity
+                key={m.id}
+                style={styles.item}
+                onPress={() => router.push({ pathname: `/client/models/${m.id}`, params: { liked_only: "true" } })}
+              >
                 <View>
                   <LinearGradient colors={[m.thumbnail_color, colors.indigoText]} style={styles.thumb} />
                   <View style={styles.likeOverlay}>
