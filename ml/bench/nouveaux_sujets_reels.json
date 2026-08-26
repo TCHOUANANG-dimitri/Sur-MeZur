@@ -1,0 +1,68 @@
+{
+  "_lisez_moi": "8e sujet (170.3cm, femme) en attente de mesures reelles - donnees dupliquees recues invalides",
+  "sujets": [
+    {
+      "id": 1,
+      "height_cm": 171,
+      "weight_kg": 62,
+      "gender": "female",
+      "tours": [36.1, 86.9, 67, 87, 25.4, 56.6, 15, 23],
+      "longueurs": [30, 59, 71, 49],
+      "photos": {"face": "WhatsApp Image 2026-08-10 at 4.52.13 PM.jpeg", "profil": "WhatsApp Image 2026-08-10 at 4.52.14 PM.jpeg"}
+    },
+    {
+      "id": 2,
+      "height_cm": 162,
+      "weight_kg": 62,
+      "gender": "female",
+      "tours": [36.5, 80.3, 96.4, 94.5, 30.2, 58, 17, 24.5],
+      "longueurs": [31.5, 54, 73, 45],
+      "photos": {"face": "WhatsApp Image 2026-08-10 at 4.53.05 PM.jpeg", "profil": "WhatsApp Image 2026-08-10 at 4.53.05 PM (1).jpeg"}
+    },
+    {
+      "id": 3,
+      "height_cm": 180,
+      "weight_kg": 82,
+      "gender": "male",
+      "tours": [40.5, 89.5, 80, 98, 36.5, 62, 17.5, 27.4],
+      "longueurs": [34, 61, 89.8, 53],
+      "photos": {"face": "WhatsApp Image 2026-08-10 at 4.56.07 PM.jpeg", "profil": "WhatsApp Image 2026-08-10 at 4.56.07 PM (1).jpeg"}
+    },
+    {
+      "id": 4,
+      "height_cm": 181,
+      "weight_kg": 95,
+      "gender": "male",
+      "tours": [38.9, 98.4, 93.2, 103.4, 37.7, 64, 17, 27],
+      "longueurs": [35, 66, 81, 54],
+      "photos": {"face": "WhatsApp Image 2026-08-10 at 4.58.15 PM.jpeg", "profil": "WhatsApp Image 2026-08-10 at 4.58.15 PM (1).jpeg"}
+    },
+    {
+      "id": 5,
+      "height_cm": 176,
+      "weight_kg": 66,
+      "gender": "male",
+      "tours": [38, 89.5, 73, 86, 37.7, 51.9, 19.3, 25],
+      "longueurs": [32, 63, 78, 53],
+      "photos": {"face": "WhatsApp Image 2026-08-10 at 4.58.59 PM.jpeg", "profil": "WhatsApp Image 2026-08-10 at 4.58.59 PM (1).jpeg"}
+    },
+    {
+      "id": 6,
+      "height_cm": 176,
+      "weight_kg": 58,
+      "gender": "female",
+      "tours": [33.4, 78.5, 73.4, 87.4, 24.2, 51.2, 16.6, 21],
+      "longueurs": [30, 61, 81, 49],
+      "photos": {"face": "WhatsApp Image 2026-08-25 at 10.01.25 AM.jpeg", "profil": "WhatsApp Image 2026-08-25 at 10.01.25 AM (1).jpeg"}
+    },
+    {
+      "id": 7,
+      "height_cm": 152,
+      "weight_kg": 63.6,
+      "gender": "female",
+      "tours": [34.5, 81, 74, 94, 28, 57, 16, 24.7],
+      "longueurs": [31, 53, 65, 41],
+      "photos": {"face": "WhatsApp Image 2026-08-25 at 10.24.25 AM.jpeg", "profil": "WhatsApp Image 2026-08-25 at 10.24.25 AM (1).jpeg"}
+    }
+  ]
+}

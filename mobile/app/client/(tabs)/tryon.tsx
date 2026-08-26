@@ -272,7 +272,22 @@ export default function TryOn() {
           <Header title={t("tryon.title")} showBack={sessions !== null && sessions.length > 0} onBack={backToList} />
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyText}>{t("tryon.takeMeasurements")}</Text>
-            <Button onPress={() => router.push("/client/measurements")}>{t("measurement.intro.title")}</Button>
+            <Button fullWidth onPress={() => router.push("/client/measurements")}>{t("measurement.intro.title")}</Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              onPress={() =>
+                router.push({
+                  pathname: "/client/tryon/pick-measurement",
+                  params: {
+                    ...(params.modelId ? { modelId: params.modelId } : {}),
+                    ...(params.tailorId ? { tailorId: params.tailorId } : {}),
+                  },
+                })
+              }
+            >
+              {t("tryon.useExisting")}
+            </Button>
           </View>
         </Screen>
       );

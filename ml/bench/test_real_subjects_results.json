@@ -1,0 +1,81 @@
+{
+  "summary": {
+    "passed": 10,
+    "failed": 2
+  },
+  "results": [
+    {
+      "name": "R1-nb-sujets",
+      "passed": true,
+      "detail": "nb=13"
+    },
+    {
+      "name": "R1-nb-males",
+      "passed": false,
+      "detail": "nb=8"
+    },
+    {
+      "name": "R1-nb-females",
+      "passed": false,
+      "detail": "nb=5"
+    },
+    {
+      "name": "R1-all-have-tours",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "R1-all-have-longueurs",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "R2-v3-has-errors",
+      "passed": true,
+      "detail": "V3 avg=10.72"
+    },
+    {
+      "name": "R2-v4-improvement",
+      "passed": true,
+      "detail": "V3=10.72 -> V4=5.89 (gain: 45.0%)"
+    },
+    {
+      "name": "R3-best-subject",
+      "passed": true,
+      "detail": "best=4.44"
+    },
+    {
+      "name": "R3-worst-subject",
+      "passed": true,
+      "detail": "worst=7.40"
+    },
+    {
+      "name": "R4-factors-stable",
+      "passed": true,
+      "detail": "Facteurs eloignes d'ANSUR"
+    },
+    {
+      "name": "R5-bmi-correlation",
+      "passed": true,
+      "detail": "correlation = 0.039"
+    },
+    {
+      "name": "R9-factor-improvement",
+      "passed": true,
+      "detail": "Sans=9.20, Avec=0.02"
+    }
+  ],
+  "key_findings": {
+    "v3_avg_error": 10.72,
+    "v4_avg_error": 5.89,
+    "v4_gain": "45.0%",
+    "best_subject": "#10 (4.44 cm)",
+    "worst_subject": "#7 (7.40 cm)",
+    "factor_calibration": {
+      "chest": 1.2124,
+      "waist": 1.0577,
+      "hips": 1.0916
+    },
+    "bmi_correlation": 0.039
+  }
+}

@@ -74,6 +74,23 @@ def capabilities():
     return avatar_service.avatar_capabilities()
 
 
+@router.get("", response_model=list[AvatarOut])
+def list_avatars(
+    user: User = Depends(require_roles("client")),
+    db: Session = Depends(get_db),
+):
+    """Liste tous les avatars du client, du plus récent au plus ancien."""
+    client = db.query(ClientProfile).filter(ClientProfile.user_id == user.id).first()
+    if not client:
+        return []
+    return (
+        db.query(Avatar)
+        .filter(Avatar.client_id == client.id)
+        .order_by(Avatar.created_at.desc())
+        .all()
+    )
+
+
 @router.post("", response_model=AvatarOut)
 def create_avatar(
     payload: AvatarCreateIn,
@@ -152,6 +169,22 @@ def get_avatar(
     db: Session = Depends(get_db),
 ):
     return _require_avatar_owner(avatar_id, user, db)
+
+
+@router.patch("/{avatar_id}", response_model=AvatarOut)
+def patch_avatar(
+    avatar_id: str,
+    payload: dict,
+    user: User = Depends(require_roles("client")),
+    db: Session = Depends(get_db),
+):
+    """Permet de renommer un avatar."""
+    avatar = _require_avatar_owner(avatar_id, user, db)
+    if "name" in payload:
+        avatar.name = payload["name"][:100] if payload["name"] else None
+    db.commit()
+    db.refresh(avatar)
+    return avatar
 
 
 @router.get("/{avatar_id}/glb")

@@ -1,0 +1,39 @@
+{
+  "summary": {
+    "passed": 1,
+    "failed": 2
+  },
+  "results": [
+    {
+      "name": "V5-1-evaluation",
+      "passed": true,
+      "detail": "Evaluation completee"
+    },
+    {
+      "name": "V5-2-comparison",
+      "passed": false,
+      "detail": "V3=4.65 -> V5=5.24 (gain: -12.7%)"
+    },
+    {
+      "name": "V5-4-high-errors",
+      "passed": false,
+      "detail": "46 mesures avec erreur > 5 cm"
+    }
+  ],
+  "v5_performance": {
+    "avg_error": 5.24,
+    "gain_vs_v3": "-12.7%",
+    "measures_in_target": 3,
+    "measures_total": 8
+  },
+  "errors_by_measure": {
+    "neck": 10.45,
+    "chest": 1.25,
+    "waist": 0.11,
+    "hips": 0.17,
+    "biceps": 3.65,
+    "thigh": 11.57,
+    "wrist": 4.5,
+    "ankle": 10.21
+  }
+}

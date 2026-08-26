@@ -1,0 +1,35 @@
+{
+  "summary": {
+    "passed": 3,
+    "failed": 1
+  },
+  "results": [
+    {
+      "name": "A1-hip-thigh-correlation",
+      "passed": true,
+      "detail": "Analyse des correlations"
+    },
+    {
+      "name": "A2-best-model",
+      "passed": true,
+      "detail": "Meilleur modele : 1.37 cm"
+    },
+    {
+      "name": "A3-factor-stable",
+      "passed": false,
+      "detail": "CV = 10.4%"
+    },
+    {
+      "name": "A4-correlations",
+      "passed": true,
+      "detail": "Analyse des correlations entre membres"
+    }
+  ],
+  "thigh_factor": {
+    "mean": 0.322,
+    "std": 0.0334,
+    "cv_percent": 10.4,
+    "male": 0.3432,
+    "female": 0.288
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "summary": {
+    "passed": 14,
+    "failed": 1
+  },
+  "results": [
+    {
+      "name": "N1-rotation-10deg",
+      "passed": true,
+      "detail": "Erreur a 10 degres : 0.4 cm"
+    },
+    {
+      "name": "N2-neck-breadth-ratio",
+      "passed": true,
+      "detail": "ratio male = 0.9567"
+    },
+    {
+      "name": "N2-neck-breadth-ratio-female",
+      "passed": true,
+      "detail": "ratio female = 0.9041"
+    },
+    {
+      "name": "N2-neck-prediction",
+      "passed": true,
+      "detail": "Erreur de prediction : 0.0 cm"
+    },
+    {
+      "name": "N3-whr-range",
+      "passed": true,
+      "detail": "Plage WHR : 0.30"
+    },
+    {
+      "name": "N3-cwr-range",
+      "passed": true,
+      "detail": "Plage CWR : 0.45"
+    },
+    {
+      "name": "N4-chest-plausible",
+      "passed": true,
+      "detail": "Poitrine predite : 95.5 cm"
+    },
+    {
+      "name": "N4-waist-plausible",
+      "passed": true,
+      "detail": "Taille predite : 84.8 cm"
+    },
+    {
+      "name": "N5-regression-error",
+      "passed": true,
+      "detail": "Erreur moyenne : 2.5 cm"
+    },
+    {
+      "name": "N6-stacking-better",
+      "passed": false,
+      "detail": "Stacking : 9.6 cm vs meilleur : 0.0 cm"
+    },
+    {
+      "name": "N7-loo-error",
+      "passed": true,
+      "detail": "Erreur LOO : 9.2 cm"
+    },
+    {
+      "name": "N8-stability-chest",
+      "passed": true,
+      "detail": "CV de chest : 1.2%"
+    },
+    {
+      "name": "N8-stability-waist",
+      "passed": true,
+      "detail": "CV de waist : 1.6%"
+    },
+    {
+      "name": "N8-stability-hips",
+      "passed": true,
+      "detail": "CV de hips : 0.9%"
+    },
+    {
+      "name": "N9-sample-size",
+      "passed": true,
+      "detail": "Recommandation : 50 sujets"
+    }
+  ],
+  "key_findings": {
+    "rotation_impact": "10 deg rotation = 0.4 cm erreur sur profondeur",
+    "best_method": "Ellipse x facteur",
+    "loo_error": "9.2 cm",
+    "factor_stability_cv": {
+      "chest": "23.9%",
+      "waist": "5.5%",
+      "hips": "8.9%"
+    },
+    "recommended_sample_size": 50
+  }
+}

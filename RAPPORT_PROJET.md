@@ -6,11 +6,13 @@
 > précision, et ce qui reste à faire. Les chiffres qui y figurent sont tous
 > mesurés, jamais estimés — quand une valeur est incertaine, c'est écrit.
 
-> Cette mise à jour porte sur l'infrastructure, l'avatar 3D, le catalogue
-> et le système de géolocalisation des tailleurs (voir §2, §7, §8.13, §9).
-> Aucune nouvelle campagne de mesure n'a eu lieu depuis le 8 août : les
-> sections 3 à 6, entièrement dédiées à la précision des mensurations, sont
-> inchangées et restent la référence.
+> Cette mise à jour porte sur l'infrastructure, l'avatar 3D, le catalogue,
+> le système de géolocalisation des tailleurs (voir §2, §7, §8.13, §9) —
+> et surtout sur une nouvelle campagne de recherche sur la précision des
+> mensurations (§6bis), la première depuis la campagne du 8 août. Les
+> sections 3 à 6 restent la référence pour l'état **en production** (rien
+> de ce qui suit n'y a été déployé) ; §6bis documente ce qui a été trouvé
+> depuis et n'est pas encore livré.
 
 ---
 
@@ -22,6 +24,7 @@
 4. [Comment les mensurations sont calculées](#4-comment-les-mensurations-sont-calculées)
 5. [Ce que les tests sur 13 personnes ont appris](#5-ce-que-les-tests-sur-13-personnes-ont-appris)
 6. [Les limites, et pourquoi elles existent](#6-les-limites-et-pourquoi-elles-existent)
+   - [6bis. Nouvelle campagne de précision (25 août)](#6bis-nouvelle-campagne-de-précision-25-août-2026)
 7. [Ce qui reste à faire](#7-ce-qui-reste-à-faire)
 8. [Historique des corrections](#8-historique-des-corrections)
 9. [Journal des versions](#9-journal-des-versions)
@@ -359,6 +362,127 @@ algorithme ne voit à travers un vêtement.
 
 ---
 
+## 6bis. Nouvelle campagne de précision (25 août 2026)
+
+**Statut : recherche terminée, rien déployé en production.** Tout ce qui
+suit vit dans un module séparé (`ml/bench/pipeline_ameliore.py`) qui
+prend la sortie du pipeline de production et la corrige *après coup* —
+le pipeline de §3-6 tourne exactement comme avant. Journal de recherche
+complet : `claude_code.md`. Explication détaillée du module, mesure par
+mesure : `PIPELINE_AMELIORE.md`.
+
+### D'où vient cette campagne
+
+Trois recherches indépendantes ont eu lieu en parallèle sur ce dépôt :
+la nôtre, et deux autres agents ayant chacun exploré une piste distincte
+(`ml/bench/freebuff.md` — sélection de variables sur les mêmes 13 sujets ;
+`opencode.md`, à la racine du poste — simulation multi-vues sur maillages
+3D exacts). Chaque candidat proposé par les deux autres a été **revérifié
+indépendamment** avant toute intégration — deux des candidats de
+`freebuff.md` se sont effondrés à la revérification (shoulder : 1,10 cm
+annoncé → 6,28 cm en réalité), deux autres ont résisté et se sont révélés
+meilleurs que nos propres corrections (biceps, thigh).
+
+### Les corrections retenues
+
+| Mesure | Avant | Après (LOO) | Confiance |
+|---|---|---|---|
+| biceps | 2,33 cm | **0,63 cm** | haute |
+| wrist | 1,55 cm | **0,72 cm** | haute *(retirée, voir plus bas)* |
+| thigh | 1,64 cm | **0,74 cm** | haute |
+| neck | 1,74 cm | 1,26 cm | moyenne |
+| ankle | 4,02 cm | **1,22 cm** | haute |
+| shoulder | 2,27 cm | 1,46 cm | moyenne *(retirée, voir plus bas)* |
+| inseam | 3,14 cm | ~2,98 cm | moyenne — correction géométrique (moyenne des deux chevilles, pas une variable apprise), pas la sélection d'une cheville unique |
+| sleeve_length | 4,50 cm | 3,08 cm | moyenne |
+| chest / hips / waist (hommes) | 4,45 / 4,04 / 6,66 cm | 2,61 / 2,35 / 4,14 cm | moyenne, n=7 |
+| chest / hips / waist (femmes) | — | non corrigées | échantillon insuffisant (n=5, dont 2 sujets aux mesures suspectes) |
+
+La plupart des corrections retenues recalibrent directement sur le
+**poids** plutôt que sur la sortie du modèle Ridge existant — celui-ci,
+entraîné sur ANSUR II (base militaire américaine), a tendance à *tirer*
+ses prédictions vers la moyenne de sa population d'entraînement
+(*shrinkage*) ; le poids, mesure directe et fiable, porte l'information
+que le modèle sous-exploite.
+
+### Validation indépendante — et un vrai retour de bâton salutaire
+
+Le 25 août, 7 nouveaux sujets (jamais vus par aucune des trois
+recherches) ont été photographiés et mesurés. 6 ont pu être traités
+(1 a échoué à la garde de plausibilité du pipeline). Résultat :
+
+- **`ankle` et `hips` (hommes) confirmés très fortement** : gains réels
+  de +2,98 cm et +3,32 cm sur des sujets inédits — au-delà de ce
+  qu'espérait la validation interne.
+- **`shoulder` s'est effondré** : 1,63 → 4,20 cm. Sur un sujet de 95 kg
+  (carrure réelle 35 cm), la correction prédisait 47,2 cm. Le lien
+  poids→largeur d'épaules, calibré sur 11 sujets, ne se généralise pas —
+  contrairement à `ankle`/`hips`, il n'a pas de justification
+  physiologique directe (l'ossature ne suit pas le poids comme le fait
+  la graisse corporelle).
+- **`wrist` — pourtant la correction la plus stable en validation croisée
+  interne (12 sujets sur 12 donnant le même résultat) — a aussi échoué** :
+  n'améliore que 2 sujets sur 6.
+- Les deux ont été **retirées du pipeline** (archivées, documentées,
+  jamais appliquées).
+
+**La leçon retenue, au-delà de cette campagne précise** : une correction
+peut être parfaitement stable en validation croisée sur 11-13 sujets et
+quand même ne pas généraliser — la validation croisée protège contre la
+fuite de données *au sein* de l'échantillon, pas contre le fait que
+l'échantillon est trop petit pour couvrir la vraie diversité des
+morphologies. Seul un test sur des sujets réellement neufs le révèle.
+
+### Piste explorée et non confirmée : une 3ᵉ photo à 45°
+
+Une proposition externe suggérait qu'ajouter une vue oblique à 45° (en
+plus de face+profil) rapprocherait la précision du tronc de ~1 cm.
+Testé en deux temps :
+
+1. **Simulation sur maillages 3D exacts** (8 morphologies, aucun bruit
+   de photo) : le gain géométrique pur est réel et systématique — chest
+   -50 %, hip -34 %. Confirme l'intuition de départ.
+2. **Premier vrai sujet, 3 photos réelles (face+45°+profil)** : la 3ᵉ vue
+   **n'a pas aidé** — chest et waist légèrement pires, hip meilleur mais
+   sur une mesure déjà anormalement faussée indépendamment de la
+   question à 45°. Explication probable : les bandes d'exclusion des
+   bras et de recherche anatomique du pipeline sont calibrées pour
+   face/profil uniquement, jamais pour un angle oblique — le bruit
+   d'extraction ajouté par la 3ᵉ vue, non calibrée, a probablement
+   dépassé le gain géométrique théorique.
+
+**Statut : piste ouverte, pas invalidée mais pas confirmée non plus.**
+Un seul sujet réel ne tranche rien dans un sens ou dans l'autre.
+
+### Recherche d'architecture alternative
+
+Recherche large sur ce que d'autres acteurs (académiques et
+commerciaux — Bold Metrics, 3DLook) font face aux mêmes contraintes
+(2 photos, budget limité). Constats principaux :
+
+- Même les solutions les mieux financées (GPU dédié) rapportent
+  **3 à 12 cm d'erreur typique** sur les circonférences — notre pipeline
+  corrigé fait déjà mieux sur plusieurs mesures, sans aucun GPU.
+- Elles documentent le **même phénomène de *regression to the mean***
+  qu'on a diagnostiqué et corrigé ici (shrinkage) — validation croisée
+  indépendante que ce n'est pas une faiblesse propre à notre approche,
+  mais structurelle au problème.
+- **SMPL** (le modèle 3D paramétrique académique dominant) est écarté :
+  licence non-commerciale bloquant la production, comme déjà noté pour
+  l'avatar le 17 août.
+- **Piste complémentaire identifiée** : **Anny** (Naver Labs, licence
+  Apache 2.0, base anthropométrique MakeHuman — la même lignée que notre
+  avatar déjà en place, calibré sur les statistiques OMS plutôt qu'ANSUR)
+  + **clad-body** (extraction de mesures ISO 8559-1 open-source,
+  CPU uniquement, dépendances déjà présentes chez nous). Piste à évaluer,
+  pas encore testée.
+- **Piste bon marché immédiatement testable** : remplacer la régression
+  Ridge (linéaire) par une régression par processus gaussien sur les
+  cibles actuelles — la littérature rapporte des gains de 20-30 % sur des
+  problèmes comparables, aucune nouvelle donnée requise.
+
+---
+
 ## 7. Ce qui reste à faire
 
 ### Priorité 1 — Tester la capture guidée sur le terrain
@@ -689,6 +813,16 @@ trié par `created_at desc`).
 `frontend/src/pages/client/UseExistingMeasurements.tsx` (nouveau),
 `frontend/src/App.tsx`, `frontend/src/i18n/fr.json`, `frontend/src/i18n/en.json`.
 
+**Porté sur mobile le 25 août.** Ce correctif n'avait touché que le site
+web — l'app mobile a continué de renvoyer systématiquement vers la
+capture photo complète tant que ce portage n'a pas été fait. Nouveau
+fichier `mobile/app/client/tryon/pick-measurement.tsx` (équivalent de
+`UseExistingMeasurements.tsx`, dans les conventions déjà utilisées côté
+mobile — `Screen`/`Header`/`StatusChip`), guard "pas d'avatar" de
+`(tabs)/tryon.tsx` mis à jour avec le second bouton, 8 clés i18n ajoutées
+(fr + en). `npx tsc --noEmit` propre sur tout le projet mobile après ce
+changement.
+
 ### 8.10 Page vérification admin : informations insuffisantes
 
 **Le symptôme** : l'administrateur devait approuver ou rejeter des tailleurs sans
@@ -835,6 +969,29 @@ et documentée.
 `mobile/app/client/(tabs)/search.tsx`, `frontend/src/i18n/fr.json`,
 `frontend/src/i18n/en.json`, `mobile/src/i18n/fr.json`, `mobile/src/i18n/en.json`.
 
+### 8.14 `colors.indigo` inexistant : chips actifs muets sur mobile
+
+**Le symptôme** : sur `mobile/app/tailor/verification.tsx` (les chips
+ville/quartier ajoutés en §8.13), l'état "actif" d'un chip ne s'affichait
+pas avec la bonne couleur.
+
+**La cause** : `chipActive` référençait `colors.indigo`, un token qui
+n'existe pas dans le thème (seul `colors.indigoText` existe — un token de
+texte, jamais destiné à un fond). `backgroundColor: undefined` en React
+Native ne plante pas, il rend juste sans le style attendu — silencieux,
+donc passé inaperçu, y compris par la vérification "19/19 checks
+passent" faite après §8.13 (qui ne semble pas avoir inclus `tsc
+--noEmit`, seul moyen mécanique de l'attraper).
+
+**Trouvé en cherchant systématiquement d'autres écarts du même type**
+(frontend modifié, mobile oublié ou cassé) après le portage §8.9 : `npx
+tsc --noEmit` sur le projet mobile complet a immédiatement signalé
+l'erreur de type. Corrigé en `colors.violetPrimary`, cohérent avec les
+autres états "actif" de l'app (sélection de modèle, tissu, teint de
+peau...). `tsc --noEmit` propre depuis.
+
+**Fichiers modifiés** : `mobile/app/tailor/verification.tsx`.
+
 ---
 
 ## 9. Journal des versions
@@ -905,3 +1062,8 @@ et documentée.
 | 24 août | **Page catalogue admin créée** : catégories cliquables, grid de modèles avec photos, suppression (§8.11) |
 | 24 août | **API admin étendue** : endpoint documents de vérification câblé, CRUD catégories/modèles ajouté, `api.delete()` ajouté au client HTTP (§8.10, §8.11) |
 | 25 août | **Champ quartier ajouté** : dropdowns ville/quartier sur vérification tailleur (web + mobile), recherche tailleurs filtrable par ville et quartier, colonne `quartier` en base (§8.13) |
+| 25 août | **Essayage "mesure existante" porté sur mobile** — n'existait jusque-là que côté web (§8.9) |
+| 25 août | **Bug `colors.indigo` corrigé** sur mobile (chips actifs muets, trouvé par `tsc --noEmit`) — (§8.14) |
+| 25 août | **Nouvelle campagne de précision des mensurations** : 7 corrections validées et livrées dans un module séparé non déployé (`ml/bench/pipeline_ameliore.py`), `ankle`/`hips` confirmés fortement sur sujets inédits, `shoulder`/`wrist` retirés après échec en validation indépendante malgré une validation interne solide (§6bis) |
+| 25 août | Piste "3ᵉ photo à 45°" testée en simulation (gain confirmé) puis sur un premier vrai sujet (gain non confirmé) — recherche ouverte, pas de conclusion définitive (§6bis) |
+| 25 août | Recherche d'architecture alternative (Anny/clad-body, limites de SMPL, benchmarks du secteur) — piste identifiée, pas encore testée (§6bis) |

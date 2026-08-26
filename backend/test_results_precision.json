@@ -1,0 +1,48 @@
+{
+  "summary": {
+    "passed": 7,
+    "failed": 1
+  },
+  "results": [
+    {
+      "name": "T1-scale-error-reduction",
+      "passed": true,
+      "detail": "Am\u00e9lioration: 8.98 -> 6.83 cm"
+    },
+    {
+      "name": "T2-ellipse-correction",
+      "passed": true,
+      "detail": "Moyenne: 11.5 -> 4.8 cm"
+    },
+    {
+      "name": "T3-multi-scale-calibration",
+      "passed": false,
+      "detail": "Am\u00e9lioration: 6.80% -> 11.83%"
+    },
+    {
+      "name": "T4-clothing-correction",
+      "passed": true,
+      "detail": "Sans: 5.3 cm, Avec: 5.3 cm"
+    },
+    {
+      "name": "T5-chest-factor",
+      "passed": true,
+      "detail": "chest_factor=1.240"
+    },
+    {
+      "name": "T5-waist-factor",
+      "passed": true,
+      "detail": "waist_factor=1.056"
+    },
+    {
+      "name": "T5-hip-factor",
+      "passed": true,
+      "detail": "hip_factor=1.089"
+    },
+    {
+      "name": "T6-overall-improvement",
+      "passed": true,
+      "detail": "Moyenne: 10.6 -> 8.2 cm (gain: 21.9%)"
+    }
+  ]
+}

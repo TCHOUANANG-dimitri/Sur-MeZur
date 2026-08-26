@@ -1,0 +1,49 @@
+Resolved "preview" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "preview" environment on EAS.
+Environment variables loaded from the "preview" build profile "env" configuration: EXPO_PUBLIC_API_URL.
+
+
+
+✔ Using remote Android credentials (Expo server)
+✔ Using Keystore from configuration: Build Credentials WsRPrPVgLK (default)
+
+Compressing project files and uploading to EAS Build. Learn more: https://expo.fyi/eas-build-archive
+- Compressing project files
+Your project archive is 463 MB. You can reduce its size and the time it takes to upload by excluding files that are unnecessary for the build process in .easignore file. Learn more: https://expo.fyi/eas-build-archive
+- Uploading to EAS Build (0 / 463 MB)
+✔ Uploaded to EAS 56m 33s
+- Computing project fingerprint
+⌛️ Computing the project fingerprint is taking longer than expected...
+⏩ To skip this step, set the environment variable: EAS_SKIP_AUTO_FINGERPRINT=1
+✔ Computed project fingerprint
+
+See logs: https://expo.dev/accounts/dim39/projects/sur-mezur/builds/6032145b-1999-43c7-975c-aa3a0e6af2ef
+
+Waiting for build to complete. You can press Ctrl+C to exit.
+- Waiting for build to complete.
+✔ Build finished
+
+  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+  █ ▄▄▄▄▄ █▄▀▀▄▄ ▀█ █▀▀▄▀ █  ▀█▀█ ▄▄▄▄▄ █
+  █ █   █ ███▄█  █▄ ▀▀▄█ █▄▄ █▀▀█ █   █ █
+  █ █▄▄▄█ ██▄▀▄▀█ █▄▀▀▄  ▀▀█▀████ █▄▄▄█ █
+  █▄▄▄▄▄▄▄█ █ ▀▄▀▄▀▄█▄▀▄█▄█▄▀ █▄█▄▄▄▄▄▄▄█
+  █▄ █ ▄▀▄▀█▄▄▄▀██ ▀ ▄▀▀██▀█▀ ▀▀█▄▀▀██▀▄█
+  █▀ ▀  █▄▄█▀▄ ▀▄█▄  ▄▀▄▄▄▄ ▄▀  ▄▄▄▄▄ ▄▄█
+  █▀▀ ▀ █▄  ▄█▄▄▀▀  ▀ ▄▄▀█▀██▀ ██▄▄▀ ▀ ▄█
+  █ ▀▀▄█▀▄ ▄▀▄ ▄▄█▄▀██▄▄▄▄███▀▄█▀▄▀▄█▀▄ █
+  █▄▄▄██ ▄▄█▀█▀▀▄█ █▀▄▀█▀ ▄▄▄█▀█▀▄██ ▄▄▄█
+  █▀▄▄██▀▄▀▀▄▄▄▀▀▀▄▀▄▀ ▄▄█▄█ █▄█▀█▄▀▀██ █
+  █ █   ▀▄█ ▀▀█▄██▀ ▄▄  █▀ ▄█ ▀▄ ▄▀  ▀ ▄█
+  █▀ █▄▄█▄█▄▀▀█▄▄▄  ▀▄██▄  █▄ ▄██  ▄▀▀▀ █
+  █ ▄▀▀█▀▄▀▄▄▄█▀▀▀  █▀▄▀█▀▀ ▀█  █▄▄▀█▀▀▄█
+  █ ▄▀  ▄▄▀▀▄▀█▀▄▄▄█▄▄ ▀█▄▀ ▄  █▄█ ▀  ▄ █
+  █▄█▄█▄█▄▄▀▀  ▄▄█  ▀▄▀█▀▀▄█▄▀█ ▄▄▄ █  ██
+  █ ▄▄▄▄▄ ███▄▀▄▀▀ ▀██▄▀█▀▄█▀▄█ █▄█  ▄█▄█
+  █ █   █ █ █ ▄▀ ▀ ▀    █▄▀█▀▀ ▄  ▄▄ █ ▀█
+  █ █▄▄▄█ █▀▄  ▀ █▄  ██▄█ ▄▀▄▀ ██▀▄ █ ▀ █
+  █▄▄▄▄▄▄▄█▄█▄▄▄▄████▄▄██▄▄████▄▄▄██▄██▄█
+
+
+🤖 Open this link on your Android devices (or scan the QR code) to install the app:
+https://expo.dev/accounts/dim39/projects/sur-mezur/builds/6032145b-1999-43c7-975c-aa3a0e6af2ef

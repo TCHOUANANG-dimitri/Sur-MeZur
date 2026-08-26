@@ -1,0 +1,26 @@
+{
+  "_lisez_moi": [
+    "Format attendu pour tester le pipeline ameliore (pipeline_ameliore.py)",
+    "sur de nouveaux sujets, jamais vus par aucune des corrections.",
+    "",
+    "tours = [neck, chest, waist, hips, biceps, thigh, wrist, ankle] (cm)",
+    "longueurs = [shoulder, sleeve_length, inseam, back_length] (cm)",
+    "photos.face et photos.profil : noms de fichiers dans le dossier passe",
+    "en 2e argument a evaluer_nouveaux_sujets() -- profil optionnel mais",
+    "fortement recommande (ameliore la precision du tronc).",
+    "",
+    "Usage :",
+    "  python ml/bench/pipeline_ameliore.py chemin/vers/ce_fichier.json chemin/vers/dossier_photos/"
+  ],
+  "sujets": [
+    {
+      "id": 1,
+      "height_cm": 175,
+      "weight_kg": 70,
+      "gender": "male",
+      "tours": [38, 90, 78, 98, 30, 55, 17, 23],
+      "longueurs": [34, 58, 78, 55],
+      "photos": {"face": "sujet1_face.jpg", "profil": "sujet1_profil.jpg"}
+    }
+  ]
+}

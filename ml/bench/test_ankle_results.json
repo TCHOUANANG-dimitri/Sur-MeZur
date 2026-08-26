@@ -1,0 +1,29 @@
+{
+  "summary": {
+    "passed": 3,
+    "failed": 0
+  },
+  "results": [
+    {
+      "name": "AN1-ankle-stats",
+      "passed": true,
+      "detail": "Statistiques de la cheville"
+    },
+    {
+      "name": "AN2-correlations",
+      "passed": true,
+      "detail": "Analyse des correlations"
+    },
+    {
+      "name": "AN3-r2-ceiling",
+      "passed": true,
+      "detail": "R\u00b2 = -4.476"
+    }
+  ],
+  "ankle_stats": {
+    "mean": 24.8,
+    "std": 2.1,
+    "range": 8
+  },
+  "r_squared": -4.476
+}

@@ -81,9 +81,12 @@ export const MeasurementsApi = {
 };
 
 export const AvatarsApi = {
+  list: () => api.get<Avatar[]>("/avatars"),
   create: (body: { measurement_id: string; skin_tone_hex: string }) =>
     api.post<Avatar>("/avatars", body),
   get: (id: string) => api.get<Avatar>(`/avatars/${id}`),
+  patch: (id: string, body: { name?: string }) =>
+    api.patch<Avatar>(`/avatars/${id}`, body),
 };
 
 // --- Catalog -----------------------------------------------------------

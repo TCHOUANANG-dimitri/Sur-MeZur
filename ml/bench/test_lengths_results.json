@@ -1,0 +1,81 @@
+{
+  "summary": {
+    "passed": 11,
+    "failed": 0
+  },
+  "results": [
+    {
+      "name": "L1-stats",
+      "passed": true,
+      "detail": "Statistiques calculees"
+    },
+    {
+      "name": "L2-ratios",
+      "passed": true,
+      "detail": "Ratios calcules"
+    },
+    {
+      "name": "L3-correlations",
+      "passed": true,
+      "detail": "Correlations calculees"
+    },
+    {
+      "name": "L4-prediction",
+      "passed": true,
+      "detail": "Prediction calculee"
+    },
+    {
+      "name": "L5-shoulder<chest",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "L5-inseam<height/2",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "L5-back<height/2",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "L5-sleeve>shoulder",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "L6-extremes",
+      "passed": true,
+      "detail": "Analyse des extremes"
+    },
+    {
+      "name": "L7-precision",
+      "passed": true,
+      "detail": "Precision estimee"
+    },
+    {
+      "name": "L8-comparison",
+      "passed": true,
+      "detail": "Comparaison avec ANSUR"
+    }
+  ],
+  "stats": {
+    "shoulder": {
+      "mean": 33.8,
+      "std": 6.2
+    },
+    "sleeve": {
+      "mean": 58.7,
+      "std": 5.1
+    },
+    "inseam": {
+      "mean": 75.5,
+      "std": 6.7
+    },
+    "back": {
+      "mean": 52.2,
+      "std": 5.9
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "summary": {
+    "passed": 5,
+    "failed": 0
+  },
+  "results": [
+    {
+      "name": "N1-neck-stats",
+      "passed": true,
+      "detail": "Statistiques du cou"
+    },
+    {
+      "name": "N2-correlations",
+      "passed": true,
+      "detail": "Analyse des correlations"
+    },
+    {
+      "name": "N3-best-model",
+      "passed": true,
+      "detail": "Meilleur modele : 0.85 cm"
+    },
+    {
+      "name": "N4-neck-smallest",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "N5-comparison",
+      "passed": true,
+      "detail": "Comparaison avec ANSUR"
+    }
+  ],
+  "neck_stats": {
+    "mean": 36.9,
+    "std": 3.7,
+    "range": 13.5,
+    "male_mean": 38.8,
+    "female_mean": 33.7
+  },
+  "best_model": "Poids+Poitrine+Biceps",
+  "best_error": 0.85
+}

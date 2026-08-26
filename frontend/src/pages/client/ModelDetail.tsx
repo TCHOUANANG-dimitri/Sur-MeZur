@@ -2,12 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { CatalogApi } from "../../api/endpoints";
 import type { GarmentModel } from "../../api/types";
-import { useI18n, formatFcfa } from "../../i18n/I18nProvider";
+import { useI18n } from "../../i18n/I18nProvider";
 import { Button } from "../../components/Button";
 import { Header, Spinner } from "../../components/Misc";
-import { StatusChip } from "../../components/Chip";
-import { colors, radii } from "../../theme/tokens";
-import { saveForLater } from "./savedModels";
+import { colors } from "../../theme/tokens";
 
 export default function ModelDetail() {
   const { id = "" } = useParams();
@@ -32,34 +30,27 @@ export default function ModelDetail() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <Header title={model.name} onBack />
-      <div
-        style={{
-          minHeight: 260,
-          background: model.photo_url
-            ? `url(${model.photo_url}) center/cover`
-            : `linear-gradient(160deg, ${model.thumbnail_color}, ${colors.indigoText})`,
-        }}
-      />
-      <div style={{ flex: 1, overflowY: "auto", padding: 18 }}>
-        <StatusChip status="neutral" label={model.category.name} />
-        <h2 style={{ fontFamily: "'Playfair Display', serif", margin: "10px 0 6px", color: colors.indigoText }}>{model.name}</h2>
-        <p style={{ fontSize: 13, color: colors.textSecondary }}>{model.description}</p>
-        {model.base_price && (
-          <p style={{ fontWeight: 700, color: colors.violetPrimary }}>{t("order.priceOffer").split(" (")[0]}: ~{formatFcfa(model.base_price)}</p>
+
+      {/* Image — remplit tout l'espace disponible, jamais tronquée */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: colors.backgroundAlt }}>
+        {model.photo_url ? (
+          <img src={model.photo_url} alt={model.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+        ) : (
+          <div style={{ width: "100%", height: "100%", background: `linear-gradient(160deg, ${model.thumbnail_color}, ${colors.indigoText})` }} />
         )}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
-          {model.style_tags.map((tag) => (
-            <span key={tag} style={{ fontSize: 11, background: colors.backgroundAlt, borderRadius: radii.chip, padding: "4px 10px" }}>
-              {tag}
-            </span>
-          ))}
+      </div>
+
+      {/* Barre inférieure — toujours visible, pas de scroll requis */}
+      <div style={{ padding: "12px 18px 18px", borderTop: `1px solid ${colors.border}`, background: colors.white }}>
+        <h2 style={{ fontFamily: "'Playfair Display', serif", margin: "0 0 4px", color: colors.indigoText }}>{model.name}</h2>
+
+        {/* Description — scrollable uniquement si elle déborde */}
+        <div style={{ maxHeight: 56, overflowY: "auto", fontSize: 13, color: colors.textSecondary, margin: "0 0 10px" }}>
+          {model.description}
         </div>
 
-        <Button fullWidth onClick={() => navigate(`/client/tryon${tryonQs}`)} style={{ marginBottom: 10 }}>
+        <Button fullWidth onClick={() => navigate(`/client/tryon${tryonQs}`)}>
           Essayer sur mon avatar
-        </Button>
-        <Button fullWidth variant="secondary" onClick={() => saveForLater(model.id)}>
-          {t("order.saveForLater")}
         </Button>
       </div>
     </div>

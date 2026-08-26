@@ -1,0 +1,139 @@
+{
+  "summary": {
+    "passed": 25,
+    "failed": 0
+  },
+  "results": [
+    {
+      "name": "T1-chest-factor-range",
+      "passed": true,
+      "detail": "chest_factor=1.240"
+    },
+    {
+      "name": "T1-waist-factor-range",
+      "passed": true,
+      "detail": "waist_factor=1.056"
+    },
+    {
+      "name": "T1-hip-factor-range",
+      "passed": true,
+      "detail": "hip_factor=1.089"
+    },
+    {
+      "name": "T1-chest-factor-female",
+      "passed": true,
+      "detail": "chest_factor_f=1.168"
+    },
+    {
+      "name": "T1-waist-factor-female",
+      "passed": true,
+      "detail": "waist_factor_f=1.061"
+    },
+    {
+      "name": "T2-overall-improvement",
+      "passed": true,
+      "detail": "V3=9.7 cm -> V4=8.1 cm (gain: 16.4%)"
+    },
+    {
+      "name": "T2-chest-gain",
+      "passed": true,
+      "detail": "Gain poitrine: 35.5%"
+    },
+    {
+      "name": "T2-waist-gain",
+      "passed": true,
+      "detail": "Gain taille: 43.8%"
+    },
+    {
+      "name": "T2-hips-gain",
+      "passed": true,
+      "detail": "Gain hanches: 39.6%"
+    },
+    {
+      "name": "T3-import-success",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "T3-male-factors",
+      "passed": true,
+      "detail": "male_factors={'chest': 1.24, 'waist': 1.056, 'hips': 1.089}"
+    },
+    {
+      "name": "T3-female-factors",
+      "passed": true,
+      "detail": "female_factors={'chest': 1.228, 'waist': 1.048, 'hips': 1.112}"
+    },
+    {
+      "name": "T3-coherence-chest",
+      "passed": true,
+      "detail": "diff chest: 0.012"
+    },
+    {
+      "name": "T3-coherence-waist",
+      "passed": true,
+      "detail": "diff waist: 0.008"
+    },
+    {
+      "name": "T3-coherence-hips",
+      "passed": true,
+      "detail": "diff hips: 0.023"
+    },
+    {
+      "name": "T4-import-success",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "T4-torso-ratio",
+      "passed": true,
+      "detail": "torso_ratio=0.352"
+    },
+    {
+      "name": "T4-leg-ratio",
+      "passed": true,
+      "detail": "leg_ratio=0.482"
+    },
+    {
+      "name": "T4-weights-sum",
+      "passed": true,
+      "detail": "weights_sum=1.0"
+    },
+    {
+      "name": "T5-tronc-improvement",
+      "passed": true,
+      "detail": "V3=10.6 cm -> V4=6.4 cm"
+    },
+    {
+      "name": "T6-pipeline-import",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "T6-model-import",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "T6-pipeline-run",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "T6-pipeline-capabilities",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "T6-model-predict",
+      "passed": true,
+      "detail": ""
+    }
+  ],
+  "expected_gains": {
+    "chest": "35.5%",
+    "waist": "43.8%",
+    "hips": "39.6%",
+    "overall": "16.4%"
+  }
+}

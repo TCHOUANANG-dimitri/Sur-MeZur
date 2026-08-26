@@ -1,0 +1,36 @@
+{
+  "summary": {
+    "passed": 3,
+    "failed": 0
+  },
+  "results": [
+    {
+      "name": "P1-biceps",
+      "passed": true,
+      "detail": "1.21 cm"
+    },
+    {
+      "name": "P2-thigh",
+      "passed": true,
+      "detail": "1.11 cm"
+    },
+    {
+      "name": "P3-all-measures",
+      "passed": true,
+      "detail": "6/8"
+    }
+  ],
+  "final_errors": {
+    "chest": 0.02,
+    "waist": 0.02,
+    "hips": 0.02,
+    "neck": 0.85,
+    "wrist": 0.57,
+    "ankle": 0.95,
+    "biceps": 1.2121769902567425,
+    "thigh": 1.1120835957818576
+  },
+  "avg_error": 0.59,
+  "measures_below_1cm": 6,
+  "objective_reached": false
+}

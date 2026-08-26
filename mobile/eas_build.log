@@ -1,0 +1,18 @@
+Resolved "preview" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "preview" environment on EAS.
+Environment variables loaded from the "preview" build profile "env" configuration: EXPO_PUBLIC_API_URL.
+
+
+
+✔ Using remote Android credentials (Expo server)
+✔ Using Keystore from configuration: Build Credentials WsRPrPVgLK (default)
+
+Compressing project files and uploading to EAS Build. Learn more: https://expo.fyi/eas-build-archive
+- Compressing project files
+Your project archive is 463 MB. You can reduce its size and the time it takes to upload by excluding files that are unnecessary for the build process in .easignore file. Learn more: https://expo.fyi/eas-build-archive
+- Uploading to EAS Build (0 / 463 MB)
+✖ Uploading to EAS Build (274 MB / 463 MB)
+Failed to upload the project tarball to EAS Build
+
+Reason: request to https://storage.googleapis.com/turtle-v2-projects/production/a6cfb808-3206-4d93-a799-b4d7091cd54a/23bc708b-d1a3-4b10-b24a-36ee3d68055a?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260824%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260824T132625Z&X-Goog-Expires=3600&X-Goog-SignedHeaders=host%3Bx-goog-content-length-range&X-Goog-Signature=5aadb7973cf96313e4abe64c8b7da203e54d79319eb8f04d72131eb746209ff56473ab0f47609e2d6581f6b60dec2f29b930c4990ca8c00be6351061ac1e983da38cb6f88092334f171b9dc277fc8363bf999a07b37640dc634d145e207ee683e2956a805193d15666f187aaf85249363cbf7df4f6de640437380e91f5d983a4821fd82f3c3dbe116877ef67d54dce78def9b4336ca714dd7019de939b101d273411a2060b8cac19001877c891d2db8b842e419b59b01c8d2cba601aeeb42c0b8da381afb9b52603f6fcc0027d8494017848e8bfa466756d3dbbe172cbbf0567da19b5752cd4b33e4d6016be8262848a85a9b4af2003f190f1759029ec5896a4 failed, reason: write ECONNRESET
+    Error: build command failed.

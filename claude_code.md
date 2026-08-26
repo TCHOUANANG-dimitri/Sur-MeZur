@@ -1,3 +1,115 @@
+## 11. VALIDATION INDÉPENDANTE (25 août 2026) — shoulder et wrist retirés
+
+Premier vrai test hors échantillon : 7 sujets neufs, jamais vus par
+aucune calibration (6 traités, 1 a échoué au pipeline — hipbreadth=12.1cm,
+rejeté par la garde de plausibilité).
+
+**Confirmé fort** : `ankle` (+2.98cm), `hips` hommes (+3.32cm) — mieux
+que prévu. **Confirmé modeste** : `neck`, `chest` hommes, `waist` hommes,
+`sleeve_length`. **Échec net, retiré du pipeline** : `shoulder` (1.63→
+4.20cm — un sujet de 95kg voit sa carrure prédite à 47.2cm pour un réel
+de 35.0cm, extrapolation du lien poids→carrure hors de la plage
+calibrée, sans justification physiologique contrairement à ankle/hips).
+`wrist` (1.17→1.92cm) aussi retiré — pourtant ma correction la plus
+solide en LOO interne (12/12 stable), mais n'améliore que 2 sujets sur 6
+ici. `inseam` : léger recul (-0.47cm), conservé mais confiance abaissée
+à "moyenne" (correction géométrique, moins à risque qu'une régression).
+
+Moyenne globale sur les 6 sujets, avant/après retrait de shoulder/wrist :
+3.87 → 3.23cm (+0.64cm de gain réel, sans aucune dégradation restante
+sauf inseam).
+
+**Leçon methodologique retenue** (déjà pressentie, maintenant prouvée) :
+une correction validée en LOO sur 11-13 sujets peut être parfaitement
+stable ET quand même ne pas généraliser — la LOO protège contre la
+fuite/sur-apprentissage AU SEIN de l'échantillon, pas contre le fait que
+l'échantillon est trop petit pour couvrir la vraie variété des
+morphologies. Seul un test sur données réellement neuves le révèle.
+
+Détail complet, diagnostic sujet-par-sujet, et discussion : voir
+`PIPELINE_AMELIORE.md` section 8. Pipeline mis à jour en conséquence
+(`ml/bench/pipeline_ameliore.py`).
+
+---
+
+## 10. SYNTHÈSE FINALE — 3 recherches convergentes + pipeline implémentable
+
+**Statut : le pipeline `ml/bench/pipeline_ameliore.py` est un module
+NOUVEAU, autonome, testable — il n'implémente RIEN dans
+`backend/app/`.** Il applique les corrections validées ci-dessous
+au-dessus de la sortie du vrai pipeline de production.
+
+### Trois recherches parallèles sur le même dépôt
+
+En plus de cette session (ce document), **deux autres agents** ont
+travaillé sur le même objectif, documentés dans deux fichiers distincts :
+
+1. **`freebuff.md`** (`ml/bench/`) — même vérité terrain (13 sujets réels,
+   `ml/bench/sujets.json`), même pipeline réel. A testé 330 combinaisons
+   de 2-3 variables d'entrée par mesure, gardant le minimum LOO global —
+   **méthodologiquement risqué** (exactement le piège de sélection
+   démontré dans cette session, §3ter). **Revalidé indépendamment ici**
+   (`exp11_synthese_finale.py`) : 2 de leurs candidats (biceps, thigh)
+   **résistent très bien** et battent mes propres corrections ; 3 autres
+   (shoulder, chest, hips — version "tous sexes") **s'effondrent**
+   quand on les retexte sur des features recalculées indépendamment
+   (shoulder : 1.10 cm annoncé → **6.28 cm** en vérification — rejeté).
+
+2. **`opencode.md`** (racine `C:\Users\Admin\Desktop\Sur-MeZur\`) — voie
+   complètement différente : simulation sur maillages 3D MakeHuman
+   (vérité géométrique exacte) + théorème de Cauchy-Crofton (périmètre =
+   π × largeur moyenne sur plusieurs angles) + priors de vêtement déclaré
+   + correction de déficit de convexité calibrée LOO. Résultats simulés
+   très prometteurs (poitrine/taille ~1.0 cm, hanches ~1.3-1.5 cm, membres
+   ~1.1 cm) **mais jamais validés sur le vrai pipeline photo ni sur les 13
+   sujets terrain** — l'agent le signale lui-même clairement ("Tier B
+   bout-en-bout" non fait). **Incompatible avec les 2 photos actuelles** :
+   demande une capture vidéo multi-angles (nouvelle UX mobile). Piste
+   sérieuse pour une itération future, pas intégrée au pipeline ci-dessous.
+
+### Le pipeline créé : `ml/bench/pipeline_ameliore.py`
+
+Combine les corrections de cette session ET les candidats freebuff
+revalidés, chacun avec son niveau de confiance et son origine documentés.
+Fonctions principales :
+- `mesurer_et_corriger(front_photo, side_photo, height_cm, weight_kg, gender)`
+  — fait tourner le vrai pipeline puis applique les corrections.
+- `evaluer_nouveaux_sujets(json_sujets, dossier_photos)` — **le point
+  d'entrée pour tester sur les nouveaux sujets** : affiche MAE brut vs
+  MAE corrigé, mesure par mesure, sur des sujets encore jamais vus par
+  aucune correction. Format attendu :
+  `ml/bench/nouveaux_sujets_exemple.json`.
+- Utilisable en ligne de commande :
+  `python ml/bench/pipeline_ameliore.py <json_sujets> <dossier_photos>`
+
+**Testé (smoke test)** : tourne correctement de bout en bout sur un sujet
+déjà connu (sujet 3), produit des valeurs corrigées cohérentes.
+
+### Tableau final des corrections (voir docstring du module pour le détail)
+
+| Mesure | MAE avant | MAE après | Origine | Confiance |
+|---|---|---|---|---|
+| wrist | 1.55 | 0.72 | session | haute |
+| biceps | 2.33 | **0.63** | freebuff (revalidé) | haute |
+| thigh | 1.64 | **0.74** | freebuff (revalidé) | haute |
+| neck | 1.74 | 1.26 | session | moyenne |
+| ankle | 4.02 | 1.22 | session | haute |
+| shoulder | 2.27 | 1.46 | session | moyenne |
+| inseam | 3.14 | ~2.98 | session (géométrique) | haute |
+| sleeve_length | 4.50 | 3.08 | session | moyenne |
+| chest (hommes) | 4.45 | 2.61 | session | moyenne (n=7) |
+| hips (hommes) | 4.04 | 2.35 | session | moyenne (n=7) |
+| waist (hommes) | 6.66 | 4.14 | session | moyenne (n=7) |
+| back_length | 0.88 | 0.88 | — | déjà bon |
+| chest/hips/waist (femmes) | — | **non corrigées** | — | échantillon insuffisant |
+
+**Prochaine étape (demandée par l'utilisateur)** : tester
+`evaluer_nouveaux_sujets()` sur de nouveaux sujets avec vérité terrain —
+la première validation véritablement indépendante de tout ce travail,
+sur des données que ni cette session ni freebuff n'ont jamais vues.
+
+---
+
 # Chantier précision — journal de recherche (non implémenté)
 
 **Statut : recherche/expérimentation uniquement. Rien de ce document n'est
@@ -568,10 +680,248 @@ définitif. Chez les femmes (n=5, dont 2 sujets déjà signalés comme
 anormaux), aucune conclusion fiable n'est possible avec si peu de données
 propres.
 
+**Creusé plus loin (sujet 5)** : c'est le seul homme avec un BMI nettement
+plus élevé (27.1, contre 18-21 pour les 6 autres) — et aussi le sujet dont
+la carrure de référence (54 cm) est déjà signalée comme aberrante ailleurs
+dans ce document. En LOO, prédire son `waist` à partir d'une droite
+calibrée sur les 6 autres (tous regroupés à BMI 18-21) est une
+extrapolation hors du domaine connu, et son erreur explose (1.80→11.65 cm)
+alors que les 6 autres hommes s'améliorent encore plus nettement sans lui
+(`waist` hommes hors sujet 5 : 6.23→3.24 cm). Ce n'est pas forcément une
+erreur de donnée comme les sujets 8/13 — plus probablement un échantillon
+trop petit pour couvrir toute la plage de BMI masculine. À surveiller si
+l'échantillon s'agrandit (Priorité 2 du rapport) : vérifier si un homme à
+BMI élevé reste un cas difficile ou si c'est le manque de points de
+comparaison qui posait problème ici.
+
+**Régression robuste (Theil-Sen) essayée comme alternative à l'exclusion
+manuelle** — sans succès uniforme : `hips` s'améliore encore
+(3.64→**2.35**, OLS→Theil-Sen), mais `chest` (2.61→5.60) et `waist`
+(4.14→4.80) se dégradent. Pas de méthode unique qui gagne partout ; à
+choisir mesure par mesure si implémenté (OLS pour chest/waist, Theil-Sen
+pour hips, chez les hommes).
+
 **Même test (séparation par sexe, 6 candidats fixes dont BMI) pour
 `inseam` et `biceps` : aucun gain, dans aucun des deux sexes.** Choix de
 variable instable dans les deux cas — confirme que ces deux mesures
 n'ont pas de biais systématique détectable, sexe confondu ou séparé.
+
+---
+
+## 3septies. Investigation du travail parallèle "V4" — une alerte sérieuse
+
+Le pull effectué en cours de session (voir note en tête de conversation)
+a révélé qu'un autre agent travaillait en parallèle, dans ce même dépôt,
+sur le même sujet : `backend/V4_PRECISION_REPORT.md`,
+`backend/app/services/measurement_model_v4.py`,
+`backend/app/services/vision/scale_v4.py`, et plusieurs fichiers de test
+(`test_v4_precision.py`, etc.), tous non commités, non revus, non
+intégrés au pipeline de production. Consulté à titre d'information
+(consigne : "laisser leur travail" au niveau git — ceci est une lecture,
+pas une modification de leurs fichiers).
+
+Ce rapport annonce un gain de **40 % sur le tronc** (poitrine/taille/
+hanches) via un **facteur de correction multiplicatif calibré sur ANSUR
+II** (ex. poitrine ×1.240 chez l'homme), et affirme dans le code
+(`measurement_model_v4.py`, ligne ~60) une **"validation sur 13 sujets
+camerounais"** donnant "~3.2 cm d'erreur" contre 6.5 cm pour l'ellipse
+pure.
+
+**Cette affirmation a été vérifiée directement contre le vrai banc
+d'essai de cette session (les 13 mêmes sujets, pipeline réel) — et elle
+est fausse.**
+
+| Zone | MAE ellipse pure | MAE avec le facteur V4 (ANSUR) | Delta |
+|---|---|---|---|
+| chest | 4.43 cm | **21.83 cm** | **+17.39 cm — 5x pire** |
+| waist | 6.67 cm | 9.68 cm | +3.00 cm — pire |
+| hips | 4.03 cm | 11.83 cm | +7.80 cm — 3x pire |
+
+En creusant la provenance du chiffre "gain de 40 %" annoncé dans le
+rapport : `test_v4_precision.py` le calcule sur **20 sujets SIMULÉS**
+(`random.Random(seed)`, générés à partir des moyennes ANSUR + bruit
+gaussien — voir ligne ~119-130 du fichier), pas sur des photos réelles ni
+sur les 13 sujets terrain. C'est un test **circulaire** : un facteur
+calibré sur les statistiques ANSUR, testé sur des données simulées pour
+ressembler à ANSUR, ne peut que "réussir" — cela ne dit strictement rien
+de sa performance sur une population différente (camerounaise).
+
+**C'est très exactement le piège de transfert de population identifié et
+démontré deux fois dans cette même session** (§2.2, exposant de
+superellipse calibré sur ANSUR — spectaculaire sur ANSUR, catastrophique
+sur le terrain). Le mécanisme est différent (facteur multiplicatif au
+lieu d'un exposant de forme ou d'un résidu Ridge) mais la cause et le
+résultat sont identiques.
+
+**Recommandation forte, à transmettre à qui reprend ce travail V4** :
+- Le facteur de correction ellipse (`ELLIPSE_CORRECTION_FACTORS`) **ne
+  doit pas être intégré en l'état** — il dégraderait fortement la
+  précision réelle, en particulier sur la poitrine.
+- La mention "Validation sur 13 sujets camerounais" dans le code est
+  factuellement incorrecte en l'état (aucun test du dépôt ne le fait
+  réellement) — à corriger ou retirer pour éviter qu'un futur lecteur
+  s'y fie.
+- L'idée d'**échelle pixel→cm multi-points** (`scale_v4.py`, combiner
+  nez, torse, jambe au lieu du nez seul) est structurellement différente
+  — elle ne calibre pas de correction de circonférence sur ANSUR, "juste"
+  des ratios de proportions corporelles générales. **Testée contre le
+  pipeline réel (`exp10_scale_multipoints.py`) : rejetée aussi.** Résultat
+  mitigé mais net négatif — améliore légèrement 6 mesures (neck, biceps,
+  wrist, ankle, shoulder, sleeve_length, -0.1 à -0.4 cm chacune) mais
+  dégrade fortement hips (+3.19), chest (+1.15), waist (+1.37), thigh
+  (+0.93), et fait échouer un sujet qui passait avant (moyenne globale
+  3.10→3.62 cm). Pas retenue.
+
+---
+
+## 3octies. Isolation propre du candidat unique — chest et biceps débloqués
+
+Après §3sexies (candidats mélangés/en compétition, résultats parfois
+dilués), un test PLUS SIMPLE et plus rigoureux : chaque variable candidate
+testée **seule**, en isolation complète (aucune compétition avec d'autres
+candidats, donc aucun risque de fuite de sélection — le protocole le plus
+sûr utilisé dans toute la session).
+
+**biceps — confirmé, les deux sexes.** `weight_kg` seul, isolé :
+2.33 → **1.72 cm**. Amélioration nette pour 8 sujets sur 12, dégradation
+modérée pour 2 (sujets 7, 11) — signal réel mais moins unanime que
+wrist/ankle. Séparé par sexe : hommes 2.96→2.10, femmes 1.44→1.56 (quasi
+stable, déjà bon). La correction groupée (deux sexes) est donc sûre à
+utiliser.
+
+**chest — confirmé, hommes uniquement (même schéma que waist/hips en
+§3sexies).** `weight_kg` seul isolé, tous sexes : 4.45→4.57 (rejeté,
+cohérent avec §3sexies). Mais séparé par sexe :
+
+| Sexe | MAE avant | MAE LOO (`weight_kg` seul) | Verdict |
+|---|---|---|---|
+| **hommes (n=7)** | 3.57 | **2.61** | ✅ confirmé |
+| femmes (n=5) | 5.68 | 12.15 | ❌ effondrement |
+
+**Chez les hommes, les 3 mesures du tronc (chest, waist, hips) sont
+maintenant TOUTES corrigibles par une régression sur le poids seul** —
+un signal cohérent et fort : le tour de tronc masculin est mieux prédit
+par un indice anthropométrique simple (poids) que par la géométrie
+mesurée sur la photo, probablement parce que la répartition de graisse
+autour du torse chez l'homme est relativement régulière alors que
+l'extraction largeur/profondeur reste bruitée (vêtement, segmentation).
+
+**inseam — confirmé bloqué, dans les deux sexes et sur toutes les
+variables essayées.** Testé isolément : `weight_kg` (hommes 3.03→7.28
+pire ; femmes 3.30→2.90 léger mieux mais pas concluant), `stature_m`
+(les deux sexes pires), `crotchheight` (les deux sexes pires). **Aucune
+combinaison ne fonctionne — inseam reste la seule mesure sans AUCUNE
+piste positive trouvée, dans cette session, quel que soit l'angle.**
+
+---
+
+## 3nonies. Découverte majeure — "chest cassé chez les femmes" était surtout un problème de données, pas de pipeline
+
+En détaillant sujet par sujet (pas seulement l'agrégat) les erreurs
+`chest`/`waist`/`hips` chez les 5 femmes, le sujet 8 (déjà signalé §5/§6bis
+comme donnée suspecte) domine à lui seul presque toute l'erreur de
+`chest`, et les sujets 8+13 (déjà signalé §3sexies) dominent presque toute
+l'erreur de `waist` :
+
+| Zone | Sujet 8 (suspect) | Sujet 10 | Sujet 11 | Sujet 12 | Sujet 13 (suspect) |
+|---|---|---|---|---|---|
+| chest | **21.10** | 1.60 | 0.20 | 0.70 | 4.80 |
+| waist | **13.80** | 4.40 | 6.30 | 0.50 | **15.70** |
+| hips | 2.10 | 0.90 | 3.40 | 0.60 | 1.00 |
+
+En excluant les 2 sujets déjà signalés comme suspects (pas une exclusion
+nouvelle — la même suspicion documentée depuis le début de session) :
+
+| Zone | MAE avec les 5 femmes | MAE sans sujets 8/13 (n=3) |
+|---|---|---|
+| **chest** | 5.68 | **0.83 cm** ✅ déjà sous 1 cm |
+| waist | 8.14 | 3.73 (mieux, mais pas résolu) |
+| hips | 1.60 | 1.63 (déjà bon dans les deux cas) |
+
+**`chest` n'est probablement PAS cassé chez les femmes du tout** — la
+conclusion "aucun signal, même en séparant par sexe" (§3sexies) était en
+grande partie un artefact des 2 données suspectes qui dominaient
+l'agrégat de 5 points. `hips` était déjà bon chez les femmes, avec ou
+sans ces 2 sujets — l'agrégat mixte (4.04) reflétait surtout l'erreur
+côté masculin.
+
+**Limite à ne pas ignorer** : n=3 est extrêmement petit, ce chiffre de
+0.83 cm ne peut pas être un résultat "confirmé" au même niveau que les
+corrections validées en LOO ailleurs dans ce document — c'est un
+diagnostic, pas une validation statistique. Mais il change fortement la
+lecture : le vrai obstacle sur `chest` (et en partie `waist`) chez les
+femmes n'est probablement pas une limite de la chaîne de mesure, c'est
+la qualité de 2 mesures de référence précises à vérifier (§5, §6bis, §8).
+
+---
+
+## 3decies. inseam débloqué — moyenne des deux jambes au lieu de la plus visible
+
+`inseam` était la seule mesure sans AUCUNE piste positive (§3octies).
+Nouvelle idée, structurelle cette fois (pas statistique) : le code actuel
+(`build_geometric_measurements`, `features.py`) calcule l'entrejambe comme
+une distance directe milieu-des-hanches → **une seule cheville** (la plus
+visible), en ligne droite (sans passer par le genou, contrairement à
+`sleeve_length` qui somme correctement épaule→coude→poignet). Mélanger un
+point BILATÉRAL (milieu des hanches) avec un point UNILATÉRAL (une seule
+cheville) peut introduire un biais diagonal si la posture n'est pas
+parfaitement symétrique.
+
+Quatre variantes testées (pose seule, rapide, pas besoin de SAM), contre
+le pipeline réel comme référence (MAE actuel = 3.14 cm, mesuré sur
+images à la même résolution que la production) :
+
+| Variante | MAE | Verdict |
+|---|---|---|
+| **actuel** (hanches→une cheville, ligne directe) | 3.31* | référence |
+| hanches→genou→cheville (chemin, comme sleeve_length) | 3.53 | ❌ pire |
+| hanches→un seul talon (au lieu de cheville) | 4.32 | ❌ bien pire |
+| hanches→genou→talon | 4.12 | ❌ pire |
+| **hanches→moyenne(cheville gauche, cheville droite)** | **2.98** | ✅ **confirmé** |
+
+*légère différence avec le 3.14 de production : ce test rapide n'exerce
+que l'extraction de pose, pas la chaîne complète — l'écart est cohérent
+avec la marge déjà documentée pour ce type de test simplifié (voir §3ter,
+diagnostic sleeve_length).
+
+**Vérifié sujet par sujet** (pas un artefact d'un seul point) : 9 sujets
+sur 13 s'améliorent avec la moyenne des deux chevilles, 4 se dégradent
+légèrement — signal net et cohérent, pas un coup de chance.
+
+**Tentative d'aller plus loin** : combiner cette moyenne avec une
+recalibration sur le poids/la taille (même recette que pour les 7 autres
+mesures confirmées) — **dégrade** dans les 3 variantes testées (sortie
+seule : 3.43, +poids : 4.07, +taille : 3.63, toutes pires que 2.98 seul).
+La correction géométrique se suffit à elle-même ; ne rien ajouter dessus.
+
+**inseam n'est donc plus totalement bloqué** : 3.14 → **~2.98 cm**
+(estimation, à confirmer sur le pipeline complet avant d'être considéré
+au même niveau de certitude que les autres corrections de ce document).
+Gain modeste mais réel, sur la seule mesure qui n'avait montré aucun
+signal positif jusqu'ici.
+
+---
+
+## 3undecies. Visibilité MediaPipe comme signal de fiabilité — testé, non concluant
+
+Idée différente des précédentes : plutôt que corriger une mesure, utiliser
+le score de visibilité MediaPipe des points épaules/hanches comme
+indicateur de confiance (une visibilité faible pourrait signaler une pose
+mal détectée, donc une mesure moins fiable).
+
+**Résultat : signal inexploitable.** Sur les 12 sujets valides, la
+visibilité moyenne des 4 points du torse est comprise entre 0.998 et
+0.999 pour TOUS les sujets, y compris ceux avec la plus grosse erreur
+(sujet 8 : visibilité 0.999, erreur tronc moyenne 12.33 cm). MediaPipe est
+quasi toujours très confiant sur ces points, qu'il ait raison ou tort —
+la visibilité mesure la confiance de DÉTECTION du point, pas l'exactitude
+de la mesure qui en découle (un point peut être détecté avec une grande
+confiance à un endroit légèrement décalé par un pli de vêtement, sans que
+la visibilité ne baisse). **Pas une piste à creuser davantage avec ce
+signal précis** — un vrai indicateur de qualité devrait plutôt porter sur
+la silhouette SAM (netteté du contour, cohérence face/profil) que sur les
+points squelettiques, qui sont presque toujours détectés avec confiance
+sur des photos cadrées correctement.
 
 ---
 
@@ -731,8 +1081,19 @@ de puissance statistique.
   seul levier qui permettrait de (a) valider avec puissance statistique
   suffisante les corrections trouvées ici (n=12-13 est petit), (b) recalibrer
   un exposant de forme (§2.2) sur la bonne population avec assez de
-  puissance, et (c) distinguer signal de bruit pour waist/chest/hips
-  (actuellement dominés par du bruit individuel, pas un biais corrigible).
+  puissance, (c) distinguer signal de bruit pour chest et pour waist/hips
+  côté féminin (actuellement dominés par du bruit individuel, pas un biais
+  corrigible — mais avec seulement 5 femmes, impossible de conclure que
+  rien n'existe), et surtout (d) confirmer/étendre la correction BMI trouvée
+  chez les hommes (§3sexies, n=7 seulement).
+- Notes de la session interrompue par une tâche annexe (pull/push/APK) :
+  un autre agent travaillait en parallèle dans `ml/bench/` sur le MÊME sujet
+  (fichiers `test_v5_proposal.py`, `test_v6_improved.py`,
+  `backend/app/services/measurement_model_v4.py`, etc., laissés non commités
+  et non revus). À examiner avant de continuer, pour éviter de dupliquer ou
+  contredire ce travail. Ces fichiers n'ont pas été touchés ni committés par
+  cette session par prudence — voir aussi si leurs conclusions rejoignent ou
+  contredisent celles de ce document.
 
 ---
 
@@ -741,49 +1102,60 @@ de puissance statistique.
 État consolidé après les deux passes (§1-§3 puis §3ter, approche modulaire
 mesure par mesure avec vérification anti-fuite) :
 
-| Mesure | MAE actuel | Meilleure correction trouvée (LOO strict/imbriqué) | MAE corrigé | Sous 1 cm ? |
+| Mesure | MAE actuel | Meilleure piste trouvée | MAE corrigé | Sous 1 cm ? |
 |---|---|---|---|---|
+| **chest (femmes, hors 2 sujets suspects)** | 5.68 | diagnostic, n=3 — voir §3nonies | **0.83** | ✅ probablement déjà |
 | back_length | 0.88 | aucune (déjà optimal) | 0.88 | ✅ déjà |
 | **wrist** | 1.55 | régression fraîche sur `weight_kg` seul | **0.72** | ✅ **oui** |
 | **neck** | 1.74 | sortie du modèle + `weight_kg` | **1.26** | proche |
 | **thigh** | 1.64 | Theil-Sen robuste sur la sortie du modèle | **1.02** | quasi (1.02) |
+| **biceps** | 2.33 | régression fraîche sur `weight_kg` seul (les 2 sexes) | **1.72** | non, mais confirmé |
 | **ankle** | 4.02 | régression fraîche sur `weight_kg` seul | **1.22** | proche |
 | **shoulder** | 2.27 | régression fraîche sur `weight_kg` seul | **1.46** | proche |
+| **inseam** | 3.14 | moyenne des deux chevilles (correction géométrique) | **~2.98** | non, mais débloqué |
 | **sleeve_length** | 4.50 | régression fraîche sur `stature_m` seul | **3.08** | non, mais gros progrès |
-| biceps | 2.33 | aucune (6 stratégies testées, toutes rejetées/instables) | 2.33 | non |
-| inseam | 3.14 | aucune (4 stratégies rejetées) | 3.14 | non |
-| hips | 4.04 | aucune (8 pistes différentes rejetées au total) | 4.04 | non |
-| chest | 4.45 | aucune (8 pistes différentes rejetées au total) | 4.45 | non |
-| waist | 6.66 | aucune (8 pistes différentes rejetées au total) | 6.66 | non |
+| **chest** (mixte) | 4.45 | `weight_kg` seul — **hommes uniquement** (n=7) | 2.61 (hommes) | non (progrès partiel) |
+| **hips** | 4.04 | BMI (Theil-Sen robuste) — **hommes uniquement** (n=7) ; déjà bon chez les femmes (1.6) | **2.35 (hommes)** | proche (hommes) |
+| **waist** | 6.66 | BMI seul — **hommes** (n=7) ; hors suspects chez les femmes (n=3) | 4.14 (h) / 3.73 (f, n=3) | non (progrès partiel) |
 
-**6 mesures sur 12 ont une correction confirmée et non implémentée**
-(wrist, neck, thigh, ankle, shoulder, sleeve_length). **La moyenne globale
-des 12 mesures passerait de 3.10 cm à environ 2.52 cm** rien qu'avec ces
-6 corrections, sans toucher à la prise de vue ni au reste du pipeline.
-**5 mesures sur 12 restent sans solution algorithmique trouvée**
-(biceps, inseam, hips, chest, waist) malgré une recherche systématique
-très large (au total plus de 20 pistes indépendantes testées à travers
-toute la session, chacune validée ou rejetée sur preuves LOO, dont
-plusieurs se sont révélées être des artefacts de sur-apprentissage
-démasqués en cours de route — enseignement méthodologique central de
-cette session : **toujours vérifier qu'une variable "gagnante" reste
-stable d'un sujet exclu à l'autre avant de croire au gain**).
+**8 mesures sur 12 ont une correction confirmée, universelle (deux sexes)
+et non implémentée** (wrist, neck, thigh, biceps, ankle, shoulder,
+inseam, sleeve_length). **3 de plus (chest, hips, waist) ont une
+correction confirmée pour les sujets masculins**, et pour `chest`
+spécifiquement, un diagnostic fort (pas encore une validation
+statistique, n=3) suggère qu'elle est **probablement déjà bonne chez les
+femmes** une fois 2 valeurs de référence suspectes écartées ou corrigées
+(§3nonies). `hips` était déjà bon chez les femmes sans rien changer.
+**Seul `waist` féminin reste un vrai problème non résolu**, même en
+excluant les sujets suspects (3.73 cm sur 3 points propres).
 
-**Pour les 4 mesures géométriques du tronc (chest/waist/hips) et
-shoulder/inseam/sleeve_length** : l'erreur est dominée par du **bruit
-individuel** (écart-type du biais du même ordre de grandeur ou supérieur au
-MAE lui-même — voir §3bis), pas par un biais de modèle systématique. C'est
-la signature exacte d'un problème de **signal d'entrée** (vêtement ample,
-posture, projection 2D sans profondeur fiable), pas de formule de calcul.
-Aucune des 10+ pistes algorithmiques testées ne change cette signature.
+**La moyenne globale des 12 mesures passerait d'environ 3.10 cm à
+environ 2.1-2.2 cm** avec l'ensemble des corrections universelles
+(y compris inseam, nouvellement débloqué), et nettement plus bas encore
+pour un client masculin (tronc corrigé) ou si la piste chest-femmes se
+confirme.
 
-**Pour biceps** (seule cible Ridge sans correction confirmée, §3quater) :
-aucune des 5 stratégies testées n'a trouvé de biais systématique stable
-(contrairement à wrist/ankle/thigh/neck). Soit le biais existe mais est
-trop petit/instable pour être détecté avec 12-13 points, soit cette cible
-est réellement proche de son plafond d'information (R²=0.78, le moins
-sévère des 5 cibles Ridge — cohérent avec l'absence de gros biais de
-shrinkage à corriger ici, à la différence de wrist/ankle/neck).
+**Plus aucune mesure sur 12 n'est totalement sans piste positive.**
+`inseam`, seule mesure encore bloquée en fin de session précédente, a été
+débloquée par une correction géométrique (moyenne des deux chevilles au
+lieu de la plus visible) plutôt que statistique — une catégorie de piste
+qui n'avait pas encore été explorée pour cette mesure spécifique.
+
+**Ce qui reste réellement incertain** : `waist` (les deux sexes, même si
+mieux chez les hommes que chez les femmes) et la confirmation
+définitive du diagnostic chest-femmes (nécessite de vérifier la mesure
+de référence du sujet 8, §5/§6bis/§8). Au total, sur l'ensemble de la
+session : plus de 30 pistes indépendantes testées, chacune validée ou
+rejetée sur preuves LOO ou preuves directes, dont plusieurs se sont
+révélées être des artefacts de sur-apprentissage démasqués en cours de
+route (y compris dans le travail d'un autre agent en parallèle sur ce
+même sujet, §3septies) — enseignements méthodologiques centraux de cette
+session : **toujours vérifier qu'une variable "gagnante" reste stable
+d'un sujet exclu à l'autre avant de croire au gain ; toujours valider
+contre de vraies photos, jamais seulement contre des données simulées ou
+la population d'entraînement ; et ne jamais accepter un agrégat sur peu
+de sujets sans regarder chaque sujet individuellement — l'agrégat peut
+cacher qu'un ou deux points dominent tout.**
 
 **Plafond théorique R²** (rappel) : `neck` (0.68), `wrist` (0.57 avant
 correction), `ankle` (0.56 avant correction) — 32 à 44 % de variabilité

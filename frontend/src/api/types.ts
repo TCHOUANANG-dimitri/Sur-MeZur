@@ -100,6 +100,7 @@ export interface Avatar {
   measurement_id: string;
   gltf_url: string | null;
   skin_tone_hex: string;
+  name: string | null;
   status: JobStatus;
 }
 

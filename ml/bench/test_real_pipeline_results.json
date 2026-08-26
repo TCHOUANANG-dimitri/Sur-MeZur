@@ -1,0 +1,1268 @@
+{
+  "details_sujets": [
+    {
+      "id": 1,
+      "gender": "male",
+      "height_cm": 182,
+      "weight_kg": 68.0,
+      "source": "vision_sam",
+      "duree_s": 14.0,
+      "notes": [],
+      "features": {
+        "stature_m": 182.0,
+        "weight_kg": 68.0,
+        "biacromialbreadth": 42.3,
+        "bideltoidbreadth": 51.6,
+        "hipbreadth": 41.4,
+        "sittingheight": 96.1,
+        "crotchheight": 88.9,
+        "chestbreadth": 37.8,
+        "waistbreadth": 36.2,
+        "chestdepth": 22.4,
+        "waistdepth": 21.1,
+        "buttockdepth": 26.2,
+        "chestbreadth_body": 34.9,
+        "chestdepth_body": 19.5,
+        "waistbreadth_body": 33.3,
+        "waistdepth_body": 18.2,
+        "hipbreadth_body": 38.5,
+        "buttockdepth_body": 23.3
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 37,
+          "calcule": 35.8,
+          "erreur_abs": 1.2,
+          "erreur_signe": -1.2
+        },
+        "chest": {
+          "attendu": 84,
+          "calcule": 87.2,
+          "erreur_abs": 3.2,
+          "erreur_signe": 3.2
+        },
+        "waist": {
+          "attendu": 71,
+          "calcule": 82.6,
+          "erreur_abs": 11.6,
+          "erreur_signe": 11.6
+        },
+        "hips": {
+          "attendu": 91,
+          "calcule": 98.5,
+          "erreur_abs": 7.5,
+          "erreur_signe": 7.5
+        },
+        "biceps": {
+          "attendu": 32.6,
+          "calcule": 27.6,
+          "erreur_abs": 5.0,
+          "erreur_signe": -5.0
+        },
+        "thigh": {
+          "attendu": 54.3,
+          "calcule": 56.1,
+          "erreur_abs": 1.8,
+          "erreur_signe": 1.8
+        },
+        "wrist": {
+          "attendu": 17.3,
+          "calcule": 16.6,
+          "erreur_abs": 0.7,
+          "erreur_signe": -0.7
+        },
+        "ankle": {
+          "attendu": 27,
+          "calcule": 21.2,
+          "erreur_abs": 5.8,
+          "erreur_signe": -5.8
+        },
+        "shoulder": {
+          "attendu": 33,
+          "calcule": 34.9,
+          "erreur_abs": 1.9,
+          "erreur_signe": 1.9
+        },
+        "sleeve_length": {
+          "attendu": 66,
+          "calcule": 61.4,
+          "erreur_abs": 4.6,
+          "erreur_signe": -4.6
+        },
+        "inseam": {
+          "attendu": 77,
+          "calcule": 79.7,
+          "erreur_abs": 2.7,
+          "erreur_signe": 2.7
+        },
+        "back_length": {
+          "attendu": 57,
+          "calcule": 56.7,
+          "erreur_abs": 0.3,
+          "erreur_signe": -0.3
+        }
+      }
+    },
+    {
+      "id": 3,
+      "gender": "male",
+      "height_cm": 182,
+      "weight_kg": 60.0,
+      "source": "vision_sam",
+      "duree_s": 12.2,
+      "notes": [],
+      "features": {
+        "stature_m": 182.0,
+        "weight_kg": 60.0,
+        "biacromialbreadth": 42.9,
+        "bideltoidbreadth": 52.3,
+        "hipbreadth": 40.4,
+        "sittingheight": 96.3,
+        "crotchheight": 86.2,
+        "chestbreadth": 40.4,
+        "waistbreadth": 39.0,
+        "chestdepth": 24.3,
+        "waistdepth": 22.2,
+        "buttockdepth": 25.6,
+        "chestbreadth_body": 35.3,
+        "chestdepth_body": 19.2,
+        "waistbreadth_body": 33.9,
+        "waistdepth_body": 17.1,
+        "hipbreadth_body": 35.3,
+        "buttockdepth_body": 20.5
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 36,
+          "calcule": 35.3,
+          "erreur_abs": 0.7,
+          "erreur_signe": -0.7
+        },
+        "chest": {
+          "attendu": 83,
+          "calcule": 87.5,
+          "erreur_abs": 4.5,
+          "erreur_signe": 4.5
+        },
+        "waist": {
+          "attendu": 74,
+          "calcule": 82.3,
+          "erreur_abs": 8.3,
+          "erreur_signe": 8.3
+        },
+        "hips": {
+          "attendu": 91,
+          "calcule": 89.2,
+          "erreur_abs": 1.8,
+          "erreur_signe": -1.8
+        },
+        "biceps": {
+          "attendu": 32,
+          "calcule": 24.1,
+          "erreur_abs": 7.9,
+          "erreur_signe": -7.9
+        },
+        "thigh": {
+          "attendu": 52,
+          "calcule": 49.7,
+          "erreur_abs": 2.3,
+          "erreur_signe": -2.3
+        },
+        "wrist": {
+          "attendu": 17.1,
+          "calcule": 16.1,
+          "erreur_abs": 1.0,
+          "erreur_signe": -1.0
+        },
+        "ankle": {
+          "attendu": 22.6,
+          "calcule": 19.7,
+          "erreur_abs": 2.9,
+          "erreur_signe": -2.9
+        },
+        "shoulder": {
+          "attendu": 32,
+          "calcule": 35.5,
+          "erreur_abs": 3.5,
+          "erreur_signe": 3.5
+        },
+        "sleeve_length": {
+          "attendu": 54,
+          "calcule": 54.5,
+          "erreur_abs": 0.5,
+          "erreur_signe": 0.5
+        },
+        "inseam": {
+          "attendu": 77.9,
+          "calcule": 78.1,
+          "erreur_abs": 0.2,
+          "erreur_signe": 0.2
+        },
+        "back_length": {
+          "attendu": 59,
+          "calcule": 56.8,
+          "erreur_abs": 2.2,
+          "erreur_signe": -2.2
+        }
+      }
+    },
+    {
+      "id": 4,
+      "gender": "male",
+      "height_cm": 193,
+      "weight_kg": 70.0,
+      "source": "vision_sam",
+      "duree_s": 14.2,
+      "notes": [],
+      "features": {
+        "stature_m": 193.0,
+        "weight_kg": 70.0,
+        "biacromialbreadth": 40.5,
+        "bideltoidbreadth": 49.4,
+        "hipbreadth": 36.7,
+        "sittingheight": 97.9,
+        "crotchheight": 97.1,
+        "chestbreadth": 32.1,
+        "waistbreadth": 29.4,
+        "chestdepth": 24.7,
+        "waistdepth": 23.6,
+        "buttockdepth": 23.8,
+        "chestbreadth_body": 30.9,
+        "chestdepth_body": 23.5,
+        "waistbreadth_body": 28.2,
+        "waistdepth_body": 22.4,
+        "hipbreadth_body": 35.5,
+        "buttockdepth_body": 22.6
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 37.4,
+          "calcule": 36.0,
+          "erreur_abs": 1.4,
+          "erreur_signe": -1.4
+        },
+        "chest": {
+          "attendu": 88.2,
+          "calcule": 85.8,
+          "erreur_abs": 2.4,
+          "erreur_signe": -2.4
+        },
+        "waist": {
+          "attendu": 74.9,
+          "calcule": 79.7,
+          "erreur_abs": 4.8,
+          "erreur_signe": 4.8
+        },
+        "hips": {
+          "attendu": 89,
+          "calcule": 92.4,
+          "erreur_abs": 3.4,
+          "erreur_signe": 3.4
+        },
+        "biceps": {
+          "attendu": 34.7,
+          "calcule": 28.7,
+          "erreur_abs": 6.0,
+          "erreur_signe": -6.0
+        },
+        "thigh": {
+          "attendu": 54.4,
+          "calcule": 52.9,
+          "erreur_abs": 1.5,
+          "erreur_signe": -1.5
+        },
+        "wrist": {
+          "attendu": 18.5,
+          "calcule": 17.2,
+          "erreur_abs": 1.3,
+          "erreur_signe": -1.3
+        },
+        "ankle": {
+          "attendu": 25.1,
+          "calcule": 21.2,
+          "erreur_abs": 3.9,
+          "erreur_signe": -3.9
+        },
+        "shoulder": {
+          "attendu": 32,
+          "calcule": 33.5,
+          "erreur_abs": 1.5,
+          "erreur_signe": 1.5
+        },
+        "sleeve_length": {
+          "attendu": 66,
+          "calcule": 56.3,
+          "erreur_abs": 9.7,
+          "erreur_signe": -9.7
+        },
+        "inseam": {
+          "attendu": 87,
+          "calcule": 85.8,
+          "erreur_abs": 1.2,
+          "erreur_signe": -1.2
+        },
+        "back_length": {
+          "attendu": 58,
+          "calcule": 57.8,
+          "erreur_abs": 0.2,
+          "erreur_signe": -0.2
+        }
+      }
+    },
+    {
+      "id": 5,
+      "gender": "male",
+      "height_cm": 175,
+      "weight_kg": 83.0,
+      "source": "vision_sam",
+      "duree_s": 13.3,
+      "notes": [],
+      "features": {
+        "stature_m": 175.0,
+        "weight_kg": 83.0,
+        "biacromialbreadth": 42.1,
+        "bideltoidbreadth": 51.4,
+        "hipbreadth": 41.5,
+        "sittingheight": 94.2,
+        "crotchheight": 82.6,
+        "chestbreadth": 31.8,
+        "waistbreadth": 32.0,
+        "chestdepth": 23.9,
+        "waistdepth": 24.5,
+        "buttockdepth": 27.6,
+        "chestbreadth_body": 33.3,
+        "chestdepth_body": 25.4,
+        "waistbreadth_body": 33.5,
+        "waistdepth_body": 26.0,
+        "hipbreadth_body": 43.0,
+        "buttockdepth_body": 29.1
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 42,
+          "calcule": 38.3,
+          "erreur_abs": 3.7,
+          "erreur_signe": -3.7
+        },
+        "chest": {
+          "attendu": 94,
+          "calcule": 92.6,
+          "erreur_abs": 1.4,
+          "erreur_signe": -1.4
+        },
+        "waist": {
+          "attendu": 92,
+          "calcule": 93.8,
+          "erreur_abs": 1.8,
+          "erreur_signe": 1.8
+        },
+        "hips": {
+          "attendu": 99,
+          "calcule": 114.3,
+          "erreur_abs": 15.3,
+          "erreur_signe": 15.3
+        },
+        "biceps": {
+          "attendu": 34,
+          "calcule": 34.0,
+          "erreur_abs": 0.0,
+          "erreur_signe": 0.0
+        },
+        "thigh": {
+          "attendu": 64,
+          "calcule": 65.3,
+          "erreur_abs": 1.3,
+          "erreur_signe": 1.3
+        },
+        "wrist": {
+          "attendu": 19,
+          "calcule": 17.3,
+          "erreur_abs": 1.7,
+          "erreur_signe": -1.7
+        },
+        "ankle": {
+          "attendu": 25,
+          "calcule": 22.8,
+          "erreur_abs": 2.2,
+          "erreur_signe": -2.2
+        },
+        "sleeve_length": {
+          "attendu": 59,
+          "calcule": 56.6,
+          "erreur_abs": 2.4,
+          "erreur_signe": -2.4
+        },
+        "inseam": {
+          "attendu": 80,
+          "calcule": 74.7,
+          "erreur_abs": 5.3,
+          "erreur_signe": -5.3
+        },
+        "back_length": {
+          "attendu": 54,
+          "calcule": 55.6,
+          "erreur_abs": 1.6,
+          "erreur_signe": 1.6
+        }
+      }
+    },
+    {
+      "id": 6,
+      "gender": "male",
+      "height_cm": 178,
+      "weight_kg": 67.0,
+      "source": "vision_sam",
+      "duree_s": 13.0,
+      "notes": [],
+      "features": {
+        "stature_m": 178.0,
+        "weight_kg": 67.0,
+        "biacromialbreadth": 39.5,
+        "bideltoidbreadth": 48.2,
+        "hipbreadth": 37.2,
+        "sittingheight": 90.2,
+        "crotchheight": 87.1,
+        "chestbreadth": 28.3,
+        "waistbreadth": 27.3,
+        "chestdepth": 22.8,
+        "waistdepth": 22.3,
+        "buttockdepth": 22.8,
+        "chestbreadth_body": 29.8,
+        "chestdepth_body": 24.3,
+        "waistbreadth_body": 28.8,
+        "waistdepth_body": 23.8,
+        "hipbreadth_body": 38.7,
+        "buttockdepth_body": 24.3
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 40.7,
+          "calcule": 35.7,
+          "erreur_abs": 5.0,
+          "erreur_signe": -5.0
+        },
+        "chest": {
+          "attendu": 83.1,
+          "calcule": 85.2,
+          "erreur_abs": 2.1,
+          "erreur_signe": 2.1
+        },
+        "waist": {
+          "attendu": 78.4,
+          "calcule": 82.8,
+          "erreur_abs": 4.4,
+          "erreur_signe": 4.4
+        },
+        "hips": {
+          "attendu": 100.2,
+          "calcule": 100.3,
+          "erreur_abs": 0.1,
+          "erreur_signe": 0.1
+        },
+        "biceps": {
+          "attendu": 33.3,
+          "calcule": 30.4,
+          "erreur_abs": 2.9,
+          "erreur_signe": -2.9
+        },
+        "thigh": {
+          "attendu": 56.7,
+          "calcule": 55.9,
+          "erreur_abs": 0.8,
+          "erreur_signe": -0.8
+        },
+        "wrist": {
+          "attendu": 19,
+          "calcule": 16.7,
+          "erreur_abs": 2.3,
+          "erreur_signe": -2.3
+        },
+        "ankle": {
+          "attendu": 27.2,
+          "calcule": 21.1,
+          "erreur_abs": 6.1,
+          "erreur_signe": -6.1
+        },
+        "shoulder": {
+          "attendu": 33,
+          "calcule": 32.6,
+          "erreur_abs": 0.4,
+          "erreur_signe": -0.4
+        },
+        "sleeve_length": {
+          "attendu": 58.7,
+          "calcule": 60.0,
+          "erreur_abs": 1.3,
+          "erreur_signe": 1.3
+        },
+        "inseam": {
+          "attendu": 85,
+          "calcule": 76.7,
+          "erreur_abs": 8.3,
+          "erreur_signe": -8.3
+        },
+        "back_length": {
+          "attendu": 54,
+          "calcule": 53.2,
+          "erreur_abs": 0.8,
+          "erreur_signe": -0.8
+        }
+      }
+    },
+    {
+      "id": 7,
+      "gender": "male",
+      "height_cm": 193,
+      "weight_kg": 71.0,
+      "source": "vision_sam",
+      "duree_s": 14.2,
+      "notes": [],
+      "features": {
+        "stature_m": 193.0,
+        "weight_kg": 71.0,
+        "biacromialbreadth": 43.1,
+        "bideltoidbreadth": 52.6,
+        "hipbreadth": 35.2,
+        "sittingheight": 93.7,
+        "crotchheight": 96.7,
+        "chestbreadth": 29.2,
+        "waistbreadth": 27.0,
+        "chestdepth": 22.9,
+        "waistdepth": 20.9,
+        "buttockdepth": 28.6,
+        "chestbreadth_body": 29.9,
+        "chestdepth_body": 23.6,
+        "waistbreadth_body": 27.7,
+        "waistdepth_body": 21.6,
+        "hipbreadth_body": 35.9,
+        "buttockdepth_body": 29.3
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 36.3,
+          "calcule": 35.8,
+          "erreur_abs": 0.5,
+          "erreur_signe": -0.5
+        },
+        "chest": {
+          "attendu": 87.1,
+          "calcule": 84.3,
+          "erreur_abs": 2.8,
+          "erreur_signe": -2.8
+        },
+        "waist": {
+          "attendu": 71.2,
+          "calcule": 77.7,
+          "erreur_abs": 6.5,
+          "erreur_signe": 6.5
+        },
+        "hips": {
+          "attendu": 91,
+          "calcule": 102.7,
+          "erreur_abs": 11.7,
+          "erreur_signe": 11.7
+        },
+        "biceps": {
+          "attendu": 29.4,
+          "calcule": 30.2,
+          "erreur_abs": 0.8,
+          "erreur_signe": 0.8
+        },
+        "thigh": {
+          "attendu": 54.5,
+          "calcule": 56.6,
+          "erreur_abs": 2.1,
+          "erreur_signe": 2.1
+        },
+        "wrist": {
+          "attendu": 18.7,
+          "calcule": 17.3,
+          "erreur_abs": 1.4,
+          "erreur_signe": -1.4
+        },
+        "ankle": {
+          "attendu": 24.5,
+          "calcule": 21.4,
+          "erreur_abs": 3.1,
+          "erreur_signe": -3.1
+        },
+        "shoulder": {
+          "attendu": 32,
+          "calcule": 35.6,
+          "erreur_abs": 3.6,
+          "erreur_signe": 3.6
+        },
+        "sleeve_length": {
+          "attendu": 67,
+          "calcule": 61.5,
+          "erreur_abs": 5.5,
+          "erreur_signe": -5.5
+        },
+        "inseam": {
+          "attendu": 83.5,
+          "calcule": 86.0,
+          "erreur_abs": 2.5,
+          "erreur_signe": 2.5
+        },
+        "back_length": {
+          "attendu": 55,
+          "calcule": 55.3,
+          "erreur_abs": 0.3,
+          "erreur_signe": 0.3
+        }
+      }
+    },
+    {
+      "id": 8,
+      "gender": "female",
+      "height_cm": 166,
+      "weight_kg": 62.0,
+      "source": "vision_sam",
+      "duree_s": 12.1,
+      "notes": [],
+      "features": {
+        "stature_m": 166.0,
+        "weight_kg": 62.0,
+        "biacromialbreadth": 40.2,
+        "bideltoidbreadth": 49.0,
+        "hipbreadth": 35.9,
+        "sittingheight": 80.5,
+        "crotchheight": 80.2,
+        "chestbreadth": 28.6,
+        "waistbreadth": 27.1,
+        "chestdepth": 22.5,
+        "waistdepth": 21.6,
+        "buttockdepth": 25.8,
+        "chestbreadth_body": 29.4,
+        "chestdepth_body": 23.3,
+        "waistbreadth_body": 27.9,
+        "waistdepth_body": 22.4,
+        "hipbreadth_body": 36.7,
+        "buttockdepth_body": 26.6
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 34.5,
+          "calcule": 32.2,
+          "erreur_abs": 2.3,
+          "erreur_signe": -2.3
+        },
+        "chest": {
+          "attendu": 62,
+          "calcule": 83.1,
+          "erreur_abs": 21.1,
+          "erreur_signe": 21.1
+        },
+        "waist": {
+          "attendu": 93,
+          "calcule": 79.2,
+          "erreur_abs": 13.8,
+          "erreur_signe": -13.8
+        },
+        "hips": {
+          "attendu": 98,
+          "calcule": 100.1,
+          "erreur_abs": 2.1,
+          "erreur_signe": 2.1
+        },
+        "biceps": {
+          "attendu": 28.5,
+          "calcule": 28.2,
+          "erreur_abs": 0.3,
+          "erreur_signe": -0.3
+        },
+        "thigh": {
+          "attendu": 60,
+          "calcule": 59.3,
+          "erreur_abs": 0.7,
+          "erreur_signe": -0.7
+        },
+        "wrist": {
+          "attendu": 17,
+          "calcule": 15.1,
+          "erreur_abs": 1.9,
+          "erreur_signe": -1.9
+        },
+        "ankle": {
+          "attendu": 23.5,
+          "calcule": 20.2,
+          "erreur_abs": 3.3,
+          "erreur_signe": -3.3
+        },
+        "shoulder": {
+          "attendu": 28.5,
+          "calcule": 33.2,
+          "erreur_abs": 4.7,
+          "erreur_signe": 4.7
+        },
+        "sleeve_length": {
+          "attendu": 53,
+          "calcule": 57.6,
+          "erreur_abs": 4.6,
+          "erreur_signe": 4.6
+        },
+        "inseam": {
+          "attendu": 70,
+          "calcule": 70.7,
+          "erreur_abs": 0.7,
+          "erreur_signe": 0.7
+        },
+        "back_length": {
+          "attendu": 44,
+          "calcule": 43.7,
+          "erreur_abs": 0.3,
+          "erreur_signe": -0.3
+        }
+      }
+    },
+    {
+      "id": 9,
+      "gender": "male",
+      "height_cm": 170,
+      "weight_kg": 59.0,
+      "source": "vision_sam",
+      "duree_s": 12.4,
+      "notes": [],
+      "features": {
+        "stature_m": 170.0,
+        "weight_kg": 59.0,
+        "biacromialbreadth": 40.9,
+        "bideltoidbreadth": 49.9,
+        "hipbreadth": 34.1,
+        "sittingheight": 90.5,
+        "crotchheight": 77.0,
+        "chestbreadth": 29.7,
+        "waistbreadth": 28.5,
+        "chestdepth": 25.3,
+        "waistdepth": 24.9,
+        "buttockdepth": 25.9,
+        "chestbreadth_body": 26.8,
+        "chestdepth_body": 22.4,
+        "waistbreadth_body": 25.6,
+        "waistdepth_body": 22.0,
+        "hipbreadth_body": 31.2,
+        "buttockdepth_body": 23.0
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 36.7,
+          "calcule": 35.9,
+          "erreur_abs": 0.8,
+          "erreur_signe": -0.8
+        },
+        "chest": {
+          "attendu": 85.8,
+          "calcule": 77.4,
+          "erreur_abs": 8.4,
+          "erreur_signe": -8.4
+        },
+        "waist": {
+          "attendu": 75.4,
+          "calcule": 74.9,
+          "erreur_abs": 0.5,
+          "erreur_signe": -0.5
+        },
+        "hips": {
+          "attendu": 91.2,
+          "calcule": 85.6,
+          "erreur_abs": 5.6,
+          "erreur_signe": -5.6
+        },
+        "biceps": {
+          "attendu": 28.6,
+          "calcule": 27.7,
+          "erreur_abs": 0.9,
+          "erreur_signe": -0.9
+        },
+        "thigh": {
+          "attendu": 52,
+          "calcule": 50.7,
+          "erreur_abs": 1.3,
+          "erreur_signe": -1.3
+        },
+        "wrist": {
+          "attendu": 17.8,
+          "calcule": 16.0,
+          "erreur_abs": 1.8,
+          "erreur_signe": -1.8
+        },
+        "ankle": {
+          "attendu": 23.7,
+          "calcule": 19.3,
+          "erreur_abs": 4.4,
+          "erreur_signe": -4.4
+        },
+        "shoulder": {
+          "attendu": 32,
+          "calcule": 33.8,
+          "erreur_abs": 1.8,
+          "erreur_signe": 1.8
+        },
+        "sleeve_length": {
+          "attendu": 59.9,
+          "calcule": 55.9,
+          "erreur_abs": 4.0,
+          "erreur_signe": -4.0
+        },
+        "inseam": {
+          "attendu": 69.2,
+          "calcule": 68.2,
+          "erreur_abs": 1.0,
+          "erreur_signe": -1.0
+        },
+        "back_length": {
+          "attendu": 53.6,
+          "calcule": 53.4,
+          "erreur_abs": 0.2,
+          "erreur_signe": -0.2
+        }
+      }
+    },
+    {
+      "id": 10,
+      "gender": "female",
+      "height_cm": 159,
+      "weight_kg": 49.0,
+      "source": "vision_sam",
+      "duree_s": 13.1,
+      "notes": [],
+      "features": {
+        "stature_m": 159.0,
+        "weight_kg": 49.0,
+        "biacromialbreadth": 36.1,
+        "bideltoidbreadth": 44.0,
+        "hipbreadth": 32.9,
+        "sittingheight": 81.2,
+        "crotchheight": 78.9,
+        "chestbreadth": 27.7,
+        "waistbreadth": 26.2,
+        "chestdepth": 21.3,
+        "waistdepth": 21.1,
+        "buttockdepth": 24.0,
+        "chestbreadth_body": 27.1,
+        "chestdepth_body": 20.7,
+        "waistbreadth_body": 25.6,
+        "waistdepth_body": 20.5,
+        "hipbreadth_body": 32.3,
+        "buttockdepth_body": 23.4
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 32,
+          "calcule": 30.5,
+          "erreur_abs": 1.5,
+          "erreur_signe": -1.5
+        },
+        "chest": {
+          "attendu": 77,
+          "calcule": 75.4,
+          "erreur_abs": 1.6,
+          "erreur_signe": -1.6
+        },
+        "waist": {
+          "attendu": 77,
+          "calcule": 72.6,
+          "erreur_abs": 4.4,
+          "erreur_signe": -4.4
+        },
+        "hips": {
+          "attendu": 89,
+          "calcule": 88.1,
+          "erreur_abs": 0.9,
+          "erreur_signe": -0.9
+        },
+        "biceps": {
+          "attendu": 27.3,
+          "calcule": 25.2,
+          "erreur_abs": 2.1,
+          "erreur_signe": -2.1
+        },
+        "thigh": {
+          "attendu": 54.9,
+          "calcule": 52.6,
+          "erreur_abs": 2.3,
+          "erreur_signe": -2.3
+        },
+        "wrist": {
+          "attendu": 15,
+          "calcule": 14.1,
+          "erreur_abs": 0.9,
+          "erreur_signe": -0.9
+        },
+        "ankle": {
+          "attendu": 21,
+          "calcule": 18.7,
+          "erreur_abs": 2.3,
+          "erreur_signe": -2.3
+        },
+        "shoulder": {
+          "attendu": 28,
+          "calcule": 29.8,
+          "erreur_abs": 1.8,
+          "erreur_signe": 1.8
+        },
+        "sleeve_length": {
+          "attendu": 54,
+          "calcule": 48.9,
+          "erreur_abs": 5.1,
+          "erreur_signe": -5.1
+        },
+        "inseam": {
+          "attendu": 67,
+          "calcule": 68.7,
+          "erreur_abs": 1.7,
+          "erreur_signe": 1.7
+        },
+        "back_length": {
+          "attendu": 44,
+          "calcule": 44.0,
+          "erreur_abs": 0.0,
+          "erreur_signe": 0.0
+        }
+      }
+    },
+    {
+      "id": 11,
+      "gender": "female",
+      "height_cm": 165,
+      "weight_kg": 66.0,
+      "source": "vision_sam",
+      "duree_s": 13.4,
+      "notes": [],
+      "features": {
+        "stature_m": 165.0,
+        "weight_kg": 66.0,
+        "biacromialbreadth": 36.8,
+        "bideltoidbreadth": 44.9,
+        "hipbreadth": 39.2,
+        "sittingheight": 83.6,
+        "crotchheight": 80.7,
+        "chestbreadth": 28.3,
+        "waistbreadth": 27.2,
+        "chestdepth": 26.4,
+        "waistdepth": 23.2,
+        "buttockdepth": 28.9,
+        "chestbreadth_body": 29.2,
+        "chestdepth_body": 27.3,
+        "waistbreadth_body": 28.1,
+        "waistdepth_body": 24.1,
+        "hipbreadth_body": 40.1,
+        "buttockdepth_body": 29.8
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 33.5,
+          "calcule": 32.2,
+          "erreur_abs": 1.3,
+          "erreur_signe": -1.3
+        },
+        "chest": {
+          "attendu": 89,
+          "calcule": 88.8,
+          "erreur_abs": 0.2,
+          "erreur_signe": -0.2
+        },
+        "waist": {
+          "attendu": 75.8,
+          "calcule": 82.1,
+          "erreur_abs": 6.3,
+          "erreur_signe": 6.3
+        },
+        "hips": {
+          "attendu": 107,
+          "calcule": 110.4,
+          "erreur_abs": 3.4,
+          "erreur_signe": 3.4
+        },
+        "biceps": {
+          "attendu": 28,
+          "calcule": 28.8,
+          "erreur_abs": 0.8,
+          "erreur_signe": 0.8
+        },
+        "thigh": {
+          "attendu": 63,
+          "calcule": 62.9,
+          "erreur_abs": 0.1,
+          "erreur_signe": -0.1
+        },
+        "wrist": {
+          "attendu": 16.5,
+          "calcule": 15.0,
+          "erreur_abs": 1.5,
+          "erreur_signe": -1.5
+        },
+        "ankle": {
+          "attendu": 25.2,
+          "calcule": 20.4,
+          "erreur_abs": 4.8,
+          "erreur_signe": -4.8
+        },
+        "shoulder": {
+          "attendu": 32.5,
+          "calcule": 30.4,
+          "erreur_abs": 2.1,
+          "erreur_signe": -2.1
+        },
+        "sleeve_length": {
+          "attendu": 59.3,
+          "calcule": 51.6,
+          "erreur_abs": 7.7,
+          "erreur_signe": -7.7
+        },
+        "inseam": {
+          "attendu": 75,
+          "calcule": 69.6,
+          "erreur_abs": 5.4,
+          "erreur_signe": -5.4
+        },
+        "back_length": {
+          "attendu": 45,
+          "calcule": 45.3,
+          "erreur_abs": 0.3,
+          "erreur_signe": 0.3
+        }
+      }
+    },
+    {
+      "id": 12,
+      "gender": "female",
+      "height_cm": 175,
+      "weight_kg": 78.0,
+      "source": "vision_sam",
+      "duree_s": 12.7,
+      "notes": [],
+      "features": {
+        "stature_m": 175.0,
+        "weight_kg": 78.0,
+        "biacromialbreadth": 39.1,
+        "bideltoidbreadth": 47.7,
+        "hipbreadth": 38.8,
+        "sittingheight": 85.5,
+        "crotchheight": 87.2,
+        "chestbreadth": 30.3,
+        "waistbreadth": 29.1,
+        "chestdepth": 26.9,
+        "waistdepth": 26.1,
+        "buttockdepth": 27.3,
+        "chestbreadth_body": 31.5,
+        "chestdepth_body": 28.1,
+        "waistbreadth_body": 30.3,
+        "waistdepth_body": 27.3,
+        "hipbreadth_body": 40.0,
+        "buttockdepth_body": 28.5
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 37.7,
+          "calcule": 34.1,
+          "erreur_abs": 3.6,
+          "erreur_signe": -3.6
+        },
+        "chest": {
+          "attendu": 93,
+          "calcule": 93.7,
+          "erreur_abs": 0.7,
+          "erreur_signe": 0.7
+        },
+        "waist": {
+          "attendu": 90,
+          "calcule": 90.5,
+          "erreur_abs": 0.5,
+          "erreur_signe": 0.5
+        },
+        "hips": {
+          "attendu": 109,
+          "calcule": 108.4,
+          "erreur_abs": 0.6,
+          "erreur_signe": -0.6
+        },
+        "biceps": {
+          "attendu": 32.5,
+          "calcule": 31.1,
+          "erreur_abs": 1.4,
+          "erreur_signe": -1.4
+        },
+        "thigh": {
+          "attendu": 65,
+          "calcule": 64.8,
+          "erreur_abs": 0.2,
+          "erreur_signe": -0.2
+        },
+        "wrist": {
+          "attendu": 19,
+          "calcule": 16.0,
+          "erreur_abs": 3.0,
+          "erreur_signe": -3.0
+        },
+        "ankle": {
+          "attendu": 26,
+          "calcule": 21.5,
+          "erreur_abs": 4.5,
+          "erreur_signe": -4.5
+        },
+        "shoulder": {
+          "attendu": 33,
+          "calcule": 32.3,
+          "erreur_abs": 0.7,
+          "erreur_signe": -0.7
+        },
+        "sleeve_length": {
+          "attendu": 57,
+          "calcule": 51.3,
+          "erreur_abs": 5.7,
+          "erreur_signe": -5.7
+        },
+        "inseam": {
+          "attendu": 73.3,
+          "calcule": 77.4,
+          "erreur_abs": 4.1,
+          "erreur_signe": 4.1
+        },
+        "back_length": {
+          "attendu": 50,
+          "calcule": 46.3,
+          "erreur_abs": 3.7,
+          "erreur_signe": -3.7
+        }
+      }
+    },
+    {
+      "id": 13,
+      "gender": "female",
+      "height_cm": 160,
+      "weight_kg": 54.0,
+      "source": "vision_sam",
+      "duree_s": 13.2,
+      "notes": [],
+      "features": {
+        "stature_m": 160.0,
+        "weight_kg": 54.0,
+        "biacromialbreadth": 36.3,
+        "bideltoidbreadth": 44.3,
+        "hipbreadth": 39.6,
+        "sittingheight": 79.8,
+        "crotchheight": 79.8,
+        "chestbreadth": 28.7,
+        "waistbreadth": 26.8,
+        "chestdepth": 30.4,
+        "waistdepth": 27.2,
+        "buttockdepth": 25.9,
+        "chestbreadth_body": 27.4,
+        "chestdepth_body": 29.1,
+        "waistbreadth_body": 25.5,
+        "waistdepth_body": 25.9,
+        "hipbreadth_body": 38.3,
+        "buttockdepth_body": 24.6
+      },
+      "mesures": {
+        "neck": {
+          "attendu": 31,
+          "calcule": 31.0,
+          "erreur_abs": 0.0,
+          "erreur_signe": 0.0
+        },
+        "chest": {
+          "attendu": 84,
+          "calcule": 88.8,
+          "erreur_abs": 4.8,
+          "erreur_signe": 4.8
+        },
+        "waist": {
+          "attendu": 65,
+          "calcule": 80.7,
+          "erreur_abs": 15.7,
+          "erreur_signe": 15.7
+        },
+        "hips": {
+          "attendu": 99,
+          "calcule": 100.0,
+          "erreur_abs": 1.0,
+          "erreur_signe": 1.0
+        },
+        "biceps": {
+          "attendu": 28,
+          "calcule": 25.4,
+          "erreur_abs": 2.6,
+          "erreur_signe": -2.6
+        },
+        "thigh": {
+          "attendu": 60,
+          "calcule": 54.8,
+          "erreur_abs": 5.2,
+          "erreur_signe": -5.2
+        },
+        "wrist": {
+          "attendu": 15.4,
+          "calcule": 14.0,
+          "erreur_abs": 1.4,
+          "erreur_signe": -1.4
+        },
+        "ankle": {
+          "attendu": 22,
+          "calcule": 17.6,
+          "erreur_abs": 4.4,
+          "erreur_signe": -4.4
+        },
+        "shoulder": {
+          "attendu": 33,
+          "calcule": 30.0,
+          "erreur_abs": 3.0,
+          "erreur_signe": -3.0
+        },
+        "sleeve_length": {
+          "attendu": 50,
+          "calcule": 52.9,
+          "erreur_abs": 2.9,
+          "erreur_signe": 2.9
+        },
+        "inseam": {
+          "attendu": 66,
+          "calcule": 70.6,
+          "erreur_abs": 4.6,
+          "erreur_signe": 4.6
+        },
+        "back_length": {
+          "attendu": 44,
+          "calcule": 43.3,
+          "erreur_abs": 0.7,
+          "erreur_signe": -0.7
+        }
+      }
+    }
+  ],
+  "mae_par_mesure": {
+    "neck": 1.83,
+    "chest": 4.43,
+    "waist": 6.55,
+    "hips": 4.45,
+    "biceps": 2.56,
+    "thigh": 1.63,
+    "wrist": 1.57,
+    "ankle": 3.98,
+    "shoulder": 2.27,
+    "sleeve_length": 4.5,
+    "inseam": 3.14,
+    "back_length": 0.88
+  },
+  "bias_par_mesure": {
+    "neck": -1.83,
+    "chest": 1.63,
+    "waist": 3.43,
+    "hips": 2.97,
+    "biceps": -2.29,
+    "thigh": -0.77,
+    "wrist": -1.57,
+    "ankle": -3.98,
+    "shoulder": 1.15,
+    "sleeve_length": -2.95,
+    "inseam": -0.39,
+    "back_length": -0.52
+  },
+  "mae_moyenne": 3.15,
+  "echecs": [
+    2
+  ],
+  "n_sujets_reussis": 12,
+  "n_sujets_total": 13
+}

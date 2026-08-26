@@ -56,6 +56,7 @@ class Avatar(Base, IDMixin, TimestampMixin):
     # embarqué dans l'app (mobile/assets/avatar-base-{gender}.glb).
     morph_weights: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     skin_tone_hex: Mapped[str] = mapped_column(String(9), default="#C68863")
+    name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[JobStatus] = mapped_column(String(16), default=JobStatus.processing)
 
 

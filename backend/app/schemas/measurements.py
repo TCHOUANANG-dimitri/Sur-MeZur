@@ -68,4 +68,5 @@ class AvatarOut(ORMModel):
     gltf_url: str | None
     morph_weights: dict | None
     skin_tone_hex: str
+    name: str | None = None
     status: JobStatus

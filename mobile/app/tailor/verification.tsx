@@ -230,8 +230,8 @@ const makeStyles = (colors: ThemeColors) =>
     backgroundColor: colors.surface,
   },
   chipActive: {
-    backgroundColor: colors.indigo,
-    borderColor: colors.indigo,
+    backgroundColor: colors.violetPrimary,
+    borderColor: colors.violetPrimary,
   },
   chipText: { fontSize: 12, color: colors.textSecondary, fontFamily: fonts.body },
   chipTextActive: { color: "#fff", fontFamily: fonts.bodySemiBold },
