@@ -95,9 +95,15 @@ export default function ModelDetail() {
 
   if (!models) return <Spinner />;
 
+  const current = models[index];
+
   return (
     <Screen scroll={false} edges={["top", "left", "right"]}>
-      <Header title={models[index]?.name ?? ""} showBack />
+      <Header title={current?.name ?? ""} showBack />
+
+      {/* Zone image — remplit l'espace disponible, jamais rognee (contain) ;
+          tap pour zoomer en plein ecran. Le nom/la description/le bouton
+          d'essayage vivent dans la barre du bas, TOUJOURS visible. */}
       <FlatList
         data={models}
         keyExtractor={(m) => m.id}
@@ -109,38 +115,47 @@ export default function ModelDetail() {
         onMomentumScrollEnd={onMomentumScrollEnd}
         style={{ flex: 1 }}
         renderItem={({ item }) => (
-          <ScrollView style={{ width }} showsVerticalScrollIndicator={false}>
-            <View>
-              <TouchableOpacity activeOpacity={0.92} disabled={!item.photo_url} onPress={() => setZoomTarget(item)}>
-                {item.photo_url ? (
-                  <Image source={{ uri: fileUrl(item.photo_url) }} style={styles.hero} resizeMode="cover" />
-                ) : (
-                  <LinearGradient colors={[item.thumbnail_color, colors.indigoText]} style={styles.hero} />
-                )}
-              </TouchableOpacity>
-              <View style={styles.likeOverlay}>
-                <LikeButton liked={item.liked_by_me} count={item.like_count} onPress={() => toggleLike(item)} size={20} />
-              </View>
+          <View style={{ width, flex: 1 }}>
+            <TouchableOpacity
+              activeOpacity={0.92}
+              disabled={!item.photo_url}
+              onPress={() => setZoomTarget(item)}
+              style={styles.imageWrap}
+            >
+              {item.photo_url ? (
+                <Image source={{ uri: fileUrl(item.photo_url) }} style={styles.heroImage} resizeMode="contain" />
+              ) : (
+                <LinearGradient colors={[item.thumbnail_color, colors.indigoText]} style={StyleSheet.absoluteFillObject} />
+              )}
+            </TouchableOpacity>
+            <View style={styles.likeOverlay}>
+              <LikeButton liked={item.liked_by_me} count={item.like_count} onPress={() => toggleLike(item)} size={20} />
             </View>
-            <View style={{ padding: 18 }}>
-              <StatusChip status="neutral" label={item.category.name} />
-              <Text style={styles.title}>{item.name}</Text>
-              <Text style={styles.description}>{item.description}</Text>
-              <View style={styles.tags}>
-                {item.style_tags.map((tag) => (
-                  <Text key={tag} style={styles.tag}>
-                    {tag}
-                  </Text>
-                ))}
-              </View>
-
-              <Button fullWidth onPress={() => goTryOn(item)}>
-                Essayer sur mon avatar
-              </Button>
-            </View>
-          </ScrollView>
+          </View>
         )}
       />
+
+      {/* Barre du bas — fixe, hors de tout scroll : ne defile jamais. */}
+      {current && (
+        <View style={styles.bottomBar}>
+          <StatusChip status="neutral" label={current.category.name} />
+          <Text style={styles.title}>{current.name}</Text>
+          <ScrollView style={styles.descScroll} showsVerticalScrollIndicator={false}>
+            <Text style={styles.description}>{current.description}</Text>
+          </ScrollView>
+          <View style={styles.tags}>
+            {current.style_tags.map((tag) => (
+              <Text key={tag} style={styles.tag}>
+                {tag}
+              </Text>
+            ))}
+          </View>
+          <Button fullWidth onPress={() => goTryOn(current)}>
+            Essayer sur mon avatar
+          </Button>
+        </View>
+      )}
+
       <ImageView
         images={zoomTarget?.photo_url ? [{ uri: fileUrl(zoomTarget.photo_url) }] : []}
         imageIndex={0}
@@ -153,11 +168,19 @@ export default function ModelDetail() {
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-  hero: { height: 260 },
+  imageWrap: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.backgroundAlt, overflow: "hidden" },
+  heroImage: { width: "100%", height: "100%" },
   likeOverlay: { position: "absolute", top: 12, right: 12 },
-  title: { fontFamily: fonts.display, fontSize: 20, color: colors.indigoText, marginTop: 10, marginBottom: 6 },
-  description: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body, marginBottom: 8 },
-  tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 20 },
+  bottomBar: {
+    padding: 18,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  title: { fontFamily: fonts.display, fontSize: 20, color: colors.indigoText, marginTop: 8, marginBottom: 4 },
+  descScroll: { maxHeight: 60, marginBottom: 8 },
+  description: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.body },
+  tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 14 },
   tag: {
     fontSize: 11,
     backgroundColor: colors.backgroundAlt,

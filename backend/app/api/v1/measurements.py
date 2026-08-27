@@ -26,6 +26,7 @@ from app.schemas.measurements import (
     MeasurementSessionOut,
 )
 from app.services import vision
+from app.services.measurement_corrections import corriger_mesures, inseam_corrige
 from app.services.notify import notify
 from app.services.storage import delete_upload, save_upload
 
@@ -106,7 +107,7 @@ _RETRY_GUIDANCE = (
 )
 
 
-def _measure(session_row: MeasurementSession) -> tuple[dict, dict, MeasurementSource]:
+def _measure(session_row: MeasurementSession) -> tuple[dict, dict, dict | None, MeasurementSource]:
     """
     Mesure réelle depuis les photos, ou échec explicite.
 
@@ -159,7 +160,41 @@ def _measure(session_row: MeasurementSession) -> tuple[dict, dict, MeasurementSo
         result.source,
         f" — {'; '.join(result.notes)}" if result.notes else "",
     )
-    return result.data, result.confidence, getattr(result, 'features', None), MeasurementSource.ai
+
+    data = _corriger(result, front, session_row)
+    return data, result.confidence, result.features, MeasurementSource.ai
+
+
+def _corriger(result, front: str, session_row: MeasurementSession) -> dict:
+    """
+    Applique les corrections statistiques validees (voir
+    app.services.measurement_corrections) par-dessus la sortie brute du
+    pipeline V3/V4. Toute erreur ici degrade silencieusement vers la valeur
+    brute plutot que de faire echouer une mesure autrement reussie.
+    """
+    try:
+        sortie = corriger_mesures(result.data, result.features, session_row.gender)
+        data = dict(sortie["corrige"])
+    except Exception:
+        logger.exception("Correction statistique en erreur — session %s, valeurs brutes conservees", session_row.id)
+        return dict(result.data)
+
+    if "inseam" in data:
+        try:
+            from app.services.vision import pose as pose_mod
+            from app.services.vision.pipeline import _downscaled
+            from app.services.vision.scale import estimate_scale
+
+            pose = pose_mod.extract_pose(_downscaled(front))
+            cm_per_pixel = estimate_scale(pose, session_row.height_cm) if pose else None
+            if cm_per_pixel:
+                corrige = inseam_corrige(pose, cm_per_pixel)
+                if corrige is not None:
+                    data["inseam"] = round(corrige, 1)
+        except Exception:
+            logger.exception("Correction geometrique d'inseam en erreur — session %s, valeur statistique conservee", session_row.id)
+
+    return data
 
 
 def _run_measurement_job(session_id: str) -> None:
