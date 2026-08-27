@@ -49,7 +49,20 @@ def run() -> None:
         seed_commission_tiers(db)
 
         # --- Compte administrateur -----------------------------------------
-        get_or_create_user(db, ADMIN_PHONE, UserRole.admin, "Admin Sur-MeZur", password=ADMIN_PASSWORD)
+        # `get_or_create_user` ne touche jamais un compte deja existant (meme
+        # role, meme mot de passe) : si quelqu'un s'est deja inscrit avec ce
+        # numero comme client/tailleur avant que ce script tourne, l'admin
+        # n'etait jamais reellement cree -- sans la moindre erreur (vecu le
+        # 26/08/2026 en production : connexion "reussie" mais role=client).
+        # On corrige donc explicitement l'ecart de role ici, au lieu de le
+        # laisser passer silencieusement.
+        admin = get_or_create_user(db, ADMIN_PHONE, UserRole.admin, "Admin Sur-MeZur", password=ADMIN_PASSWORD)
+        if admin.role != UserRole.admin:
+            print(
+                f"ATTENTION : {ADMIN_PHONE} existait deja avec le role "
+                f"'{admin.role.value}' (compte cree avant ce seed) -- promu en admin."
+            )
+            admin.role = UserRole.admin
         db.commit()
 
         # --- Catalogue (sans propriétaire) ------------------------------------

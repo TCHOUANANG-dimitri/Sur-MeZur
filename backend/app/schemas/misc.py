@@ -57,6 +57,7 @@ class NotificationOut(ORMModel):
 
 class VerificationDecideIn(BaseModel):
     status: VerificationStatus
+    reason: str | None = None
 
 
 class DisputeResolveIn(BaseModel):

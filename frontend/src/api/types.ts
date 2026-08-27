@@ -50,18 +50,23 @@ export interface ClientProfile {
 export interface TailorProfile {
   id: string;
   user_id: string;
+  user_email?: string | null;
   tailor_type: "individual" | "atelier";
   shop_name: string;
+  display_name?: string;
+  business_name?: string;
   bio: string | null;
   lat: number | null;
   lng: number | null;
   city: string | null;
   quartier: string | null;
+  location_text?: string | null;
   verification_status: VerificationStatus;
   rating_avg: number;
   completed_orders_count: number;
   avg_response_minutes: number;
   atelier_photo_url: string | null;
+  photo_url?: string | null;
   distance_km?: number | null;
 }
 

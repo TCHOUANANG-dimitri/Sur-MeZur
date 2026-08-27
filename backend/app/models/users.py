@@ -64,7 +64,7 @@ class VerificationDocument(Base, IDMixin, TimestampMixin):
     __tablename__ = "verification_documents"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
-    type: Mapped[str] = mapped_column(String(32))  # id_card | portfolio | atelier_photo
+    type: Mapped[str] = mapped_column(String(32))  # id_card | self_photo | atelier_photo
     file_url: Mapped[str] = mapped_column(String(500))
     status: Mapped[VerificationStatus] = mapped_column(
         String(16), default=VerificationStatus.pending

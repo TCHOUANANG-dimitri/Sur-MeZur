@@ -225,7 +225,10 @@ def decide_verification(
     ):
         doc.status = payload.status
         doc.reviewed_by = reviewer.id
-    notify(db, tailor.user_id, "verification_decided", {"status": payload.status.value})
+    notify(db, tailor.user_id, "verification_decided", {
+        "status": payload.status.value,
+        "reason": payload.reason,
+    })
     db.commit()
     db.refresh(tailor)
     return tailor

@@ -53,7 +53,10 @@ export default function Verification() {
         () => {},
         { timeout: 500 }
       );
-      if (portfolio) form.append("portfolio", portfolio);
+      // Le backend attend le champ "self_photo" (voir backend/app/api/v1/tailors.py) —
+      // seul le libelle visible reste "Portfolio", envoyer sous ce nom faisait
+      // echouer la soumission (422, champ requis manquant).
+      if (portfolio) form.append("self_photo", portfolio);
       if (idCard) form.append("id_card", idCard);
       if (atelierPhoto) form.append("atelier_photo", atelierPhoto);
       const result = await TailorsApi.submitVerification(form);

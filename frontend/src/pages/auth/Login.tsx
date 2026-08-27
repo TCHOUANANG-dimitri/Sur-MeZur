@@ -31,7 +31,8 @@ export default function Login() {
   };
 
   return (
-    <div className="app-shell" style={{ padding: 24, justifyContent: "center", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+    <div className="app-shell" style={{ padding: 24, display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", overflowY: "auto" }}>
       <h2 style={{ fontFamily: "'Playfair Display', serif", color: colors.indigoText }}>{t("auth.login")}</h2>
       {error && <ErrorBanner message={error} />}
       <Field label={t("auth.phone")}>
@@ -48,6 +49,7 @@ export default function Login() {
           {t("auth.register")}
         </a>
       </p>
+      </div>
     </div>
   );
 }

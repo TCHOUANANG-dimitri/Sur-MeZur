@@ -7,6 +7,7 @@ import { useI18n } from "../../i18n/I18nProvider";
 import { Button } from "../../components/Button";
 import { ErrorBanner, Field, inputStyle } from "../../components/Misc";
 import { colors } from "../../theme/tokens";
+import { CITIES_DATA, CITY_NAMES } from "../../data/citiesData";
 
 export default function Register() {
   const [params] = useSearchParams();
@@ -19,6 +20,8 @@ export default function Register() {
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [consent, setConsent] = useState(true);
+  const [city, setCity] = useState("");
+  const [quartier, setQuartier] = useState("");
   const [step, setStep] = useState<"form" | "otp">("form");
   const [devCode, setDevCode] = useState("");
   const [code, setCode] = useState("");
@@ -48,7 +51,7 @@ export default function Register() {
     setBusy(true);
     try {
       await AuthApi.otpVerify(phone, code);
-      const user = await register({ role, phone, full_name: fullName, password, language: lang, photo_consent: consent });
+      const user = await register({ role, phone, full_name: fullName, password, language: lang, photo_consent: consent, city: city || undefined, quartier: quartier || undefined });
       navigate(role === "tailor" ? "/tailor/verification" : "/client/home", { replace: true });
       void user;
     } catch (e) {
@@ -76,6 +79,36 @@ export default function Register() {
           <Field label={t("auth.password")}>
             <input type="password" style={inputStyle} value={password} placeholder={t("auth.password.placeholder")} maxLength={6} onChange={(e) => setPassword(e.target.value)} />
           </Field>
+          {role === "tailor" && (
+            <>
+              <Field label="Ville">
+                <select
+                  style={{ ...inputStyle, appearance: "auto" }}
+                  value={city}
+                  onChange={(e) => { setCity(e.target.value); setQuartier(""); }}
+                >
+                  <option value="">— Sélectionner —</option>
+                  {CITY_NAMES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </Field>
+              {city && CITIES_DATA[city] && (
+                <Field label="Quartier">
+                  <select
+                    style={{ ...inputStyle, appearance: "auto" }}
+                    value={quartier}
+                    onChange={(e) => setQuartier(e.target.value)}
+                  >
+                    <option value="">— Sélectionner —</option>
+                    {CITIES_DATA[city].map((q) => (
+                      <option key={q} value={q}>{q}</option>
+                    ))}
+                  </select>
+                </Field>
+              )}
+            </>
+          )}
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: colors.textSecondary, marginBottom: 18 }}>
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             {t("auth.consent")}

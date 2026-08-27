@@ -186,11 +186,14 @@ export const NotificationsApi = {
 
 // --- Admin ---------------------------------------------------------------
 export const AdminApi = {
-  pendingVerifications: () => api.get<TailorProfile[]>("/admin/verifications"),
+  pendingVerifications: (status?: string) => {
+    const qs = status ? `?status_filter=${status}` : "";
+    return api.get<TailorProfile[]>(`/admin/verifications${qs}`);
+  },
   getVerificationDocuments: (tailorId: string) =>
     api.get<VerificationDocument[]>(`/admin/verifications/${tailorId}/documents`),
-  decideVerification: (tailorId: string, status: "approved" | "rejected") =>
-    api.post<TailorProfile>(`/admin/verifications/${tailorId}/decide`, { status }),
+  decideVerification: (tailorId: string, status: "approved" | "rejected", reason?: string) =>
+    api.post<TailorProfile>(`/admin/verifications/${tailorId}/decide`, { status, reason }),
   disputes: () => api.get<Order[]>("/admin/disputes"),
   resolveDispute: (orderId: string, resolution: string, note?: string) =>
     api.post<Order>(`/admin/disputes/${orderId}/resolve`, { resolution, note }),
@@ -213,10 +216,15 @@ export const AdminApi = {
     if (params.category_id) qs.set("category_id", params.category_id);
     return api.get<GarmentModel[]>(`/models?${qs.toString()}`);
   },
-  createModel: (body: Partial<GarmentModel>) =>
+  createModel: (body: { name: string; description?: string; category_id: string; base_price?: number; style_tags?: string[]; thumbnail_color?: string }) =>
     api.post<GarmentModel>("/admin/models", body),
-  updateModel: (modelId: string, body: Partial<GarmentModel>) =>
+  updateModel: (modelId: string, body: { name?: string; description?: string; category_id?: string; base_price?: number; style_tags?: string[]; thumbnail_color?: string }) =>
     api.patch<GarmentModel>(`/admin/models/${modelId}`, body),
+  uploadModelPhotos: (modelId: string, files: File[]) => {
+    const fd = new FormData();
+    files.forEach((f) => fd.append("files", f));
+    return api.post<GarmentModel>(`/admin/models/${modelId}/photos`, fd);
+  },
   deleteModel: (modelId: string) =>
     api.delete(`/admin/models/${modelId}`),
 };

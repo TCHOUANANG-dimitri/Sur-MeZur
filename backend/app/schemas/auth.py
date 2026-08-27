@@ -29,6 +29,8 @@ class RegisterIn(BaseModel):
     language: Language = Language.fr
     email: str | None = None
     photo_consent: bool = False
+    city: str | None = None
+    quartier: str | None = None
 
     @field_validator("password")
     @classmethod

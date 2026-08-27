@@ -64,7 +64,13 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)):
     if payload.role == UserRole.client:
         db.add(ClientProfile(user_id=user.id))
     elif payload.role == UserRole.tailor:
-        db.add(TailorProfile(user_id=user.id, tailor_type="individual", shop_name=payload.full_name))
+        db.add(TailorProfile(
+            user_id=user.id,
+            tailor_type="individual",
+            shop_name=payload.full_name,
+            city=payload.city,
+            quartier=payload.quartier,
+        ))
 
     db.commit()
     db.refresh(user)
