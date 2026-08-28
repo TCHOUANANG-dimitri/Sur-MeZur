@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { avatarMeshUrl, userMessage } from "../../src/api/client";
 import { AvatarsApi, MeasurementsApi } from "../../src/api/endpoints";
 import type { Avatar as AvatarT, Measurement } from "../../src/api/types";
@@ -31,6 +31,9 @@ export default function AvatarPage() {
   const [loading, setLoading] = useState(false);
   const [genError, setGenError] = useState("");
   const [meshRendered, setMeshRendered] = useState(false);
+  const [name, setName] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [savingName, setSavingName] = useState(false);
   const mountedRef = useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
 
@@ -84,6 +87,17 @@ export default function AvatarPage() {
         setGenError(t("avatar.err.generationFailed"));
       }
       setAvatar(av);
+      setEditingName(false);
+      if (av.name) {
+        setName(av.name);
+      } else {
+        try {
+          const list = await AvatarsApi.list();
+          setName(list.length > 1 ? `Avatar ${list.length}` : "Mon avatar");
+        } catch {
+          setName("Mon avatar");
+        }
+      }
     } catch (e) {
       if (mountedRef.current) setGenError(userMessage(e));
     } finally {
@@ -111,6 +125,19 @@ export default function AvatarPage() {
 
   const isReady = avatar?.status === "ready" && meshRendered;
   const isGenerating = loading || (avatar !== null && avatar?.status !== "ready" && avatar?.status !== "failed");
+
+  const saveName = async () => {
+    if (!avatar || !name?.trim()) return;
+    setSavingName(true);
+    try {
+      const updated = await AvatarsApi.patch(avatar.id, { name: name.trim() });
+      setAvatar((prev) => (prev ? { ...prev, name: updated.name } : prev));
+      setName(updated.name);
+      setEditingName(false);
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   // État de chargement plein écran (pas de mensuration ou génération en cours)
   if (measurement === undefined || (measurement && !avatar && loading)) {
@@ -188,6 +215,29 @@ export default function AvatarPage() {
       {/* Boutons ancrés en bas */}
       {isReady && (
         <View style={styles.bottomActions}>
+          {/* Nom de l'avatar + rename */}
+          {editingName ? (
+            <View style={styles.nameEditRow}>
+              <TextInput
+                value={name || ""}
+                onChangeText={setName}
+                placeholder="Nom de l'avatar"
+                style={styles.nameInput}
+                autoFocus
+                maxLength={30}
+                returnKeyType="done"
+                onSubmitEditing={saveName}
+              />
+              <TouchableOpacity onPress={saveName} disabled={savingName || !name?.trim()} style={styles.nameSaveBtn}>
+                <Text style={styles.nameSaveText}>{savingName ? "…" : "OK"}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setEditingName(true)} style={styles.nameRow}>
+              <Text style={styles.nameLabel}>{name || "Mon avatar"}</Text>
+              <Text style={styles.nameEditHint}>renommer</Text>
+            </TouchableOpacity>
+          )}
           <Button fullWidth onPress={() => goTryOn(false)}>
             {t("avatar.confirm")}
           </Button>
@@ -312,5 +362,49 @@ const makeStyles = (colors: ThemeColors) =>
       fontFamily: fonts.body,
       color: "rgba(255,255,255,0.7)",
       textDecorationLine: "underline",
+    },
+    nameRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 6,
+    },
+    nameLabel: {
+      fontSize: 14,
+      fontFamily: fonts.bodyBold,
+      color: "#fff",
+    },
+    nameEditHint: {
+      fontSize: 11,
+      fontFamily: fonts.body,
+      color: "rgba(255,255,255,0.6)",
+      textDecorationLine: "underline",
+    },
+    nameEditRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    nameInput: {
+      flex: 1,
+      backgroundColor: "rgba(255,255,255,0.15)",
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      color: "#fff",
+      fontSize: 13,
+      fontFamily: fonts.body,
+    },
+    nameSaveBtn: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+      backgroundColor: colors.violetPrimary,
+    },
+    nameSaveText: {
+      fontSize: 12,
+      fontFamily: fonts.bodyBold,
+      color: "#fff",
     },
   });

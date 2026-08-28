@@ -52,8 +52,12 @@ export interface ClientProfile {
 export interface TailorProfile {
   id: string;
   user_id: string;
+  user_email?: string | null;
   tailor_type: "individual" | "atelier";
   shop_name: string;
+  display_name?: string;
+  business_name?: string;
+  location_text?: string | null;
   bio: string | null;
   lat: number | null;
   lng: number | null;
@@ -64,6 +68,7 @@ export interface TailorProfile {
   completed_orders_count: number;
   avg_response_minutes: number;
   atelier_photo_url: string | null;
+  photo_url?: string | null;
   distance_km?: number | null;
 }
 
@@ -118,6 +123,7 @@ export interface Avatar {
     weights: Record<string, number>;
   } | null;
   skin_tone_hex: string;
+  name: string | null;
   status: JobStatus;
 }
 

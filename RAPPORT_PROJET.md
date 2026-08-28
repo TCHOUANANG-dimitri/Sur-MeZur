@@ -1,18 +1,23 @@
 # Sur-MeZur — Rapport de réalisation
 
-*Dernière mise à jour : 25 août 2026*
+*Dernière mise à jour : 28 août 2026*
 
 > Ce document décrit l'état réel du projet : ce qui fonctionne, avec quelle
 > précision, et ce qui reste à faire. Les chiffres qui y figurent sont tous
 > mesurés, jamais estimés — quand une valeur est incertaine, c'est écrit.
 
-> Cette mise à jour porte sur l'infrastructure, l'avatar 3D, le catalogue,
-> le système de géolocalisation des tailleurs (voir §2, §7, §8.13, §9) —
-> et surtout sur une nouvelle campagne de recherche sur la précision des
-> mensurations (§6bis), la première depuis la campagne du 8 août. Les
-> sections 3 à 6 restent la référence pour l'état **en production** (rien
-> de ce qui suit n'y a été déployé) ; §6bis documente ce qui a été trouvé
-> depuis et n'est pas encore livré.
+> Cette mise à jour couvre la suite de la campagne de précision du 25 août
+> (§6bis) : deux pistes supplémentaires testées et écartées (régression par
+> processus gaussien, modèle Anny + clad-body), et surtout **le passage en
+> production des corrections validées** — jusqu'ici cantonnées à un module
+> de recherche séparé, elles sont désormais réellement appliquées aux
+> mesures des clients (voir §6bis, "Déploiement en production"). Les
+> sections 3 à 6 restaient la référence pour l'état en production avant
+> cette date ; ce n'est plus le cas pour la partie précision, dont §6bis
+> est maintenant la source à jour. Couvre aussi plusieurs corrections de
+> cohérence trouvées en relisant le travail d'une collaboratrice (§8.15,
+> §8.16), un bug de contournement silencieux du compte admin (§8.17), et
+> un correctif d'affichage sur la fiche modèle mobile (§8.18).
 
 ---
 
@@ -24,7 +29,7 @@
 4. [Comment les mensurations sont calculées](#4-comment-les-mensurations-sont-calculées)
 5. [Ce que les tests sur 13 personnes ont appris](#5-ce-que-les-tests-sur-13-personnes-ont-appris)
 6. [Les limites, et pourquoi elles existent](#6-les-limites-et-pourquoi-elles-existent)
-   - [6bis. Nouvelle campagne de précision (25 août)](#6bis-nouvelle-campagne-de-précision-25-août-2026)
+   - [6bis. Nouvelle campagne de précision (25-27 août)](#6bis-nouvelle-campagne-de-précision-25-27-août-2026)
 7. [Ce qui reste à faire](#7-ce-qui-reste-à-faire)
 8. [Historique des corrections](#8-historique-des-corrections)
 9. [Journal des versions](#9-journal-des-versions)
@@ -59,7 +64,7 @@ sombre.
 | Application mobile (3 rôles) | ✅ fonctionnelle |
 | API et règles métier | ✅ fonctionnelle |
 | Comptes et sessions | ✅ fonctionnels |
-| **Mesure par photo** | ✅ **fonctionnelle — précision 4,2 cm** |
+| **Mesure par photo** | ✅ **fonctionnelle — 4,2 cm en base (§5), corrections statistiques actives en production depuis le 27 août (§6bis)** |
 | Capture guidée (silhouette + minuteur) | ✅ en place, **jamais testée sur le terrain** |
 | Hébergement | ✅ O2Switch |
 | Certificat HTTPS | ❌ absent — tests en HTTP (exception ciblée sur ce seul domaine côté Android, voir §7) |
@@ -362,14 +367,17 @@ algorithme ne voit à travers un vêtement.
 
 ---
 
-## 6bis. Nouvelle campagne de précision (25 août 2026)
+## 6bis. Nouvelle campagne de précision (25-27 août 2026)
 
-**Statut : recherche terminée, rien déployé en production.** Tout ce qui
-suit vit dans un module séparé (`ml/bench/pipeline_ameliore.py`) qui
-prend la sortie du pipeline de production et la corrige *après coup* —
-le pipeline de §3-6 tourne exactement comme avant. Journal de recherche
-complet : `claude_code.md`. Explication détaillée du module, mesure par
-mesure : `PIPELINE_AMELIORE.md`.
+**Statut : déployé en production depuis le 27 août.** Les corrections
+décrites plus bas ont d'abord vécu dans un module de recherche séparé
+(`ml/bench/pipeline_ameliore.py`) le temps d'être validées ; une fois la
+validation indépendante concluante, la même logique a été portée dans
+`backend/app/services/measurement_corrections.py` et câblée dans le vrai
+point d'entrée de mesure (`backend/app/api/v1/measurements.py::_measure`)
+— voir "Déploiement en production" plus bas. Journal de recherche complet :
+`claude_code.md`. Explication détaillée du module, mesure par mesure :
+`PIPELINE_AMELIORE.md`.
 
 ### D'où vient cette campagne
 
@@ -470,16 +478,111 @@ commerciaux — Bold Metrics, 3DLook) font face aux mêmes contraintes
 - **SMPL** (le modèle 3D paramétrique académique dominant) est écarté :
   licence non-commerciale bloquant la production, comme déjà noté pour
   l'avatar le 17 août.
-- **Piste complémentaire identifiée** : **Anny** (Naver Labs, licence
-  Apache 2.0, base anthropométrique MakeHuman — la même lignée que notre
-  avatar déjà en place, calibré sur les statistiques OMS plutôt qu'ANSUR)
-  + **clad-body** (extraction de mesures ISO 8559-1 open-source,
-  CPU uniquement, dépendances déjà présentes chez nous). Piste à évaluer,
-  pas encore testée.
-- **Piste bon marché immédiatement testable** : remplacer la régression
-  Ridge (linéaire) par une régression par processus gaussien sur les
-  cibles actuelles — la littérature rapporte des gains de 20-30 % sur des
-  problèmes comparables, aucune nouvelle donnée requise.
+
+### Piste testée et rejetée : régression par processus gaussien
+
+Idée : remplacer la régression linéaire de la couche de correction par un
+processus gaussien (GP), la littérature rapportant des gains de 20-30 %
+sur des problèmes comparables. Testé le 26 août sur les 17 sujets réels
+disponibles (mêmes features, mêmes plis de validation croisée que le
+linéaire, comparaison strictement appariée) :
+
+| Mesure | Brut | Linéaire (LOO) | GP (LOO) |
+|---|---|---|---|
+| neck | 1,69 | 1,36 | **1,13** |
+| thigh | 1,49 | **1,37** | 1,91 |
+| biceps | 2,70 | **2,06** | 2,88 |
+| ankle | 3,71 | **1,18** | 1,23 |
+| sleeve_length | 3,72 | **2,76** | 2,93 |
+| chest (h.) | 4,54 | **2,48** | 3,41 |
+| hips (h.) | 7,60 | **2,64** | 3,59 |
+| waist (h.) | 5,49 | 3,49 | 3,49 |
+| **moyenne** | 3,87 | **2,17** | 2,57 |
+
+Le GP ne gagne que sur 1 mesure sur 8, et dégrade la moyenne de 18 %
+(2,17 → 2,57 cm) — l'inverse du gain annoncé. Cause probable : avec 9 à
+16 points d'entraînement par pli et 1 à 3 variables, un noyau RBF est trop
+flexible pour distinguer signal et bruit — les journaux d'exécution
+montrent d'ailleurs des avertissements de convergence répétés (les
+hyperparamètres butent contre leurs bornes sur presque tous les plis).
+C'est la même raison que celle qui avait fait préférer Ridge au gradient
+boosting lors de l'entraînement du modèle de base (§4.3) : à si petit
+échantillon, un modèle simple généralise mieux qu'un modèle flexible.
+**Rejetée** — pourrait redevenir pertinente à 30-50 sujets (priorité 2
+ci-dessous), pas avant. Script : `ml/bench/experiments/exp13_gp_vs_lineaire.py`.
+
+### Piste testée et rejetée : Anny (Naver Labs) + clad-body
+
+**Anny** (modèle 3D paramétrique, Apache 2.0, base anthropométrique
+MakeHuman calibrée sur les statistiques OMS plutôt qu'ANSUR) et
+**clad-body** (extraction de mesures ISO 8559-1 open-source à partir d'un
+maillage Anny) ont été installés et testés le 26 août dans un
+environnement isolé (pas le venv de production). Deux incompatibilités de
+version entre les deux paquets ont dû être corrigées localement pour les
+faire fonctionner ensemble (`clad-body` appelle une paramétrisation de
+pose absente de la dernière version d'Anny publiée sur PyPI).
+
+Test volontairement strict et honnête : Anny n'a reçu **que** ce que le
+client saisit déjà (taille, poids, sexe) — aucune photo, aucune largeur ni
+profondeur extraite — via une optimisation par descente de gradient sur
+les seuls paramètres "taille" et "poids" du modèle (2 inconnues pour 2
+contraintes, le reste de la morphologie restant à sa valeur moyenne, faute
+d'information). Comparé aux 17 mêmes sujets réels :
+
+| Mesure | Brut (prod) | Anny (taille+poids seuls) | Gagnant |
+|---|---|---|---|
+| neck | 1,69 | 1,70 | égalité |
+| chest | 4,94 | 6,95 | prod |
+| waist | 5,76 | **5,72** | Anny |
+| hips | 6,34 | **4,59** | Anny |
+| biceps | 2,70 | 3,45 | prod |
+| thigh | 1,49 | 5,58 | prod |
+| wrist | 1,45 | 2,42 | prod |
+| sleeve_length | 3,72 | **3,66** | Anny |
+| inseam | 3,49 | 6,09 | prod |
+| shoulder | 3,16 | 8,16 | prod |
+| back_length | 1,31 | 7,89 | prod |
+| **moyenne** | 3,28 | 5,11 | |
+
+Anny gagne sur 3 mesures sur 11 (waist, hips, sleeve_length — celles qui
+dépendent surtout de la corpulence globale, cohérent avec son calibrage
+OMS) mais perd nettement partout où la mesure dépend des proportions
+individuelles (carrure, longueur de dos, cuisse, entrejambe) qu'aucune
+photo ne lui a jamais montrées — 56 % d'erreur en plus en moyenne.
+**Rejetée dans cette forme** (taille+poids seuls) ; resterait à tester en
+le nourrissant des mêmes largeurs/profondeurs extraites par photo que le
+pipeline actuel, ce qui n'a pas été fait faute de temps. Script :
+`ml/bench/experiments/exp14_anny_clad_body.py`.
+
+### Déploiement en production (27 août 2026)
+
+Les 7 corrections encore valides après la validation indépendante
+(tableau plus haut, moins shoulder/wrist) sont désormais **réellement
+appliquées** aux mesures de chaque client, pas seulement documentées :
+
+- **`backend/app/services/measurement_corrections.py`** (nouveau) : portage
+  exact des coefficients et de la logique de `ml/bench/pipeline_ameliore.py`
+  — revérifié coefficient par coefficient contre l'original avant
+  intégration, résultats identiques sur un cas de test homme et femme.
+- **`backend/app/api/v1/measurements.py`** : `_measure()`, le point d'entrée
+  réel appelé par le worker de traitement des mesures, applique désormais
+  ces corrections (dont la correction géométrique d'entrejambe, qui
+  nécessite de rejouer l'extraction de pose) juste après le calcul brut du
+  pipeline V3/V4, avant l'enregistrement. Toute erreur de correction
+  dégrade silencieusement vers la valeur brute plutôt que de faire échouer
+  une mesure par ailleurs réussie.
+- **Vérifié bout en bout** sur un sujet réel (182 cm / 68 kg, mesures
+  connues) avant la mise en production : gains de 0,4 à 5,2 cm selon la
+  mesure (hanches 7,5 → 0,4 cm, biceps 5,0 → 0,4 cm, taille 11,6 → 5,2 cm,
+  cheville 5,8 → 2,3 cm), poignet et carrure inchangés comme attendu
+  (corrections retirées).
+- Déployé sur O2Switch le 27 août suivant la procédure de `DEPLOIEMENT.txt`.
+  Incident rencontré au passage : le clone git du serveur (`repo-source`)
+  avait divergé de GitHub depuis plusieurs jours (4 commits locaux jamais
+  poussés, dont un correctif du mesureur virtuel d'avatar) — vérifié
+  fichier par fichier avant de réconcilier que leur contenu était déjà
+  intégralement présent sur GitHub sous un autre historique, donc sans
+  perte, puis résolu par `git reset --hard origin/main`.
 
 ---
 
@@ -992,6 +1095,68 @@ peau...). `tsc --noEmit` propre depuis.
 
 **Fichiers modifiés** : `mobile/app/tailor/verification.tsx`.
 
+### 8.15 Compte admin : promotion de rôle silencieusement ignorée
+
+**Le symptôme** : connexion admin réussie (identifiants corrects) mais
+avec le rôle `client` au lieu de `admin` — constaté en production le
+26 août, deuxième occurrence le 28 août.
+
+**La cause** : `seed.py::get_or_create_user()` retourne l'utilisateur tel
+quel s'il existe déjà, sans jamais corriger son rôle ni son mot de passe.
+Si quelqu'un s'inscrit avec le numéro réservé à l'admin avant (ou à la
+place) que le script de seed ait pu tourner sur cette base, le compte
+admin n'est jamais réellement créé — sans la moindre erreur.
+
+**Corrigé** : `seed.py` détecte maintenant l'écart de rôle sur le compte
+admin, l'affiche clairement, et le corrige automatiquement au lieu de
+l'ignorer. Le compte de production a été promu manuellement en attendant
+(rôle mis à jour directement sur le serveur).
+
+**Fichiers modifiés** : `backend/app/seed.py`.
+
+*Note : la réapparition du symptôme le 28 août n'a pas la même cause —
+testé directement contre l'API de production, le compte est bien
+`role:"admin"` cette fois. Cause encore non identifiée à la date de cette
+mise à jour, investigation interrompue.*
+
+### 8.16 Soumission de vérification tailleur cassée côté web (`portfolio` vs `self_photo`)
+
+**Le symptôme** : un tailleur qui soumettait son dossier de vérification
+depuis le site web recevait un échec silencieux — le formulaire
+n'aboutissait jamais.
+
+**La cause** : le formulaire web envoyait le fichier sous le nom de champ
+`"portfolio"`, mais l'API (`backend/app/api/v1/tailors.py`) attend un
+champ obligatoire nommé `self_photo` — nom retenu depuis un renommage fait
+côté mobile, jamais répercuté côté web ni dans le commentaire du modèle de
+données (qui listait encore l'ancien nom `portfolio`).
+
+**Corrigé** sans supprimer la section visible : le libellé affiché reste
+"Portfolio" à l'écran, seul le nom technique du champ envoyé change. La
+checklist de vérification admin (§8.10) et le commentaire du modèle
+suivent la même correction.
+
+**Fichiers modifiés** : `frontend/src/pages/tailor/Verification.tsx`,
+`frontend/src/pages/admin/Verifications.tsx`, `backend/app/models/users.py`.
+
+### 8.17 Fiche modèle mobile : image rognée et bouton d'essayage non fixe
+
+**Le symptôme** : sur `mobile/app/client/models/[id].tsx`, l'image du
+modèle s'affichait recadrée (jamais visible en entier sans taper dessus
+pour zoomer), et le bouton "Essayer sur mon avatar" défilait avec le
+reste du contenu — invisible tant qu'on n'avait pas tout scrollé.
+
+**Corrigé**, sur le modèle déjà utilisé côté web (`ModelDetail.tsx`) :
+l'image passe en `resizeMode="contain"` (affichée entière, le tap pour
+zoomer en plein écran reste disponible) dans une zone qui occupe l'espace
+disponible ; le nom, la description (avec son propre petit scroll interne
+si elle déborde) et le bouton d'essayage vivent maintenant dans une barre
+du bas fixe, hors de toute zone de défilement — toujours visible, quel que
+soit l'état du scroll. Le swipe horizontal entre les modèles de la liste
+est conservé.
+
+**Fichiers modifiés** : `mobile/app/client/models/[id].tsx`.
+
 ---
 
 ## 9. Journal des versions
@@ -1067,3 +1232,10 @@ peau...). `tsc --noEmit` propre depuis.
 | 25 août | **Nouvelle campagne de précision des mensurations** : 7 corrections validées et livrées dans un module séparé non déployé (`ml/bench/pipeline_ameliore.py`), `ankle`/`hips` confirmés fortement sur sujets inédits, `shoulder`/`wrist` retirés après échec en validation indépendante malgré une validation interne solide (§6bis) |
 | 25 août | Piste "3ᵉ photo à 45°" testée en simulation (gain confirmé) puis sur un premier vrai sujet (gain non confirmé) — recherche ouverte, pas de conclusion définitive (§6bis) |
 | 25 août | Recherche d'architecture alternative (Anny/clad-body, limites de SMPL, benchmarks du secteur) — piste identifiée, pas encore testée (§6bis) |
+| 26 août | Piste régression par processus gaussien testée sur 17 sujets réels et **rejetée** — dégrade la moyenne de 18 % par rapport au linéaire (§6bis) |
+| 26 août | Piste Anny + clad-body testée (taille+poids seuls) sur 17 sujets réels et **rejetée dans cette forme** — 56 % d'erreur en plus en moyenne, gagne uniquement sur les mesures dépendant de la corpulence globale (§6bis) |
+| 26 août | Revue de cohérence du travail non commité d'une collaboratrice (admin vérification/catalogue) — bug `portfolio`/`self_photo` trouvé et corrigé (§8.16) |
+| 26 août | Bug de promotion de rôle admin silencieusement ignorée trouvé et corrigé dans `seed.py` (§8.15) |
+| 27 août | **Corrections statistiques validées passées en production** (`backend/app/services/measurement_corrections.py`, câblées dans `_measure()`) — vérifié bout en bout sur un sujet réel, déployé sur O2Switch (§6bis) |
+| 27 août | Divergence git découverte et résolue sur le clone serveur (`repo-source`) — 4 commits locaux jamais poussés depuis le 22 août, vérifiés sans perte avant réconciliation (§6bis) |
+| 27 août | **Fiche modèle mobile corrigée** : image affichée entière, barre du bas fixe pour le bouton d'essayage (§8.17) |

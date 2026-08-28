@@ -167,7 +167,7 @@ const makeStyles = (colors: ThemeColors) =>
     controls: { paddingHorizontal: 18, paddingTop: 14, gap: 10 },
     searchWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
     searchInput: { flex: 1 },
-    filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    filterRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 8 },
     row: { flexDirection: "row", alignItems: "center", gap: 12 },
     avatar: {
       width: 38,

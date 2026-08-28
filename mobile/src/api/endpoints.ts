@@ -47,6 +47,8 @@ export const AuthApi = {
     password: string;
     language: "fr" | "en";
     photo_consent: boolean;
+    city?: string;
+    quartier?: string;
   }) => api.post<TokenResponse>("/auth/register", body, { auth: false }),
   login: (phone: string, password: string) =>
     api.post<TokenResponse>("/auth/login", { phone, password }, { auth: false }),
@@ -122,9 +124,12 @@ export const MeasurementsApi = {
 };
 
 export const AvatarsApi = {
+  list: () => api.get<Avatar[]>("/avatars"),
   create: (body: { measurement_id: string; skin_tone_hex: string }) =>
     api.post<Avatar>("/avatars", body),
   get: (id: string) => api.get<Avatar>(`/avatars/${id}`),
+  patch: (id: string, body: { name?: string }) =>
+    api.patch<Avatar>(`/avatars/${id}`, body),
 };
 
 // --- Catalog -----------------------------------------------------------
@@ -267,8 +272,8 @@ export const AdminApi = {
     api.get<TailorProfile[]>(`/admin/verifications${status ? `?status_filter=${status}` : ""}`),
   verificationDocuments: (tailorId: string) =>
     api.get<VerificationDocument[]>(`/admin/verifications/${tailorId}/documents`),
-  decideVerification: (tailorId: string, status: "approved" | "rejected") =>
-    api.post<TailorProfile>(`/admin/verifications/${tailorId}/decide`, { status }),
+  decideVerification: (tailorId: string, status: "approved" | "rejected", reason?: string) =>
+    api.post<TailorProfile>(`/admin/verifications/${tailorId}/decide`, { status, reason }),
   disputes: () => api.get<Order[]>("/admin/disputes"),
   resolveDispute: (orderId: string, resolution: string, note?: string) =>
     api.post<Order>(`/admin/disputes/${orderId}/resolve`, { resolution, note }),

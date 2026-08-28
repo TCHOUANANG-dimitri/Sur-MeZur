@@ -98,7 +98,7 @@ export default function AdminOrders() {
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 18, paddingTop: 14 },
+    filterRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 8, paddingHorizontal: 18, paddingTop: 14 },
     row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     meta: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.body },
     dateRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 },

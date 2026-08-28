@@ -3,6 +3,7 @@ import { Camera, FolderOpen, Pencil, Plus, Trash2 } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,7 +11,7 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { userMessage } from "../../../src/api/client";
+import { fileUrl, userMessage } from "../../../src/api/client";
 import { AdminCatalogApi, CatalogApi } from "../../../src/api/endpoints";
 import type { Category, GarmentModel } from "../../../src/api/types";
 import { Button } from "../../../src/components/Button";
@@ -371,12 +372,20 @@ export default function AdminCatalog() {
               models.map((m) => (
                 <Card key={m.id} style={{ marginBottom: 8 }}>
                   <View style={styles.row}>
-                    <View
-                      style={[
-                        styles.modelThumb,
-                        { backgroundColor: m.thumbnail_color },
-                      ]}
-                    />
+                    {m.photo_url ? (
+                      <Image
+                        source={{ uri: fileUrl(m.photo_url) }}
+                        style={styles.modelThumb}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.modelThumb,
+                          { backgroundColor: m.thumbnail_color },
+                        ]}
+                      />
+                    )}
                     <View style={{ flex: 1 }}>
                       <Text style={styles.modelName}>{m.name}</Text>
                       <Text style={styles.modelMeta}>
@@ -425,7 +434,7 @@ export default function AdminCatalog() {
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     controls: { paddingHorizontal: 18, paddingTop: 14, gap: 10 },
-    filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    filterRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: 8 },
     formTitle: {
       fontSize: 13,
       fontFamily: fonts.bodyBold,

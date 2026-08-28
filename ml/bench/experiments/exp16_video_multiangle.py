@@ -154,8 +154,9 @@ def extract_frames(video_path: str | Path, n_frames: int = 8,
 @dataclass
 class FrameAngle:
     frame: ExtractedFrame
-    ratio: float | None  # largeur épaules / hauteur torse -- haut = face, bas = profil
-    orientation_guess: str | None  # "front" | "side" | None si pose non détectée
+    ratio: float | None  # largeur épaules / hauteur torse -- haut = face/dos, bas = profil
+    facing_camera: bool | None  # True = face, False = dos, None = indéterminable
+    orientation_guess: str | None  # "front" | "back" | "side" | None si pose non détectée
 
 
 def estimate_frame_angle(frame_path: Path):
@@ -172,36 +173,66 @@ def estimate_frame_angle(frame_path: Path):
     référence à angle connu (voir la proposition externe, §3.3) -- hors
     scope de ce script.
 
+    Ce ratio seul NE DISTINGUE PAS face et dos (un dos large donne le même
+    ratio épaules/torse qu'une face large) -- bug confirmé sur un premier
+    essai réel : la frame de "référence face" choisie était en réalité une
+    vue de dos, biaisant le tour de poitrine de -8 à -10 cm.
+
+    Deuxième signal utilisé pour lever l'ambiguïté : la PROFONDEUR 3D
+    (repère `world` de MediaPipe, mètres, origine hanches) du nez comparée
+    à celle des épaules. De face, le nez est plus proche de la caméra que
+    les épaules (z plus négatif) ; de dos, il est plus loin (z plus grand).
+    Un premier essai avec la VISIBILITÉ du nez (au lieu de sa profondeur)
+    a échoué : vérifié empiriquement, MediaPipe renvoie une visibilité
+    proche de 1.0 même de dos (le modèle extrapole une position plausible
+    avec confiance, la visibilité n'encode pas l'occlusion réelle due à
+    l'orientation du corps) -- ne pas réutiliser ce signal.
+
     Returns:
-        (ratio, PoseResult) ou (None, None) si la pose n'est pas détectée.
+        (ratio, facing_camera, PoseResult) -- facing_camera est None si le
+        repère `world` est indisponible ; (None, None, None) si la pose
+        n'est pas détectée.
     """
     from app.services.vision import pose as pose_mod
 
     pose = pose_mod.extract_pose(str(frame_path))
     if pose is None:
-        return None, None
+        return None, None, None
 
     shoulder_w = pose.distance(pose_mod.LEFT_SHOULDER, pose_mod.RIGHT_SHOULDER)
     shoulder_mid = pose.midpoint(pose_mod.LEFT_SHOULDER, pose_mod.RIGHT_SHOULDER)
     hip_mid = pose.midpoint(pose_mod.LEFT_HIP, pose_mod.RIGHT_HIP)
     torso_h = abs(hip_mid[1] - shoulder_mid[1])
+
+    facing_camera = None
+    if pose.world is not None:
+        nose_z = pose.world[pose_mod.NOSE].z
+        shoulder_mid_z = (pose.world[pose_mod.LEFT_SHOULDER].z + pose.world[pose_mod.RIGHT_SHOULDER].z) / 2
+        facing_camera = nose_z < shoulder_mid_z
+
     if torso_h <= 0:
-        return None, pose
-    return shoulder_w / torso_h, pose
+        return None, facing_camera, pose
+    return shoulder_w / torso_h, facing_camera, pose
 
 
 def classify_frames(frames: list[ExtractedFrame]) -> list[FrameAngle]:
     """
-    Calcule le ratio de chaque frame, puis classe chacune "front" (au-dessus
-    de la médiane) ou "side" (en-dessous) -- sert uniquement à choisir quelle
-    bande d'exclusion des bras utiliser dans measure_widths (voir limite
-    documentée en tête de fichier), pas une vraie mesure d'angle.
+    Classe chaque frame en "front" (face à la caméra), "back" (de dos) ou
+    "side" (profil). Le ratio épaules/torse sépare d'abord l'axe face-dos
+    (ratio haut) de l'axe profil (ratio bas, sous la médiane) ; parmi les
+    frames sur l'axe face-dos, la profondeur 3D nez/épaules tranche entre
+    "front" et "back". Un signal indéterminable (`facing_camera is None`,
+    repère 3D absent) est traité comme "back" par défaut -- mieux vaut
+    exclure une frame exploitable que risquer de mesurer une vue de dos
+    comme si c'était une face (c'est exactement le bug déjà rencontré).
+    Les frames "back" sont exclues de la mesure (voir measure_all_frames)
+    -- measure_widths n'est calibré que pour "front" et "side".
     """
     results: list[FrameAngle] = []
     ratios = []
     for f in frames:
-        ratio, _pose = estimate_frame_angle(f.path)
-        results.append(FrameAngle(frame=f, ratio=ratio, orientation_guess=None))
+        ratio, facing_camera, _pose = estimate_frame_angle(f.path)
+        results.append(FrameAngle(frame=f, ratio=ratio, facing_camera=facing_camera, orientation_guess=None))
         if ratio is not None:
             ratios.append(ratio)
 
@@ -211,8 +242,12 @@ def classify_frames(frames: list[ExtractedFrame]) -> list[FrameAngle]:
     ratios_sorted = sorted(ratios)
     median = ratios_sorted[len(ratios_sorted) // 2]
     for r in results:
-        if r.ratio is not None:
-            r.orientation_guess = "front" if r.ratio >= median else "side"
+        if r.ratio is None:
+            continue
+        if r.ratio >= median:
+            r.orientation_guess = "front" if r.facing_camera else "back"
+        else:
+            r.orientation_guess = "side"
     return results
 
 
@@ -225,6 +260,16 @@ class LevelWidths:
     chest: list[float] = field(default_factory=list)
     waist: list[float] = field(default_factory=list)
     hip: list[float] = field(default_factory=list)
+
+
+@dataclass
+class LevelWidthsByOrientation:
+    """Mêmes largeurs que LevelWidths, séparées par orientation -- nécessaire
+    pour fuse_circumference_robust_ellipse (médiane des faces, médiane des
+    profils), qui ne doit jamais mélanger largeur et profondeur dans la
+    même liste comme le fait la fusion naïve."""
+    front: LevelWidths = field(default_factory=LevelWidths)
+    side: LevelWidths = field(default_factory=LevelWidths)
 
 
 def measure_all_frames(frames_angles: list[FrameAngle], height_cm: float) -> dict:
@@ -262,9 +307,18 @@ def measure_all_frames(frames_angles: list[FrameAngle], height_cm: float) -> dic
     levels = ref_widths.levels
 
     widths_cm = LevelWidths()
+    by_orientation = LevelWidthsByOrientation()
     per_frame_report = []
+    rejected_back = 0
     for fa in frames_angles:
         if fa.orientation_guess is None:
+            continue
+        if fa.orientation_guess == "back":
+            # measure_widths n'est calibré que pour "front"/"side" -- une vue
+            # de dos avec l'exclusion des bras "front" donnerait une largeur
+            # fausse (cause confirmée du biais de -8 à -10 cm sur la
+            # poitrine lors du premier essai). Exclue plutôt que mal mesurée.
+            rejected_back += 1
             continue
         pose = pose_mod.extract_pose(str(fa.frame.path))
         if pose is None:
@@ -275,6 +329,10 @@ def measure_all_frames(frames_angles: list[FrameAngle], height_cm: float) -> dic
         widths_cm.chest.append(w.chest_px * cm_per_pixel)
         widths_cm.waist.append(w.waist_px * cm_per_pixel)
         widths_cm.hip.append(w.hip_px * cm_per_pixel)
+        target = by_orientation.front if fa.orientation_guess == "front" else by_orientation.side
+        target.chest.append(w.chest_px * cm_per_pixel)
+        target.waist.append(w.waist_px * cm_per_pixel)
+        target.hip.append(w.hip_px * cm_per_pixel)
         per_frame_report.append({
             "frame": fa.frame.path.name,
             "t_s": round(fa.frame.t_seconds, 2),
@@ -289,12 +347,41 @@ def measure_all_frames(frames_angles: list[FrameAngle], height_cm: float) -> dic
         "levels": {"chest": levels.chest, "waist": levels.waist, "hip": levels.hip},
         "cm_per_pixel": cm_per_pixel,
         "widths_cm": widths_cm,
+        "by_orientation": by_orientation,
         "per_frame": per_frame_report,
         "reference_frame": reference.frame.path.name,
+        "rejected_back": rejected_back,
     }
 
 
-def fuse_circumference_naive(widths_cm: list[float]) -> float | None:
+def _reject_outliers(values: list[float], low_ratio: float = 0.5, high_ratio: float = 1.8) -> tuple[list[float], int]:
+    """
+    Filtre les largeurs manifestement fausses avant fusion -- absent avant ce
+    correctif, ce qui laissait une seule frame de silhouette mal segmentée
+    (ex. arrière-plan chargé perturbant MobileSAM) fausser toute la moyenne à
+    poids égal. Cas concret rencontré : 6,9 cm de largeur de hanches sur une
+    frame par ailleurs nette, contre ~30 cm sur les frames voisines.
+
+    Rejette toute valeur hors de [low_ratio, high_ratio] x médiane des
+    valeurs valides -- mêmes ordres de grandeur que la garde de plausibilité
+    déjà utilisée pour la mesure du maillage avatar (mesh_measure.py, rejet
+    sous 70% du neutre), pas une méthode statistique sophistiquée. Ne
+    rejette rien si ça laisserait moins de 3 valeurs (pas assez de données
+    pour distinguer un vrai outlier d'une variation normale).
+    """
+    if len(values) < 3:
+        return values, 0
+    sorted_v = sorted(values)
+    median = sorted_v[len(sorted_v) // 2]
+    if median <= 0:
+        return values, 0
+    kept = [v for v in values if low_ratio * median <= v <= high_ratio * median]
+    if len(kept) < 3:
+        return values, 0
+    return kept, len(values) - len(kept)
+
+
+def fuse_circumference_naive(widths_cm: list[float]) -> tuple[float | None, int]:
     """
     Fusion la plus simple possible : circonférence ~= pi * moyenne des
     largeurs observées sous plusieurs angles (proposition externe, §3.4).
@@ -302,11 +389,15 @@ def fuse_circumference_naive(widths_cm: list[float]) -> float | None:
     sert de première comparaison seulement (voir limites en tête de fichier :
     une largeur observée à un angle intermédiaire n'est pas un rayon
     indépendant, c'est une projection oblique -- cette formule l'ignore).
+
+    Returns:
+        (circonférence_cm ou None, nombre de valeurs rejetées comme aberrantes)
     """
     valid = [w for w in widths_cm if w and w > 0]
     if len(valid) < 3:
-        return None
-    return math.pi * (sum(valid) / len(valid))
+        return None, 0
+    kept, n_rejected = _reject_outliers(valid)
+    return math.pi * (sum(kept) / len(kept)), n_rejected
 
 
 def fuse_circumference_ellipse(front_width_cm: float | None, side_depth_cm: float | None) -> float | None:
@@ -316,6 +407,41 @@ def fuse_circumference_ellipse(front_width_cm: float | None, side_depth_cm: floa
     a, b = front_width_cm / 2.0, side_depth_cm / 2.0
     h = ((a - b) / (a + b)) ** 2
     return math.pi * (a + b) * (1 + 3 * h / (10 + math.sqrt(4 - 3 * h)))
+
+
+def _median(values: list[float]) -> float | None:
+    valid = sorted(v for v in values if v and v > 0)
+    if not valid:
+        return None
+    n = len(valid)
+    mid = n // 2
+    return valid[mid] if n % 2 else (valid[mid - 1] + valid[mid]) / 2.0
+
+
+def fuse_circumference_robust_ellipse(front_values_cm: list[float], side_values_cm: list[float]) -> dict:
+    """
+    Même formule que la production (fuse_circumference_ellipse), mais
+    nourrie par la MÉDIANE de plusieurs observations de largeur de face et
+    de profondeur de profil (issues de la rotation), au lieu d'une seule
+    photo de chaque comme aujourd'hui. Teste directement l'hypothèse de
+    départ de la piste vidéo (plusieurs observations réduisent le bruit
+    d'une seule photo ratée) sans changer de modèle géométrique -- contrairement
+    à fuse_circumference_naive, qui mélangeait largeur et profondeur dans
+    une seule moyenne (biais structurel déjà mesuré, pas juste du bruit).
+
+    Returns:
+        {"circumference_cm", "front_median_cm", "side_median_cm",
+         "n_front", "n_side"}
+    """
+    front_median = _median(front_values_cm)
+    side_median = _median(side_values_cm)
+    return {
+        "circumference_cm": fuse_circumference_ellipse(front_median, side_median),
+        "front_median_cm": front_median,
+        "side_median_cm": side_median,
+        "n_front": len([v for v in front_values_cm if v and v > 0]),
+        "n_side": len([v for v in side_values_cm if v and v > 0]),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -355,15 +481,18 @@ def main() -> None:
     frames = extract_frames(args.video, n_frames=args.n_frames, out_dir=dump_dir)
     print(f"{len(frames)} frames extraites" + (f" -> {dump_dir}" if dump_dir else " (dossier temporaire)"))
 
-    print("Classement face/profil (ratio épaules/torse)...")
+    print("Classement face/dos/profil (ratio épaules/torse + visibilité du nez)...")
     frames_angles = classify_frames(frames)
     n_front = sum(1 for fa in frames_angles if fa.orientation_guess == "front")
+    n_back = sum(1 for fa in frames_angles if fa.orientation_guess == "back")
     n_side = sum(1 for fa in frames_angles if fa.orientation_guess == "side")
     n_failed = sum(1 for fa in frames_angles if fa.orientation_guess is None)
-    print(f"  front={n_front}  side={n_side}  pose_non_detectee={n_failed}")
+    print(f"  front={n_front}  back={n_back}  side={n_side}  pose_non_detectee={n_failed}")
 
     print("Mesure de chaque frame (MediaPipe + MobileSAM)...")
     result = measure_all_frames(frames_angles, args.height)
+    if result["rejected_back"]:
+        print(f"  {result['rejected_back']} frame(s) 'dos' exclue(s) de la mesure (voir classement ci-dessus)")
 
     print(f"\nFrame de référence (face) : {result['reference_frame']}")
     print(f"Échelle : {result['cm_per_pixel']:.4f} cm/pixel")
@@ -372,25 +501,39 @@ def main() -> None:
         print(f"  {row}")
 
     widths = result["widths_cm"]
+    by_orientation = result["by_orientation"]
     report = {}
     for name, values in (("chest", widths.chest), ("waist", widths.waist), ("hip", widths.hip)):
-        naive = fuse_circumference_naive(values)
+        naive, n_rejected = fuse_circumference_naive(values)
+        front_values = getattr(by_orientation.front, name)
+        side_values = getattr(by_orientation.side, name)
+        robust = fuse_circumference_robust_ellipse(front_values, side_values)
         report[name] = {
             "n_frames_valides": len(values),
-            "circonference_multi_angle_naive_cm": round(naive, 1) if naive else None,
+            "n_aberrantes_rejetees": n_rejected,
+            "circonference_naive_cm": round(naive, 1) if naive else None,
+            "circonference_ellipse_robuste_cm": round(robust["circumference_cm"], 1) if robust["circumference_cm"] else None,
+            "ellipse_robuste_detail": {
+                "face_mediane_cm": round(robust["front_median_cm"], 1) if robust["front_median_cm"] else None,
+                "profil_mediane_cm": round(robust["side_median_cm"], 1) if robust["side_median_cm"] else None,
+                "n_face": robust["n_front"],
+                "n_profil": robust["n_side"],
+            },
         }
         if name in ground_truth:
-            report[name]["cible_metre_ruban_cm"] = ground_truth[name]
+            cible = ground_truth[name]
+            report[name]["cible_metre_ruban_cm"] = cible
             if naive:
-                report[name]["ecart_cm"] = round(naive - ground_truth[name], 2)
+                report[name]["ecart_naive_cm"] = round(naive - cible, 2)
+            if robust["circumference_cm"]:
+                report[name]["ecart_ellipse_robuste_cm"] = round(robust["circumference_cm"] - cible, 2)
 
-    print("\n=== Résultat fusion multi-angle (naïve, pi * moyenne des largeurs) ===")
+    print("\n=== Résultat fusion multi-angle : naïve (pi * moyenne) vs ellipse robuste (médiane face + médiane profil) ===")
     print(json.dumps(report, indent=2, ensure_ascii=False))
     print(
-        "\nRappel : ceci ne remplace pas encore le pipeline de production "
-        "(ellipse face+profil). Comparer ces chiffres à une mesure au mètre "
-        "ruban ET à la sortie du pipeline actuel sur les mêmes deux photos "
-        "avant toute conclusion — voir les limites documentées en tête de fichier."
+        "\nRappel : comparer ces deux méthodes ET la sortie du pipeline actuel "
+        "sur les mêmes deux photos (face+profil uniques) avant toute conclusion "
+        "— voir les limites documentées en tête de fichier."
     )
 
 

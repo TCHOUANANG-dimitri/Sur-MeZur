@@ -38,7 +38,7 @@ export default function Login() {
   };
 
   return (
-    <Screen padded style={{ flex: 1, justifyContent: "center" }} scroll={false}>
+    <Screen padded style={{ flexGrow: 1, justifyContent: "center" }}>
       <Image source={require("../assets/logo-transparent.png")} style={styles.logo} resizeMode="contain" />
       <Text style={styles.title}>{t("auth.login")}</Text>
       {error ? <ErrorBanner message={error} /> : null}

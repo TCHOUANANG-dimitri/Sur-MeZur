@@ -14,6 +14,8 @@ interface AuthContextValue {
     password: string;
     language: "fr" | "en";
     photo_consent: boolean;
+    city?: string;
+    quartier?: string;
   }) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
