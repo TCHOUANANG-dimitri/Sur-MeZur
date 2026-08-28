@@ -145,6 +145,26 @@ def compute_avatar_morphology(measurement: Measurement) -> dict | None:
             logger.info("Pas assez de données pour optimiser (%d mesures, %d cibles) — repli",
                         len(opt_measurements), len(z_scores))
 
+        # Affinage itératif par mesure réelle du maillage généré (mesh_io +
+        # mesh_measure, pur numpy, sans Blender) : contrairement à
+        # l'optimisation ci-dessus, qui corrige contre une PRÉDICTION de la
+        # matrice de sensibilité, cette étape vérifie et corrige contre le
+        # maillage effectivement déformé — jamais fait jusqu'ici (voir
+        # BRIEF_MODELE_CORPOREL_AVATAR.md §6). Best-effort : un échec ici
+        # ne doit jamais empêcher l'envoi des poids déjà calculés au-dessus.
+        try:
+            from .refine_weights import refine_weights
+            target_tours = {k: real_measurements[k] for k in ("chest", "waist", "hips", "neck")
+                             if k in real_measurements}
+            if target_tours:
+                weights, refine_report = refine_weights(weights, gender_str, target_tours, sensitivity)
+                if refine_report:
+                    method = f"{method}+affinage_maillage"
+        except Exception:
+            logger.exception(
+                "Affinage itératif par mesure du maillage en erreur — poids conservés tels quels"
+            )
+
     return {
         "gender": gender_str,
         "height_cm": params.height_cm,
