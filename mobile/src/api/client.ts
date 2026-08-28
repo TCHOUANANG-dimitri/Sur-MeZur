@@ -242,12 +242,16 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path, { method: "GET" }),
-  post: <T>(path: string, body?: unknown, opts?: { auth?: boolean }) =>
+  // retries: 2 par défaut — une lecture est par nature sans effet de bord,
+  // la rejouer sur une micro-coupure ne risque jamais de dupliquer quoi que
+  // ce soit côté serveur (contrairement à post/patch, laissés à 0 par défaut).
+  get: <T>(path: string) => request<T>(path, { method: "GET", retries: 2 }),
+  post: <T>(path: string, body?: unknown, opts?: { auth?: boolean; retries?: number }) =>
     request<T>(path, {
       method: "POST",
       body: body !== undefined ? JSON.stringify(body) : undefined,
       auth: opts?.auth,
+      retries: opts?.retries,
     }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),

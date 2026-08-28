@@ -49,24 +49,27 @@ export const AuthApi = {
     photo_consent: boolean;
     city?: string;
     quartier?: string;
-  }) => api.post<TokenResponse>("/auth/register", body, { auth: false }),
+  }) => api.post<TokenResponse>("/auth/register", body, { auth: false, retries: 2 }),
+  // retries: 2 -- une connexion échouée sur simple micro-coupure réseau ne
+  // doit pas obliger l'utilisateur à retaper son mot de passe ; rejouer un
+  // login avec les mêmes identifiants ne duplique rien côté serveur.
   login: (phone: string, password: string) =>
-    api.post<TokenResponse>("/auth/login", { phone, password }, { auth: false }),
+    api.post<TokenResponse>("/auth/login", { phone, password }, { auth: false, retries: 2 }),
   otpRequest: (phone: string) =>
-    api.post<{ sent: boolean; dev_code: string }>("/auth/otp/request", { phone }, { auth: false }),
+    api.post<{ sent: boolean; dev_code: string }>("/auth/otp/request", { phone }, { auth: false, retries: 2 }),
   otpVerify: (phone: string, code: string) =>
-    api.post<{ verified: boolean }>("/auth/otp/verify", { phone, code }, { auth: false }),
+    api.post<{ verified: boolean }>("/auth/otp/verify", { phone, code }, { auth: false, retries: 2 }),
   passwordResetRequest: (phone: string) =>
     api.post<{ sent: boolean; dev_code: string }>(
       "/auth/password/reset/request",
       { phone },
-      { auth: false }
+      { auth: false, retries: 2 }
     ),
   passwordResetConfirm: (phone: string, code: string, new_password: string) =>
     api.post<TokenResponse>(
       "/auth/password/reset/confirm",
       { phone, code, new_password },
-      { auth: false }
+      { auth: false, retries: 2 }
     ),
 };
 
