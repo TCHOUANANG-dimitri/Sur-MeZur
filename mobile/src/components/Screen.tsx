@@ -36,7 +36,15 @@ export function Screen({
     <SafeAreaView style={styles.safe} edges={edges ?? ["top", "left", "right"]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // "undefined" sur Android comptait uniquement sur
+        // windowSoftInputMode="adjustResize" (AndroidManifest.xml) pour
+        // laisser de la place au clavier -- correct en théorie, mais peu
+        // fiable en pratique sur les versions Android récentes avec
+        // affichage bord-à-bord (edge-to-edge), où le redimensionnement de
+        // fenêtre attendu par adjustResize ne se produit plus toujours.
+        // "height" est le repli standard recommandé côté Android : il agit
+        // au niveau du composant plutôt que de compter sur la fenêtre.
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         {body}
       </KeyboardAvoidingView>
