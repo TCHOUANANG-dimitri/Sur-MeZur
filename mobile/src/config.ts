@@ -29,4 +29,26 @@ function getDevServerHost(): string | null {
 const devHost = getDevServerHost();
 const DEFAULT_HOST = devHost || Platform.select({ android: "10.0.2.2", default: "localhost" });
 
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || `http://${DEFAULT_HOST}:8000`;
+/**
+ * Adresse du backend de production. Sert de SECOURS en build release quand
+ * `EXPO_PUBLIC_API_URL` n'a pas été injecté au bundling (variable absente de
+ * l'environnement de build, bundle produit hors du profil EAS, prebuild
+ * manuel...).
+ *
+ * Sans ce secours, le repli était `http://10.0.2.2:8000` — l'adresse de
+ * l'ÉMULATEUR Android, qui ne correspond à rien sur un téléphone réel. Chaque
+ * requête échouait alors instantanément (pas un timeout : une erreur réseau
+ * immédiate), et l'application affichait "Connexion impossible. Vérifiez votre
+ * connexion Internet." alors que le téléphone ET le serveur fonctionnaient
+ * parfaitement — panne observée en production, impossible à diagnostiquer
+ * depuis l'écran puisque le message accuse la connexion de l'utilisateur.
+ *
+ * En développement (`__DEV__`), on garde le repli LAN/émulateur : c'est là
+ * qu'il est utile, et pointer vers la production depuis un poste de dev
+ * masquerait un backend local non démarré.
+ */
+const PRODUCTION_API_URL = "http://api.gitingeniering.com";
+
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ||
+  (__DEV__ ? `http://${DEFAULT_HOST}:8000` : PRODUCTION_API_URL);
