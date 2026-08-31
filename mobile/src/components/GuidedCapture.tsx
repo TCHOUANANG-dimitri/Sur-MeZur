@@ -48,32 +48,28 @@ function SilhouetteFace({ color }: { color: string }) {
 }
 
 function SilhouetteProfil({ color }: { color: string }) {
+  // Corps de profil, face tournée vers la droite, sans bras visible : la
+  // consigne « mains croisées dans le dos » cache les bras derrière le torse.
+  // Une légère saillie au bas du dos (y ≈ 131-140) suggère les mains/coudes.
   const CORPS =
-    "M54 8 C62 8 67 14 67 22 C67 27 65 31 62 34 L62 40" +
-    " C70 43 76 48 78 56 L80 74 C81 90 80 106 78 120" +
-    " L76 138 C76 150 75 158 74 166 L72 200 L70 248 L58 248" +
-    " L59 200 L58 172 L52 172 L51 200 L50 248 L38 248 L40 200" +
-    " L42 166 C41 158 40 150 40 138 L38 120 C36 106 35 90 36 74" +
-    " L38 56 C40 46 46 42 52 40 L52 34 C49 31 47 27 47 22" +
-    " C47 14 49 8 54 8 Z";
-  const BRAS_AVANT =
-    "M62 48 C66 56 68 68 67 80 C66 90 64 98 62 104";
-  const BRAS_ARRIERE =
-    "M38 48 C34 56 32 68 33 80 C34 90 36 98 38 104";
+    "M58 7 C66 7 71 13 71 21 C73 24 75 28 74 32" +
+    " C73 36 67 41 61 44 C59 46 58 50 60 53 C61 57 67 62 74 68" +
+    " C80 74 84 84 82 95 C81 105 76 114 73 122 C72 130 73 139 75 147" +
+    " C77 155 74 164 71 172 C69 181 70 191 69 200 C69 209 70 219 69 227" +
+    " C68 236 69 244 71 248 L84 248 C83 254 76 256 68 256 L42 256" +
+    " C37 253 36 247 39 240 C41 235 43 229 42 221 C40 211 39 200 41 189" +
+    " C42 179 41 169 39 159 C37 150 33 145 33 137 C33 131 31 130 31 135" +
+    " C31 140 35 143 36 135 C37 128 38 120 40 113 C42 104 44 95 46 88" +
+    " C49 80 51 73 52 67 C53 62 53 56 52 50 C50 40 50 30 52 22" +
+    " C53 13 55 8 58 7 Z";
   return (
     <Svg viewBox="0 0 100 260" width="100%" height="100%">
       <Path d={CORPS} stroke={color} strokeWidth={2.4} fill={color} fillOpacity={0.12}
             strokeLinejoin="round" />
-      <Path d={BRAS_AVANT} stroke={color} strokeWidth={2.2} fill="none"
-            strokeLinecap="round" opacity={0.8} />
-      <Path d={BRAS_ARRIERE} stroke={color} strokeWidth={2.2} fill="none"
-            strokeLinecap="round" opacity={0.8} />
-      <Line x1="30" y1="88" x2="86" y2="88" stroke={color} strokeWidth={1}
+      <Line x1="28" y1="88" x2="86" y2="88" stroke={color} strokeWidth={1}
             strokeDasharray="4 4" opacity={0.5} />
-      <Line x1="31" y1="122" x2="83" y2="122" stroke={color} strokeWidth={1}
+      <Line x1="30" y1="122" x2="80" y2="122" stroke={color} strokeWidth={1}
             strokeDasharray="4 4" opacity={0.5} />
-      <Line x1="55" y1="16" x2="55" y2="244" stroke={color} strokeWidth={0.8}
-            strokeDasharray="6 6" opacity={0.35} />
     </Svg>
   );
 }

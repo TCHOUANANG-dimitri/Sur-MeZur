@@ -102,7 +102,7 @@ _RETRY_GUIDANCE = (
     "• vous êtes seul·e devant un fond dégagé et bien éclairé\n"
     "• votre tenue est ajustée (ni ample, ni très sombre sur fond sombre)\n"
     "• de face : bras légèrement écartés du corps (~45°)\n"
-    "• de profil : mains derrière la tête, coudes vers l'arrière\n"
+    "• de profil : mains croisées dans le dos, dos droit\n"
     "• le téléphone est tenu à la verticale, à hauteur de poitrine"
 )
 
