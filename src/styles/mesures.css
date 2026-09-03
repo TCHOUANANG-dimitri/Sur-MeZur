@@ -1,0 +1,243 @@
+/* ============================================================================
+   Affichage des mesures : ecran de resultat et fiche imprimable.
+   ========================================================================= */
+
+.resultIntro {
+  margin-bottom: 18px;
+}
+
+.resultIntro p {
+  max-width: 62ch;
+}
+
+.resultModel {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.resultModelThumb {
+  width: 52px;
+  height: 70px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  flex: none;
+}
+
+.measureGroup {
+  margin-bottom: 28px;
+}
+
+.measureGroupTitle {
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 14px;
+}
+
+/* Une colonne au telephone, puis autant que la largeur le permet. Chaque
+   mesure porte trois lignes de texte : sous 260px de large elle deviendrait
+   illisible, d'ou le plancher. */
+.measureList {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+}
+
+.measureItem {
+  background: var(--bg-alt);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+}
+
+.measureItemHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.measureName {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.measureValue {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--violet-primary);
+  white-space: nowrap;
+}
+
+.measureWhere {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 4px;
+}
+
+.measurePurpose {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: 0;
+}
+
+/* --- Fiche imprimable ------------------------------------------------------ */
+.ficheActions {
+  max-width: 420px;
+  margin: 0 auto 24px;
+}
+
+.fiche {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: clamp(20px, 5vw, 40px);
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.ficheHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--violet-primary);
+}
+
+.ficheBrand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--violet-primary);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ficheTitle {
+  font-size: clamp(22px, 5vw, 28px);
+  margin: 2px 0 0;
+}
+
+.ficheMeta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.ficheContext {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ficheLabel {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.ficheValue {
+  font-weight: 600;
+}
+
+.ficheGroup {
+  margin-top: 22px;
+}
+
+.ficheGroupTitle {
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--violet-primary);
+  margin-bottom: 8px;
+}
+
+.ficheTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ficheTable th {
+  text-align: left;
+  font-weight: 400;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.ficheTable td {
+  text-align: right;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  white-space: nowrap;
+  vertical-align: top;
+  padding-left: 12px;
+}
+
+.ficheMeasureName {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ficheMeasureWhere {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  max-width: 52ch;
+}
+
+.ficheFooter {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* --- Reglages d'impression ------------------------------------------------- */
+@media print {
+  /* La fiche devient la page : plus de carte, plus d'ombre, plus de marge
+     interne (les marges sont celles de @page). */
+  .fiche {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    max-width: none;
+  }
+
+  .section {
+    padding: 0;
+  }
+
+  .container {
+    padding: 0;
+    max-width: none;
+  }
+
+  /* Une mesure ne doit jamais etre coupee entre deux pages. */
+  .ficheGroup {
+    break-inside: avoid;
+  }
+
+  .ficheTable tr {
+    break-inside: avoid;
+  }
+
+  .ficheMeasureWhere,
+  .ficheFooter,
+  .ficheMeta {
+    color: #444;
+  }
+}

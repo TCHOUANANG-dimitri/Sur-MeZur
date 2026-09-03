@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 import "@/styles/shell.css";
 import "@/styles/ui.css";
+import "@/styles/landing.css";
+import "@/styles/catalog.css";
+import "@/styles/mesures.css";
 import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata: Metadata = {

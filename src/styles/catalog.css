@@ -1,0 +1,156 @@
+/* Catalogue et fiche modele. */
+
+.modelCard {
+  display: block;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: inherit;
+}
+
+/* Rapport fixe : les vignettes gardent la meme hauteur quelle que soit la
+   largeur de colonne, donc la grille reste reguliere a toutes les tailles
+   d'ecran sans hauteur codee en dur. */
+.modelCardImage {
+  aspect-ratio: 3 / 4;
+  background-size: cover;
+  background-position: center;
+}
+
+.modelCardBody {
+  padding: 10px 12px;
+}
+
+.modelCardName {
+  font-weight: 600;
+  font-size: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* --- Fiche modele --------------------------------------------------------- */
+.modelDetail {
+  display: grid;
+  gap: var(--gutter);
+}
+
+@media (min-width: 900px) {
+  .modelDetail {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.modelHero {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-card);
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg-alt);
+}
+
+@media (min-width: 900px) {
+  .modelHero {
+    position: sticky;
+    top: calc(var(--header-h) + 16px);
+  }
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  align-items: flex-start;
+}
+
+/* --- Prise de photo -------------------------------------------------------- */
+.photoPicker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.photoPicker:focus-visible {
+  outline: 2px solid var(--violet-vivid);
+  outline-offset: 2px;
+}
+
+/* Vignette et cadre vide partagent la meme empreinte, pour que la mise en
+   page ne bouge pas au moment ou la photo est choisie. */
+.photoPreview,
+.photoPlaceholder {
+  width: 72px;
+  height: 96px;
+  border-radius: 10px;
+  flex: none;
+}
+
+.photoPreview {
+  object-fit: cover;
+}
+
+.photoPlaceholder {
+  display: grid;
+  place-items: center;
+  background: var(--bg-alt);
+  font-size: 26px;
+}
+
+.photoPickerText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.photoPickerLabel {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.photoDone {
+  color: var(--success);
+}
+
+/* --- Accueil et liste de mesures ------------------------------------------ */
+.homeCta {
+  margin: 16px 0 28px;
+}
+
+.homeCta h3 {
+  margin-bottom: 6px;
+}
+
+.homeCta p {
+  margin: 0 0 16px;
+}
+
+.homeSectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.measureRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: inherit;
+}
