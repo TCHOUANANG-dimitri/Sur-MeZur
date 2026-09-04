@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { CatalogApi } from "@/lib/api/endpoints";
 import type { GarmentModel } from "@/lib/api/types";
 import { Badge, Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
+import { IconSearch } from "@/components/icons";
 
 export default function ModeleDetail() {
   const { id } = useParams<{ id: string }>();
@@ -29,7 +30,7 @@ export default function ModeleDetail() {
         <PageHeader title="Modèle" back />
         <div className="container section">
           <ErrorBanner message={error} />
-          <EmptyState icon="🔍" title="Ce modèle n'existe pas" />
+          <EmptyState icon={<IconSearch size={30} strokeWidth={1.6} />} title="Ce modèle n'existe pas" />
         </div>
       </>
     );

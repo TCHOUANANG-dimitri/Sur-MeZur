@@ -20,6 +20,7 @@ import type { GarmentModel, Measurement } from "@/lib/api/types";
 import { formatCm, presentableGroups } from "@/lib/measurements";
 import { useAuth } from "@/components/AuthProvider";
 import { Button, EmptyState, PageHeader, Spinner } from "@/components/ui";
+import { IconPrint } from "@/components/icons";
 
 function FicheInner() {
   const { id } = useParams<{ id: string }>();
@@ -46,7 +47,7 @@ function FicheInner() {
     return (
       <>
         <PageHeader title="Fiche" back />
-        <EmptyState icon="&#128196;" title="Fiche indisponible" />
+        <EmptyState icon={<IconPrint size={30} strokeWidth={1.6} />} title="Fiche indisponible" />
       </>
     );
   }

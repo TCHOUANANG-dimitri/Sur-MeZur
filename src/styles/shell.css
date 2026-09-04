@@ -56,11 +56,12 @@
 
 .tabItem {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   min-height: var(--tabbar-h);
   padding: 6px 2px;
   border: 0;
@@ -73,13 +74,22 @@
   line-height: 1.1;
 }
 
-.tabItemActive {
-  color: var(--violet-primary);
+/* Cinq onglets sur 320 px laissent 64 px chacun : un libelle trop long doit
+   etre coupe, sinon il passe sur deux lignes et fait grandir la barre. */
+.tabItem > span:last-child {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tabIcon {
-  font-size: 20px;
-  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.tabItemActive {
+  color: var(--violet-primary);
 }
 
 /* --- Navigation laterale (ordinateur) ------------------------------------ */
@@ -99,15 +109,10 @@
 }
 
 .brandMark {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: var(--gradient);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 17px;
+  width: 30px;
+  height: auto;
   flex: none;
+  object-fit: contain;
 }
 
 @media (min-width: 1024px) {

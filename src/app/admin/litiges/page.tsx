@@ -8,6 +8,7 @@ import { AdminApi } from "@/lib/api/endpoints";
 import type { Order } from "@/lib/api/types";
 import { Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { formatFcfa } from "@/components/admin/format";
+import { IconDisputes } from "@/components/icons";
 
 export default function AdminDisputes() {
   const [orders, setOrders] = useState<Order[] | null>(null);
@@ -50,7 +51,7 @@ export default function AdminDisputes() {
         {!orders ? (
           <Spinner label="Chargement des litiges…" />
         ) : orders.length === 0 ? (
-          <EmptyState icon="⚖️" title="Aucun litige ouvert" body="Tous les litiges sont résolus." />
+          <EmptyState icon={<IconDisputes size={30} strokeWidth={1.6} />} title="Aucun litige ouvert" body="Tous les litiges sont résolus." />
         ) : (
           <div className="adminStack">
             {orders.map((o) => (

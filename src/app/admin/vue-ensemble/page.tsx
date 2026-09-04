@@ -8,6 +8,7 @@ import Link from "next/link";
 import { AdminApi, type AdminStats } from "@/lib/api/endpoints";
 import { Badge, Card, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { formatFcfa } from "@/components/admin/format";
+import { IconModels, IconOrders, IconProfile, IconWarning } from "@/components/icons";
 
 const STATUS_LABEL: Record<string, string> = {
   new: "Nouvelle",
@@ -61,15 +62,15 @@ export default function AdminOverview() {
         {stats && (
           <>
             <div className="statGrid" style={{ marginBottom: 16 }}>
-              <StatTile label="Clients" value={stats.clients} icon="👤" />
+              <StatTile label="Clients" value={stats.clients} icon={<IconProfile size={30} strokeWidth={1.6} />} />
               <StatTile
                 label="Tailleurs"
                 value={stats.tailors}
-                icon="✂️"
+                icon={<IconModels size={30} strokeWidth={1.6} />}
                 hint={`${stats.tailors_pending} en attente`}
               />
-              <StatTile label="Commandes" value={stats.orders_total} icon="📦" />
-              <StatTile label="Comptes suspendus" value={stats.suspended} icon="🚫" />
+              <StatTile label="Commandes" value={stats.orders_total} icon={<IconOrders size={30} strokeWidth={1.6} />} />
+              <StatTile label="Comptes suspendus" value={stats.suspended} icon={<IconWarning size={30} strokeWidth={1.6} />} />
             </div>
 
             <Card className="adminStack" style={{ marginBottom: 16 }}>
@@ -128,7 +129,7 @@ function StatTile({
 }: {
   label: string;
   value: number;
-  icon: string;
+  icon: React.ReactNode;
   hint?: string;
 }) {
   return (

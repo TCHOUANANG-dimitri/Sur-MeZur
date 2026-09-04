@@ -5,6 +5,7 @@ import { CatalogApi } from "@/lib/api/endpoints";
 import type { Category, GarmentModel } from "@/lib/api/types";
 import { ModelCard } from "@/components/ModelCard";
 import { Chip, EmptyState, ErrorBanner, Input, PageHeader, Spinner } from "@/components/ui";
+import { IconModels } from "@/components/icons";
 
 export default function Modeles() {
   const [models, setModels] = useState<GarmentModel[] | null>(null);
@@ -79,7 +80,7 @@ export default function Modeles() {
           <Spinner label="Chargement du catalogue…" />
         ) : shown.length === 0 ? (
           <EmptyState
-            icon="👗"
+            icon={<IconModels size={30} strokeWidth={1.6} />}
             title="Aucun modèle"
             body={
               query

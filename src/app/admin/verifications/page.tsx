@@ -19,6 +19,7 @@ import {
   Spinner,
 } from "@/components/ui";
 import { assetUrl } from "@/components/admin/format";
+import { IconVerify } from "@/components/icons";
 
 type FilterKey = "pending" | "approved" | "rejected" | "all";
 
@@ -121,7 +122,7 @@ export default function AdminVerifications() {
         {!tailors ? (
           <Spinner label="Chargement…" />
         ) : tailors.length === 0 ? (
-          <EmptyState icon="✅" title="Aucune vérification" body="Aucun tailleur dans cette catégorie." />
+          <EmptyState icon={<IconVerify size={30} strokeWidth={1.6} />} title="Aucune vérification" body="Aucun tailleur dans cette catégorie." />
         ) : (
           <div className="adminStack">
             {tailors.map((tl) => {

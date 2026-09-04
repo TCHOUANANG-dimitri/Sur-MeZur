@@ -18,6 +18,7 @@ import {
   Spinner,
 } from "@/components/ui";
 import { formatDate } from "@/components/admin/format";
+import { IconUsers } from "@/components/icons";
 
 type RoleFilter = "all" | "client" | "tailor" | "admin";
 
@@ -99,7 +100,7 @@ export default function AdminUsers() {
         {!users ? (
           <Spinner label="Chargement…" />
         ) : users.length === 0 ? (
-          <EmptyState icon="👥" title="Aucun utilisateur" body="Modifiez le filtre ou la recherche." />
+          <EmptyState icon={<IconUsers size={30} strokeWidth={1.6} />} title="Aucun utilisateur" body="Modifiez le filtre ou la recherche." />
         ) : (
           <div className="adminStack">
             {users.map((u) => (

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminApi } from "@/lib/api/endpoints";
 import type { Review } from "@/lib/api/types";
 import { Badge, Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
+import { IconReviews } from "@/components/icons";
 
 function Stars({ value }: { value: number }) {
   return (
@@ -60,7 +61,7 @@ export default function AdminReviews() {
         {!reviews ? (
           <Spinner label="Chargement des avis…" />
         ) : reviews.length === 0 ? (
-          <EmptyState icon="⭐" title="Aucun avis" body="Aucun avis à modérer pour le moment." />
+          <EmptyState icon={<IconReviews size={30} strokeWidth={1.6} />} title="Aucun avis" body="Aucun avis à modérer pour le moment." />
         ) : (
           <div className="adminStack">
             {reviews.map((r) => (

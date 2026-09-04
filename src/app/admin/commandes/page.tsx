@@ -9,6 +9,7 @@ import { AdminApi } from "@/lib/api/endpoints";
 import type { Order, OrderStatus } from "@/lib/api/types";
 import { Badge, Card, Chip, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { formatDate, formatFcfa } from "@/components/admin/format";
+import { IconOrders } from "@/components/icons";
 
 type StatusFilter = OrderStatus | "ready_for_pickup" | null;
 
@@ -66,7 +67,7 @@ export default function AdminOrders() {
         {!orders ? (
           <Spinner label="Chargement des commandes…" />
         ) : orders.length === 0 ? (
-          <EmptyState icon="📦" title="Aucune commande" />
+          <EmptyState icon={<IconOrders size={30} strokeWidth={1.6} />} title="Aucune commande" />
         ) : (
           <Card style={{ padding: 8, overflow: "hidden" }}>
             <table className="dataTable">

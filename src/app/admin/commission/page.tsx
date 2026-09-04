@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AdminApi } from "@/lib/api/endpoints";
 import { Card, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { formatFcfa } from "@/components/admin/format";
+import { IconCommission } from "@/components/icons";
 
 interface Tier {
   id: string;
@@ -36,7 +37,7 @@ export default function AdminCommission() {
         {!tiers && !error ? (
           <Spinner label="Chargement des paliers…" />
         ) : !tiers || tiers.length === 0 ? (
-          <EmptyState icon="％" title="Aucun palier" body="Aucun palier de commission configuré." />
+          <EmptyState icon={<IconCommission size={30} strokeWidth={1.6} />} title="Aucun palier" body="Aucun palier de commission configuré." />
         ) : (
           <div className="adminStack">
             {tiers.map((tier) => (

@@ -43,6 +43,21 @@ export const AuthApi = {
     api.post<{ sent: boolean; dev_code: string }>("/auth/otp/request", { phone }, { auth: false }),
   otpVerify: (phone: string, code: string) =>
     api.post<{ verified: boolean }>("/auth/otp/verify", { phone, code }, { auth: false }),
+  // Reinitialisation du mot de passe. `dev_code` est renvoye tant qu'aucun
+  // fournisseur SMS n'est branche : le code s'affiche donc a l'ecran, comme a
+  // l'inscription (voir auth.py::password_reset_request).
+  passwordResetRequest: (phone: string) =>
+    api.post<{ sent: boolean; dev_code: string }>(
+      "/auth/password/reset/request",
+      { phone },
+      { auth: false }
+    ),
+  passwordResetConfirm: (phone: string, code: string, new_password: string) =>
+    api.post<TokenResponse>(
+      "/auth/password/reset/confirm",
+      { phone, code, new_password },
+      { auth: false }
+    ),
 };
 
 // --- Users / tailors -----------------------------------------------------

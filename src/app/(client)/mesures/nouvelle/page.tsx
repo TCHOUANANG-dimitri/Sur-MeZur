@@ -27,6 +27,7 @@ import {
   Spinner,
   Steps,
 } from "@/components/ui";
+import { IconCamera, IconCheck } from "@/components/icons";
 
 type Step = "infos" | "photos" | "analyse";
 
@@ -235,12 +236,17 @@ function PhotoPicker({
         <img src={preview} alt={`Apercu - ${label}`} className="photoPreview" />
       ) : (
         <span className="photoPlaceholder" aria-hidden>
-          &#128247;
+          <IconCamera size={26} strokeWidth={1.7} />
         </span>
       )}
       <span className="photoPickerText">
         <span className="photoPickerLabel">
-          {label} {file ? <span className="photoDone">&#10003;</span> : null}
+          {label}
+          {file ? (
+            <span className="photoDone" aria-label="Photo choisie">
+              <IconCheck size={15} strokeWidth={3} />
+            </span>
+          ) : null}
         </span>
         <span className="fieldHint">{file ? "Appuyez pour reprendre" : hint}</span>
       </span>

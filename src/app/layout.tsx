@@ -2,15 +2,20 @@ import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 import "@/styles/shell.css";
 import "@/styles/ui.css";
+import "@/styles/auth.css";
 import "@/styles/landing.css";
 import "@/styles/catalog.css";
 import "@/styles/mesures.css";
+// Charge en dernier : affine ce que les feuilles precedentes posent.
+import "@/styles/mobile.css";
 import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
   title: "Sur-MeZur — Vos mesures, sans mètre ruban",
   description:
     "Choisissez un modèle, prenez deux photos, obtenez vos mesures de couture et repartez avec votre fiche prête à imprimer.",
+  icons: { icon: "/icon.png", apple: "/icon.png" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Sur-MeZur" },
 };
 
 // `viewport-fit=cover` + les variables `env(safe-area-inset-*)` du CSS : sans

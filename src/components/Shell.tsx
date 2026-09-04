@@ -11,13 +11,30 @@
  */
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import React from "react";
+import {
+  IconHome,
+  IconModels,
+  IconMeasure,
+  IconProfile,
+  IconDashboard,
+  IconVerify,
+  IconCatalog,
+  IconUsers,
+  IconOrders,
+  IconDisputes,
+  IconReviews,
+  IconCommission,
+} from "./icons";
 
 export interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  /** Composant d'icone lucide, pas une chaine : le meme trait que
+   *  l'application mobile, qui utilise lucide-react-native. */
+  Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
 }
 
 // La version web se limite volontairement au parcours de prise de mesure :
@@ -25,20 +42,20 @@ export interface NavItem {
 // de commande ni de paiement — ceux-ci restent l'affaire de l'application
 // mobile.
 export const CLIENT_NAV: NavItem[] = [
-  { href: "/accueil", label: "Accueil", icon: "🏠" },
-  { href: "/modeles", label: "Modèles", icon: "👗" },
-  { href: "/mesures", label: "Mes mesures", icon: "📐" },
-  { href: "/profil", label: "Profil", icon: "👤" },
+  { href: "/accueil", label: "Accueil", Icon: IconHome },
+  { href: "/modeles", label: "Modèles", Icon: IconModels },
+  { href: "/mesures", label: "Mes mesures", Icon: IconMeasure },
+  { href: "/profil", label: "Profil", Icon: IconProfile },
 ];
 
 export const ADMIN_NAV: NavItem[] = [
-  { href: "/admin/vue-ensemble", label: "Vue d'ensemble", icon: "🏠" },
-  { href: "/admin/verifications", label: "Vérifications", icon: "✅" },
-  { href: "/admin/utilisateurs", label: "Utilisateurs", icon: "👥" },
-  { href: "/admin/commandes", label: "Commandes", icon: "📦" },
-  { href: "/admin/catalogue", label: "Catalogue", icon: "📁" },
-  { href: "/admin/litiges", label: "Litiges", icon: "⚖️" },
-  { href: "/admin/avis", label: "Avis", icon: "⭐" },
+  { href: "/admin/vue-ensemble", label: "Vue d'ensemble", Icon: IconDashboard },
+  { href: "/admin/verifications", label: "Vérifications", Icon: IconVerify },
+  { href: "/admin/utilisateurs", label: "Utilisateurs", Icon: IconUsers },
+  { href: "/admin/commandes", label: "Commandes", Icon: IconOrders },
+  { href: "/admin/catalogue", label: "Catalogue", Icon: IconCatalog },
+  { href: "/admin/litiges", label: "Litiges", Icon: IconDisputes },
+  { href: "/admin/avis", label: "Avis", Icon: IconReviews },
 ];
 
 function NavList({ items }: { items: NavItem[] }) {
@@ -55,7 +72,7 @@ function NavList({ items }: { items: NavItem[] }) {
             aria-current={active ? "page" : undefined}
           >
             <span className="tabIcon" aria-hidden>
-              {item.icon}
+              <item.Icon size={22} strokeWidth={active ? 2.4 : 1.9} />
             </span>
             <span>{item.label}</span>
           </Link>
@@ -71,9 +88,7 @@ export function Shell({ nav, children }: { nav: NavItem[]; children: React.React
       {/* Colonne laterale : masquee sous 1024px par la feuille de style. */}
       <aside className="sidenav no-print">
         <div className="brand">
-          <span className="brandMark" aria-hidden>
-            S
-          </span>
+          <Image src="/logo-mark.png" alt="" width={191} height={200} className="brandMark" />
           Sur-MeZur
         </div>
         <NavList items={nav} />

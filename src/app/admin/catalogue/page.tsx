@@ -19,6 +19,7 @@ import {
   Spinner,
 } from "@/components/ui";
 import { assetUrl } from "@/components/admin/format";
+import { IconCatalog, IconModels } from "@/components/icons";
 
 type Tab = "categories" | "models";
 
@@ -223,7 +224,7 @@ export default function AdminCatalog() {
             </Card>
 
             {categories.length === 0 ? (
-              <EmptyState icon="📁" title="Aucune catégorie" />
+              <EmptyState icon={<IconCatalog size={30} strokeWidth={1.6} />} title="Aucune catégorie" />
             ) : (
               categories.map((cat) => (
                 <Card key={cat.id} variant="flat">
@@ -305,7 +306,7 @@ export default function AdminCatalog() {
             </Card>
 
             {models.length === 0 ? (
-              <EmptyState icon="👗" title="Aucun modèle" />
+              <EmptyState icon={<IconModels size={30} strokeWidth={1.6} />} title="Aucun modèle" />
             ) : (
               models.map((m) => (
                 <Card key={m.id}>

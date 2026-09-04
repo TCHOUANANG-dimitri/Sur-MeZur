@@ -9,6 +9,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { IconBack, IconEmpty, IconWarning } from "./icons";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 
@@ -99,7 +100,7 @@ export function ErrorBanner({ message }: { message: string }) {
   if (!message) return null;
   return (
     <div className="banner bannerError" role="alert">
-      <span aria-hidden>⚠️</span>
+      <IconWarning size={18} aria-hidden />
       <span>{message}</span>
     </div>
   );
@@ -124,14 +125,17 @@ export function EmptyState({
   body,
   action,
 }: {
-  icon?: string;
+  /** Icone lucide deja instanciee. Omise, une boite vide neutre est utilisee. */
+  icon?: React.ReactNode;
   title: string;
   body?: string;
   action?: React.ReactNode;
 }) {
   return (
     <div className="center">
-      {icon && <div style={{ fontSize: 34 }} aria-hidden>{icon}</div>}
+      <div className="emptyIcon" aria-hidden>
+        {icon ?? <IconEmpty size={30} strokeWidth={1.6} />}
+      </div>
       <h3>{title}</h3>
       {body && <p className="muted" style={{ maxWidth: 420 }}>{body}</p>}
       {action}
@@ -153,7 +157,7 @@ export function PageHeader({
     <header className="header no-print">
       {back && (
         <button className="backBtn" onClick={() => router.back()} aria-label="Retour">
-          ←
+          <IconBack size={22} aria-hidden />
         </button>
       )}
       <h1 className="headerTitle">{title}</h1>

@@ -1,33 +1,37 @@
 "use client";
 
 /**
- * Creation de compte.
+ * Creation de compte, calquee sur l'ecran mobile.
  *
- * Le backend renvoie directement les jetons a l'inscription (pas de
- * verification par code avant d'entrer) : le parcours web se limite donc a un
- * seul ecran, contrairement au mobile qui insere une etape OTP. Le role est
- * fige a "client" — la version web ne propose pas de compte tailleur.
+ * Le backend renvoie directement les jetons a l'inscription : le parcours web
+ * tient donc en un seul ecran, la ou le mobile insere une etape par code. Le
+ * role est fige a "client" — la version web ne propose pas de compte tailleur.
  */
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthApi } from "@/lib/api/endpoints";
 import { setTokens, startAuthTimer } from "@/lib/api/client";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, ErrorBanner, Field, Input } from "@/components/ui";
+import { PasswordInput, PhoneField } from "@/components/fields";
+import { Button, ErrorBanner } from "@/components/ui";
+import { COUNTRIES } from "@/lib/countries";
 
 export default function Inscription() {
   const router = useRouter();
   const { refresh } = useAuth();
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(COUNTRIES[0].dial);
   const [password, setPassword] = useState("");
   const [consent, setConsent] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const tooShort = password.length > 0 && password.length < 8;
+  const localDigits = phone.replace(/^\+\d+/, "");
+  const canSubmit =
+    fullName.trim().length >= 2 && localDigits.length >= 6 && password.length >= 8 && !busy;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,70 +58,63 @@ export default function Inscription() {
   }
 
   return (
-    <main className="authPage">
-      <div className="containerNarrow authCard">
-        <h1>Créer un compte</h1>
-        <p className="muted">Quelques secondes, puis vous pourrez prendre vos mesures.</p>
+    <main className="authScreen">
+      <form className="authForm" onSubmit={submit} noValidate>
+        <div className="authLogo">
+          <Image
+            src="/logo.png"
+            alt="Sur-MeZur"
+            width={420}
+            height={630}
+            priority
+            sizes="(max-width: 480px) 55vw, 200px"
+          />
+        </div>
 
-        <form onSubmit={submit} noValidate>
-          <ErrorBanner message={error} />
-          <Field label="Nom complet">
-            <Input
-              autoComplete="name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Numéro de téléphone">
-            <Input
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="+237 6 XX XX XX XX"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-            />
-          </Field>
-          <Field
-            label="Mot de passe"
-            hint={tooShort ? "Au moins 8 caractères." : "Au moins 8 caractères."}
-          >
-            <Input
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </Field>
+        <h1 className="authTitle">Créer un compte</h1>
 
-          <label className="consentRow">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-            />
-            <span>
-              J&apos;accepte que mes photos soient analysées pour calculer mes mesures. Elles ne
-              servent qu&apos;à cela.
-            </span>
-          </label>
+        <ErrorBanner message={error} />
 
-          <Button
-            type="submit"
-            block
-            disabled={busy || !fullName || !phone || password.length < 8}
-          >
-            {busy ? "Création…" : "Créer mon compte"}
-          </Button>
-        </form>
+        <label className="field">
+          <span className="fieldLabel">Nom complet</span>
+          <input
+            className="input"
+            autoComplete="name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+        </label>
 
-        <p className="muted authSwitch">
-          Déjà inscrit ? <Link href="/connexion">Se connecter</Link>
-        </p>
-      </div>
+        <PhoneField label="Numéro de téléphone" value={phone} onChange={setPhone} />
+
+        <div className="field">
+          <span className="fieldLabel">Mot de passe</span>
+          <PasswordInput
+            value={password}
+            onChange={setPassword}
+            autoComplete="new-password"
+          />
+          <span className="fieldHint">Au moins 8 caractères.</span>
+        </div>
+
+        <label className="consentRow">
+          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+          <span>
+            J&apos;accepte que mes photos soient analysées pour calculer mes mesures. Elles ne
+            servent qu&apos;à cela.
+          </span>
+        </label>
+
+        <Button type="submit" block disabled={!canSubmit}>
+          {busy ? "Création…" : "Créer mon compte"}
+        </Button>
+
+        <div className="authLinks">
+          <Link href="/connexion" className="authLink">
+            J&apos;ai déjà un compte
+          </Link>
+        </div>
+      </form>
     </main>
   );
 }

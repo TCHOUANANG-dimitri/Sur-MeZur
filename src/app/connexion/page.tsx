@@ -1,24 +1,40 @@
 "use client";
 
-// Page de connexion — point d'entree unique du site (la racine y redirige).
-// Fidele a l'ecran de connexion mobile : logo en tete, compte telephonique et
-// mot de passe, puis bascule selon le role apres authentification.
+/**
+ * Connexion — point d'entree du site (la racine y redirige).
+ *
+ * Calquee sur l'ecran mobile (mobile/app/login.tsx) : logo, titre, champ
+ * telephone avec indicatif, mot de passe avec bascule d'affichage, bouton
+ * plein, puis les deux liens secondaires.
+ *
+ * CONTRAINTE DE HAUTEUR : l'ecran doit tenir entierement dans la fenetre,
+ * sans defilement, y compris sur un telephone de 640 px de haut. Le logo est
+ * donc dimensionne en unites de hauteur de vue (`vh`) et non en pixels fixes,
+ * et il s'efface completement sous 460 px de haut plutot que de repousser le
+ * formulaire hors du cadre. Voir `.authLogo` dans auth.css.
+ */
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 import { AuthApi } from "@/lib/api/endpoints";
 import { setTokens, startAuthTimer } from "@/lib/api/client";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, ErrorBanner, Field, Input } from "@/components/ui";
+import { PasswordInput, PhoneField } from "@/components/fields";
+import { Button, ErrorBanner } from "@/components/ui";
+import { COUNTRIES } from "@/lib/countries";
 
 export default function Connexion() {
   const router = useRouter();
   const { refresh } = useAuth();
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(COUNTRIES[0].dial);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const localDigits = phone.replace(/^\+\d+/, "");
+  const canSubmit = localDigits.length >= 6 && password.length > 0 && !busy;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,47 +54,43 @@ export default function Connexion() {
   }
 
   return (
-    <main className="authPage">
-      <div className="containerNarrow authCard">
+    <main className="authScreen">
+      <form className="authForm" onSubmit={submit} noValidate>
         <div className="authLogo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-transparent.png" alt="Sur-MeZur" />
+          <Image
+            src="/logo.png"
+            alt="Sur-MeZur"
+            width={420}
+            height={630}
+            priority
+            sizes="(max-width: 480px) 60vw, 220px"
+          />
         </div>
 
-        <h1>Se connecter</h1>
-        <p className="muted">Retrouvez vos mesures et vos modèles enregistrés.</p>
+        <h1 className="authTitle">Connexion</h1>
 
-        <form onSubmit={submit} noValidate>
-          <ErrorBanner message={error} />
-          <Field label="Numéro de téléphone">
-            <Input
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="+237 6 XX XX XX XX"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Mot de passe">
-            <Input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </Field>
-          <Button type="submit" block disabled={busy || !phone || !password}>
-            {busy ? "Connexion…" : "Se connecter"}
-          </Button>
-        </form>
+        <ErrorBanner message={error} />
 
-        <p className="muted authSwitch">
-          Pas encore de compte ? <Link href="/inscription">Créer un compte</Link>
-        </p>
-      </div>
+        <PhoneField label="Numéro de téléphone" value={phone} onChange={setPhone} />
+
+        <div className="field">
+          <span className="fieldLabel">Mot de passe</span>
+          <PasswordInput value={password} onChange={setPassword} />
+        </div>
+
+        <Button type="submit" block disabled={!canSubmit}>
+          {busy ? "Connexion…" : "Se connecter"}
+        </Button>
+
+        <div className="authLinks">
+          <Link href="/mot-de-passe-oublie" className="authLink">
+            Mot de passe oublié ?
+          </Link>
+          <Link href="/inscription" className="authLink">
+            Créer un compte
+          </Link>
+        </div>
+      </form>
     </main>
   );
 }

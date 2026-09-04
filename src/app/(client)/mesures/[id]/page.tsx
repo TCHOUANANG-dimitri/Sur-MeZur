@@ -18,6 +18,7 @@ import { CatalogApi, MeasurementsApi } from "@/lib/api/endpoints";
 import type { GarmentModel, Measurement } from "@/lib/api/types";
 import { formatCm, presentableGroups } from "@/lib/measurements";
 import { Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
+import { IconMeasure } from "@/components/icons";
 
 function DetailMesureInner() {
   const { id } = useParams<{ id: string }>();
@@ -54,7 +55,7 @@ function DetailMesureInner() {
         <PageHeader title="Mes mesures" back />
         <div className="container section">
           <ErrorBanner message={error} />
-          <EmptyState icon="&#128207;" title="Ces mesures n'existent pas" />
+          <EmptyState icon={<IconMeasure size={30} strokeWidth={1.6} />} title="Ces mesures n'existent pas" />
         </div>
       </>
     );
@@ -96,7 +97,7 @@ function DetailMesureInner() {
 
         {groups.length === 0 ? (
           <EmptyState
-            icon="&#128207;"
+            icon={<IconMeasure size={30} strokeWidth={1.6} />}
             title="Aucune mesure exploitable"
             body="L'analyse n'a rien pu retenir de ces photos. Reprenez-les en veillant a etre entierement dans le cadre."
             action={

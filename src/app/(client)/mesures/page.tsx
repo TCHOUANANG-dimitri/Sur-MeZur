@@ -6,6 +6,7 @@ import { MeasurementsApi } from "@/lib/api/endpoints";
 import type { Measurement } from "@/lib/api/types";
 import { presentableMeasures } from "@/lib/measurements";
 import { Badge, Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
+import { IconMeasure } from "@/components/icons";
 
 export default function MesMesures() {
   const [list, setList] = useState<Measurement[] | null>(null);
@@ -30,7 +31,7 @@ export default function MesMesures() {
           <Spinner label="Chargement&hellip;" />
         ) : list.length === 0 ? (
           <EmptyState
-            icon="&#128207;"
+            icon={<IconMeasure size={30} strokeWidth={1.6} />}
             title="Aucune mesure pour l'instant"
             body="Prenez deux photos et obtenez vos douze mesures de couture en moins d'une minute."
             action={

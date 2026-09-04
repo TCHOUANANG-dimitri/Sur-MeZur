@@ -24,6 +24,13 @@
   --indigo-text: #1f2a44;
   --bg: #ffffff;
   --bg-alt: #f4f2f8;
+  /* `surface` est distinct de `bg` dans les tokens du mobile : il designe le
+     fond d'un element pose SUR la page (carte, champ, feuille). Les deux se
+     confondent en theme clair, mais les separer des maintenant evite d'avoir
+     a reprendre chaque composant le jour ou le theme sombre est porte. */
+  --surface: #ffffff;
+  /* Voile violet leger derriere les petites tuiles d'icone (mobile: violetTint). */
+  --violet-tint: #ede9fe;
   --bg-page: #eceaf2;
   --border: #e5e1ee;
   --text-secondary: #6b7280;
