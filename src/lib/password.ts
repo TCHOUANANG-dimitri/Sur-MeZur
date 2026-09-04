@@ -13,10 +13,14 @@ export const PASSWORD_LENGTH = 6;
 
 export function passwordError(value: string): string | null {
   if (value.length !== PASSWORD_LENGTH) {
-    return `Le mot de passe doit contenir exactement ${PASSWORD_LENGTH} caractères.`;
+    return "Le mot de passe doit contenir exactement 6 caractères, dont au moins un chiffre et une lettre.";
   }
-  if (!/[a-zA-Z]/.test(value)) return "Il doit contenir au moins une lettre.";
-  if (!/[0-9]/.test(value)) return "Il doit contenir au moins un chiffre.";
+  if (!/[a-zA-Z]/.test(value)) {
+    return "Le mot de passe doit contenir au moins une lettre (6 caractères, dont au moins un chiffre).";
+  }
+  if (!/[0-9]/.test(value)) {
+    return "Le mot de passe doit contenir au moins un chiffre (6 caractères, dont au moins une lettre).";
+  }
   return null;
 }
 
