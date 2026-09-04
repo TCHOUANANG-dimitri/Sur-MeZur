@@ -18,7 +18,7 @@ import { setTokens, startAuthTimer } from "@/lib/api/client";
 import { useAuth } from "@/components/AuthProvider";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner, InfoBanner } from "@/components/ui";
-import { COUNTRIES } from "@/lib/countries";
+import { COUNTRIES, splitPhone } from "@/lib/countries";
 
 export default function MotDePasseOublie() {
   const router = useRouter();
@@ -31,7 +31,11 @@ export default function MotDePasseOublie() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const localDigits = phone.replace(/^\+\d+/, "");
+  // Le numero local vient de `splitPhone`, qui coupe sur les indicatifs
+  // CONNUS. Une expression reguliere du type /^\+\d+/ ne marche pas :
+  // `\d+` est gourmand et avale le numero entier en plus de l'indicatif,
+  // ce qui laissait le bouton grise quelle que soit la saisie.
+  const localDigits = splitPhone(phone).local;
 
   async function requestCode(e: React.FormEvent) {
     e.preventDefault();
