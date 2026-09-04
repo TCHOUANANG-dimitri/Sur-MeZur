@@ -34,9 +34,13 @@ export default function Inscription() {
   // CONNUS. Une expression reguliere du type /^\+\d+/ ne marche pas :
   // `\d+` est gourmand et avale le numero entier en plus de l'indicatif,
   // ce qui laissait le bouton grise quelle que soit la saisie.
+  // Meme logique assouplie que sur l'ecran de connexion : le bouton s'active
+  // des que les champs sont remplis (nom, numero, mot de passe, consentement).
+  // La validation fine du mot de passe reste au serveur au moment de
+  // l'envoi ; on ne bloque pas la saisie sur une longueur exacte.
   const localDigits = splitPhone(phone).local;
   const canSubmit =
-    fullName.trim().length >= 2 && localDigits.length >= 6 && passwordError(password) === null && !busy;
+    fullName.trim().length >= 2 && localDigits.length >= 6 && password.length > 0 && consent && !busy;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
