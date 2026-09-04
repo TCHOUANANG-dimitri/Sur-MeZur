@@ -21,14 +21,60 @@ import { CatalogApi, MeasurementsApi } from "@/lib/api/endpoints";
 import type { GarmentModel, Measurement } from "@/lib/api/types";
 import { getSelection } from "@/lib/selection";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, EmptyState, PageHeader, Spinner } from "@/components/ui";
+import { Button, EmptyState, Field, PageHeader, Spinner, Textarea } from "@/components/ui";
 import { IconModels } from "@/components/icons";
+
+/*
+ * Notes personnelles POUR CHAQUE MODELE (preferences, ajustements,
+ * instructions de couture). Elles vivent dans `localStorage`, comme la
+ * selection de modeles (`src/lib/selection.ts`) : cet eco n'appartient qu'au
+ * navigateur et a l'edition de la fiche, rien qui doive etre persiste cote
+ * serveur. Structure : un objet `{ [idModele]: note }`. On garde ces helpers
+ * ici, sans toucher a `src/lib/**` (fichier partage, hors champ).
+ */
+const NOTES_KEY = "sm_model_notes";
+
+function readNotes(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(NOTES_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeNotes(map: Record<string, string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(NOTES_KEY, JSON.stringify(map));
+  } catch {
+    /* stockage indisponible : la note ne persistera pas, sans plus */
+  }
+}
 
 export default function FicheModeles() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [measurement, setMeasurement] = useState<Measurement | null | undefined>(undefined);
   const [models, setModels] = useState<GarmentModel[] | null>(null);
+  // Preferences par modele : `{ [idModele]: texte }`.
+  const [notes, setNotes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setNotes(readNotes());
+  }, []);
+
+  const setModelNote = (modelId: string, text: string) => {
+    setNotes((prev) => {
+      const next = { ...prev };
+      if (text.trim()) next[modelId] = text;
+      else delete next[modelId];
+      writeNotes(next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -107,6 +153,28 @@ export default function FicheModeles() {
           </p>
         </div>
 
+        <div className="ficheNotesEditor no-print">
+          <div className="rowLabel" style={{ marginBottom: 4 }}>
+            Vos préférences par modèle
+          </div>
+          <p className="fieldHint" style={{ marginBottom: 12 }}>
+            Ajustements, tissu, finitions, instructions de couture : ce que vous écrivez pour chaque
+            modèle sera imprimé sur la fiche, juste sous le modèle correspondant.
+          </p>
+          <div className="ficheNotesList">
+            {models.map((m) => (
+              <Field key={m.id} label={m.name}>
+                <Textarea
+                  rows={3}
+                  placeholder="Ex. : manches plus courtes, ourlet à 3 cm, boutons de couleur…"
+                  value={notes[m.id] ?? ""}
+                  onChange={(e) => setModelNote(m.id, e.target.value)}
+                />
+              </Field>
+            ))}
+          </div>
+        </div>
+
         <article className="fiche">
           <header className="ficheHeader">
             <div>
@@ -144,6 +212,12 @@ export default function FicheModeles() {
                 {m.description && <p className="ficheModelDesc">{m.description}</p>}
                 {m.style_tags?.length > 0 && (
                   <p className="ficheModelTags">{m.style_tags.join(" · ")}</p>
+                )}
+                {notes[m.id] && (
+                  <div className="ficheModelNote">
+                    <span className="ficheModelNoteLabel">Vos préférences</span>
+                    <p className="ficheModelNoteText">{notes[m.id]}</p>
+                  </div>
                 )}
               </div>
             </section>

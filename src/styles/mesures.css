@@ -300,6 +300,46 @@
   color: var(--text-secondary);
 }
 
+/* Editeur de preferences pour le tailleur (a l'ecran uniquement). */
+.ficheNotesEditor {
+  max-width: 560px;
+  margin: 0 auto 24px;
+}
+
+.ficheNotesEditor textarea {
+  white-space: pre-wrap;
+}
+
+.ficheNotesList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Note specifique a un modele, imprimee sous le modele correspondant. */
+.ficheModelNote {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.ficheModelNoteLabel {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--violet-primary);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.ficheModelNoteText {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 519px) {
   .ficheModelBlock {
     flex-direction: column;
@@ -313,14 +353,48 @@
 }
 
 @media print {
-  /* Un modele tient d'un seul tenant sur une page, image comprise. */
+  /* Deux modeles par page, chacun occupant reellement la moitie de la page :
+     le tailleur doit voir la coupe, pas des vignettes. */
+
+  /* Sur la premiere page l'en-tete consomme ~30 mm ; deux blocs de 115 mm y
+     tiennent encore (269 mm imprimables en hauteur). L'image est fixee a
+     115 mm : elle reste toujours grande et deux modeles tiennent par page tant
+     que la note (courte) ne fait pas grossir le bloc ; si une preference est
+     longue, le bloc grandit (`min-height`) et - sans jamais etre coupe -
+     deborde proprement sur la page suivante. */
   .ficheModelBlock {
     break-inside: avoid;
+    min-height: 115mm;
+    display: flex;
+    align-items: stretch;
+    gap: 20mm;
+    padding: 0;
+    border-bottom: 0;
   }
 
+  /* Coupe la page apres chaque 2e modele, sauf le dernier : le pied de page
+     etant un <footer> distinct, `:last-child` ne suffirait pas a exclure le
+     dernier modele (il n'est pas le dernier enfant de la fiche) ; c'est
+     pourquoi on exclut plutot le dernier <section>. */
+  .ficheModelBlock:nth-of-type(2n):not(:last-of-type) {
+    break-after: page;
+  }
+
+  /* L'image remplie 115 mm de haut et reste ENTIERE : `contain`, jamais
+     `cover`, sinon une manche ou un ourlet coupe rendrait la fiche inutile. */
   .ficheModelImage {
-    width: 92px;
-    height: 122px;
+    width: auto;
+    height: 115mm;
+    flex: 0 0 60%;
+    max-width: 60%;
+    object-fit: contain;
+    border-radius: 0;
+  }
+
+  .ficheModelBody {
+    flex: 1;
+    min-width: 0;
+    align-self: center;
   }
 }
 
