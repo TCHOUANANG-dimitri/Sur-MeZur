@@ -19,6 +19,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner, InfoBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
+import { PASSWORD_HINT, passwordError } from "@/lib/password";
 
 export default function MotDePasseOublie() {
   const router = useRouter();
@@ -121,10 +122,10 @@ export default function MotDePasseOublie() {
             <div className="field">
               <span className="fieldLabel">Nouveau mot de passe</span>
               <PasswordInput value={password} onChange={setPassword} autoComplete="new-password" />
-              <span className="fieldHint">Au moins 8 caractères.</span>
+              <span className="fieldHint">{password.length > 0 ? (passwordError(password) ?? "Mot de passe valide.") : PASSWORD_HINT}</span>
             </div>
 
-            <Button type="submit" block disabled={code.length < 4 || password.length < 8 || busy}>
+            <Button type="submit" block disabled={code.length < 4 || passwordError(password) !== null || busy}>
               {busy ? "Validation…" : "Changer mon mot de passe"}
             </Button>
           </>

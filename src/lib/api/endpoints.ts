@@ -66,6 +66,9 @@ export const UsersApi = {
   patchMe: (body: Partial<Pick<User, "full_name" | "email" | "language" | "photo_consent">>) =>
     api.patch<User>("/me", body),
   myClientProfile: () => api.get<ClientProfile>("/client-profile/me"),
+  /** Efface les photos de mesure deja analysees. Les mensurations calculees
+   *  sont conservees : seules les images disparaissent. */
+  purgePhotos: () => api.post<{ purged: boolean }>("/me/photos/purge"),
 };
 
 export const TailorsApi = {
@@ -106,10 +109,37 @@ export const AvatarsApi = {
 
 // --- Catalog -----------------------------------------------------------
 export const CatalogApi = {
-  models: (params: { category_id?: string; q?: string } = {}) => {
+  models: (
+    params: {
+      category_id?: string;
+      q?: string;
+      sort?: "recent" | "popular";
+      liked_only?: boolean;
+      limit?: number;
+    } = {}
+  ) => {
     const qs = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => v && qs.set(k, v));
+    Object.entries(params).forEach(
+      ([k, v]) => v !== undefined && v !== "" && qs.set(k, String(v))
+    );
     return api.get<GarmentModel[]>(`/models?${qs.toString()}`);
+  },
+  like: (id: string) => api.post<GarmentModel>(`/models/${id}/like`),
+  unlike: (id: string) => api.delete<GarmentModel>(`/models/${id}/like`),
+  /** Modele propose par un membre, verse au catalogue commun. Le prix est
+   *  volontairement absent : un modele se confectionne sur mesure et son
+   *  tarif se negocie avec le tailleur. */
+  createModel: (body: {
+    name: string;
+    description?: string;
+    category_id: string;
+    style_tags?: string[];
+    thumbnail_color?: string;
+  }) => api.post<GarmentModel>("/models", body),
+  uploadModelPhotos: (modelId: string, files: File[]) => {
+    const fd = new FormData();
+    files.forEach((f) => fd.append("files", f));
+    return api.postForm<GarmentModel>(`/models/${modelId}/photos`, fd);
   },
   model: (id: string) => api.get<GarmentModel>(`/models/${id}`),
   categories: () => api.get<Category[]>("/categories"),

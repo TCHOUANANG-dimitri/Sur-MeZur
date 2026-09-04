@@ -13,11 +13,13 @@
  * doit pas figurer sur le papier porte la classe `no-print`.
  */
 
+import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { CatalogApi, MeasurementsApi } from "@/lib/api/endpoints";
 import type { GarmentModel, Measurement } from "@/lib/api/types";
 import { formatCm, presentableGroups } from "@/lib/measurements";
+import { getSelection } from "@/lib/selection";
 import { useAuth } from "@/components/AuthProvider";
 import { Button, EmptyState, PageHeader, Spinner } from "@/components/ui";
 import { IconPrint } from "@/components/icons";
@@ -28,7 +30,7 @@ function FicheInner() {
   const { user } = useAuth();
 
   const [measurement, setMeasurement] = useState<Measurement | null | undefined>(undefined);
-  const [model, setModel] = useState<GarmentModel | null>(null);
+  const [models, setModels] = useState<GarmentModel[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -38,8 +40,18 @@ function FicheInner() {
   }, [id]);
 
   useEffect(() => {
-    if (!modeleId) return;
-    CatalogApi.model(modeleId).then(setModel).catch(() => setModel(null));
+    // La fiche part avec les modeles que la personne a retenus : ceux de sa
+    // selection, plus celui par lequel elle est arrivee s'il n'y figure pas
+    // deja. Les modeles introuvables sont ignores plutot que de faire echouer
+    // toute la fiche.
+    const ids = Array.from(new Set([...getSelection(), ...(modeleId ? [modeleId] : [])]));
+    if (!ids.length) {
+      setModels([]);
+      return;
+    }
+    Promise.all(ids.map((id) => CatalogApi.model(id).catch(() => null))).then((list) =>
+      setModels(list.filter((m): m is GarmentModel => m !== null))
+    );
   }, [modeleId]);
 
   if (measurement === undefined) return <Spinner label="Preparation de la fiche&hellip;" />;
@@ -64,9 +76,28 @@ function FicheInner() {
 
   return (
     <>
-      <PageHeader title="Ma fiche de mesures" back />
+      <PageHeader title="Fiche de mesures" back />
 
       <div className="container section">
+        <div className="ficheSwitch no-print">
+          {models.length > 0 ? (
+            <span>
+              {models.length} modèle{models.length > 1 ? "s" : ""} retenu
+              {models.length > 1 ? "s" : ""}.{" "}
+              <Link href={`/mesures/${measurement.id}/modeles`}>
+                Télécharger la fiche des modèles
+              </Link>{" "}
+              — c&apos;est un second document, séparé de vos mesures.
+            </span>
+          ) : (
+            <span>
+              Aucun modèle retenu.{" "}
+              <Link href="/modeles">Choisissez-en un ou plusieurs</Link> pour obtenir aussi
+              leur fiche.
+            </span>
+          )}
+        </div>
+
         <div className="ficheActions no-print">
           <Button block onClick={() => window.print()}>
             Enregistrer en PDF
@@ -101,32 +132,7 @@ function FicheInner() {
                 <span className="ficheValue">{measurement.weight_kg} kg</span>
               </div>
             )}
-            {model && (
-              <div>
-                <span className="ficheLabel">Modele souhaite</span>
-                <span className="ficheValue">{model.name}</span>
-              </div>
-            )}
           </section>
-
-          {groups.map((group) => (
-            <section key={group.id} className="ficheGroup">
-              <h2 className="ficheGroupTitle">{group.title}</h2>
-              <table className="ficheTable">
-                <tbody>
-                  {group.items.map(({ key, info, value }) => (
-                    <tr key={key}>
-                      <th scope="row">
-                        <span className="ficheMeasureName">{info.label}</span>
-                        <span className="ficheMeasureWhere">{info.where}</span>
-                      </th>
-                      <td>{formatCm(value)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          ))}
 
           <footer className="ficheFooter">
             Mesures obtenues a partir de deux photographies. A verifier au metre ruban avant

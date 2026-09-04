@@ -241,3 +241,132 @@
     color: #444;
   }
 }
+
+/* --- Fiche des modeles (second document) ----------------------------------- */
+.ficheSwitch {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-button);
+  background: var(--bg-alt);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ficheModelBlock {
+  display: flex;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ficheModelImage {
+  width: 108px;
+  height: 144px;
+  flex: none;
+  border-radius: 10px;
+  object-fit: cover;
+  display: block;
+}
+
+.ficheModelBody {
+  min-width: 0;
+}
+
+.ficheModelName {
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+
+.ficheModelCat {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--violet-primary);
+  font-weight: 700;
+}
+
+.ficheModelDesc {
+  margin: 0;
+  font-size: 13px;
+  max-width: 58ch;
+}
+
+.ficheModelTags {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 519px) {
+  .ficheModelBlock {
+    flex-direction: column;
+  }
+
+  .ficheModelImage {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 4;
+  }
+}
+
+@media print {
+  /* Un modele tient d'un seul tenant sur une page, image comprise. */
+  .ficheModelBlock {
+    break-inside: avoid;
+  }
+
+  .ficheModelImage {
+    width: 92px;
+    height: 122px;
+  }
+}
+
+/* --- Les deux telechargements ---------------------------------------------- */
+.downloadCards {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+}
+
+.downloadCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: inherit;
+  box-shadow: var(--shadow-sm);
+}
+
+.downloadCard:hover {
+  border-color: var(--violet-primary);
+}
+
+.downloadIcon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 11px;
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+}
+
+.downloadText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.downloadNote {
+  margin-top: 10px;
+  text-align: center;
+}

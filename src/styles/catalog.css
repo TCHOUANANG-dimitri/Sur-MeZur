@@ -2,33 +2,52 @@
 
 .modelCard {
   display: block;
-  border-radius: var(--radius-card);
-  overflow: hidden;
-  background: var(--bg);
-  border: 1px solid var(--border);
   color: inherit;
+  min-width: 0;
 }
 
 /* Rapport fixe : les vignettes gardent la meme hauteur quelle que soit la
    largeur de colonne, donc la grille reste reguliere a toutes les tailles
    d'ecran sans hauteur codee en dur. */
 .modelCardImage {
+  position: relative;
   aspect-ratio: 3 / 4;
+  border-radius: var(--radius-card);
   background-size: cover;
   background-position: center;
+  background-color: var(--bg-alt);
 }
 
-.modelCardBody {
-  padding: 10px 12px;
+.modelCardBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--violet-primary);
+  color: #fff;
 }
 
 .modelCardName {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
   font-weight: 600;
-  font-size: 14px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelCardCategory {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* --- Fiche modele --------------------------------------------------------- */
@@ -126,25 +145,178 @@
   color: var(--success);
 }
 
-/* --- Accueil et liste de mesures ------------------------------------------ */
-.homeCta {
-  margin: 16px 0 28px;
+/* --- Accueil, calque sur l'ecran mobile ------------------------------------
+   Structure identique : salutation surmontee de la marque, barre de
+   recherche, puis un rail horizontal par section. Les rails debordent
+   volontairement la gouttiere pour aller au bord de l'ecran, comme les
+   ScrollView horizontales du mobile.                                        */
+.home {
+  padding: 8px 0 24px;
 }
 
-.homeCta h3 {
-  margin-bottom: 6px;
+.homeTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px var(--gutter) 4px;
 }
 
-.homeCta p {
-  margin: 0 0 16px;
+.homeHello {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.homeBrand {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--indigo-text);
+}
+
+.homeSearchBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px var(--gutter);
+  padding: 13px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button);
+  background: var(--bg-alt);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.homeMeasureCta {
+  display: grid;
+  gap: 12px;
+  margin: 14px var(--gutter) 4px;
+  padding: 18px;
+  border-radius: var(--radius-card);
+  background: var(--gradient);
+  color: #fff;
+}
+
+.homeMeasureCta h2 {
+  color: #fff;
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.homeMeasureCta p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.92;
+}
+
+.homeMeasureCta .btnPrimary {
+  background: #fff;
+  color: var(--violet-primary);
+}
+
+@media (min-width: 640px) {
+  .homeMeasureCta {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 22px 24px;
+  }
+
+  .homeMeasureCta .btnBlock {
+    width: auto;
+    min-width: 190px;
+  }
+}
+
+.homeSection {
+  margin-top: 18px;
 }
 
 .homeSectionHead {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  padding: 0 var(--gutter);
+  margin-bottom: 10px;
+}
+
+.homeSectionTitle {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.homeSeeAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--violet-primary);
+}
+
+/* Rail horizontal : cartes de 140 px comme sur le mobile, defilement au
+   doigt, et debordement jusqu'au bord de l'ecran pour que le debord de la
+   carte suivante signale le geste. */
+.homeRail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 140px;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 var(--gutter) 4px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.homeRail::-webkit-scrollbar {
+  display: none;
+}
+
+.homeRail > * {
+  scroll-snap-align: start;
+}
+
+/* Sur grand ecran, le defilement horizontal n'a plus d'interet : la section
+   devient une grille qui remplit la largeur. */
+@media (min-width: 1024px) {
+  .homeRail {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    overflow-x: visible;
+  }
+}
+
+.homeContribute {
+  display: grid;
+  gap: 12px;
+  margin: 26px var(--gutter) 0;
+  padding: 18px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-card);
+}
+
+.homeContribute h2 {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.homeContribute p {
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .homeContribute {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
 }
 
 .measureRow {
@@ -153,4 +325,126 @@
   justify-content: space-between;
   gap: 12px;
   color: inherit;
+}
+
+/* --- Fiche modele : galerie, favori, selection ----------------------------- */
+.modelThumbs {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.modelThumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.modelThumb {
+  width: 56px;
+  height: 74px;
+  flex: none;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.modelThumbActive {
+  border-color: var(--violet-primary);
+}
+
+.modelTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.likeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-chip);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.likeBtnActive {
+  background: var(--violet-tint);
+  border-color: var(--violet-primary);
+  color: var(--violet-primary);
+}
+
+.modelDescription {
+  margin: 14px 0 0;
+  max-width: 62ch;
+}
+
+.modelNext {
+  margin: 20px 0;
+}
+
+.modelNext h3 {
+  margin-bottom: 6px;
+}
+
+.modelNext p {
+  margin: 0;
+}
+
+/* --- Proposer un modele ---------------------------------------------------- */
+.proposePhotos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.proposePhoto,
+.proposeAdd {
+  width: 76px;
+  height: 100px;
+  border-radius: 12px;
+  flex: none;
+}
+
+.proposePhoto {
+  object-fit: cover;
+}
+
+.proposeAdd {
+  display: grid;
+  place-items: center;
+  border: 1.5px dashed var(--border);
+  background: var(--bg-alt);
+  color: var(--violet-primary);
+  cursor: pointer;
+}
+
+/* --- Bandeau de selection -------------------------------------------------- */
+.selectionBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-card);
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.selectionBar span {
+  flex: 1;
+  min-width: 0;
 }

@@ -18,7 +18,8 @@ import { CatalogApi, MeasurementsApi } from "@/lib/api/endpoints";
 import type { GarmentModel, Measurement } from "@/lib/api/types";
 import { formatCm, presentableGroups } from "@/lib/measurements";
 import { Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
-import { IconMeasure } from "@/components/icons";
+import { IconMeasure, IconModels, IconPrint } from "@/components/icons";
+import { getSelection, onSelectionChange } from "@/lib/selection";
 
 function DetailMesureInner() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +27,7 @@ function DetailMesureInner() {
 
   const [measurement, setMeasurement] = useState<Measurement | null | undefined>(undefined);
   const [model, setModel] = useState<GarmentModel | null>(null);
+  const [selectionCount, setSelectionCount] = useState(0);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -46,6 +48,14 @@ function DetailMesureInner() {
       .then(setModel)
       .catch(() => setModel(null));
   }, [modeleId]);
+
+  // La selection vit dans le navigateur : on la lit apres le montage pour
+  // eviter tout ecart entre le rendu serveur et le rendu client.
+  useEffect(() => {
+    const sync = () => setSelectionCount(getSelection().length);
+    sync();
+    return onSelectionChange(sync);
+  }, []);
 
   if (measurement === undefined) return <Spinner label="Chargement de vos mesures&hellip;" />;
 
@@ -127,14 +137,43 @@ function DetailMesureInner() {
         )}
 
         {groups.length > 0 && (
-          <div className="actionBar">
-            <Link
-              href={`/mesures/${measurement.id}/fiche${modeleId ? `?modele=${modeleId}` : ""}`}
-              style={{ display: "contents" }}
-            >
-              <Button block>Telecharger ma fiche</Button>
-            </Link>
-          </div>
+          <>
+            <div className="downloadCards">
+              <Link
+                href={`/mesures/${measurement.id}/fiche${modeleId ? `?modele=${modeleId}` : ""}`}
+                className="downloadCard"
+              >
+                <span className="downloadIcon" aria-hidden>
+                  <IconPrint size={20} strokeWidth={1.9} />
+                </span>
+                <span className="downloadText">
+                  <strong>Fiche de mesures</strong>
+                  <span className="fieldHint">
+                    Vos douze mesures, expliquées. À remettre au tailleur.
+                  </span>
+                </span>
+              </Link>
+
+              <Link href={`/mesures/${measurement.id}/modeles`} className="downloadCard">
+                <span className="downloadIcon" aria-hidden>
+                  <IconModels size={20} strokeWidth={1.9} />
+                </span>
+                <span className="downloadText">
+                  <strong>Fiche des modèles</strong>
+                  <span className="fieldHint">
+                    {selectionCount > 0
+                      ? `${selectionCount} modèle${selectionCount > 1 ? "s" : ""} retenu${selectionCount > 1 ? "s" : ""}.`
+                      : "Aucun modèle retenu pour l'instant."}
+                  </span>
+                </span>
+              </Link>
+            </div>
+
+            <p className="muted downloadNote">
+              Ce sont deux documents distincts : vos mesures d&apos;un côté, les modèles à
+              coudre de l&apos;autre.
+            </p>
+          </>
         )}
       </div>
     </>

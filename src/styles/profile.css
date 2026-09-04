@@ -1,0 +1,219 @@
+/* ============================================================================
+   Profil — repris de l'ecran mobile : en-tete degrade, compteurs, sections de
+   reglages en lignes.
+   ========================================================================= */
+
+.profilePage {
+  padding-bottom: 24px;
+}
+
+.profileHero {
+  background: var(--gradient);
+  color: #fff;
+  text-align: center;
+  padding: calc(28px + env(safe-area-inset-top)) var(--gutter) 28px;
+}
+
+.profileAvatar {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.profileName {
+  color: #fff;
+  font-size: clamp(20px, 5vw, 26px);
+  margin-bottom: 2px;
+}
+
+.profileSub {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.profileEditChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin-top: 14px;
+  padding: 6px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-chip);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profileBody {
+  margin-top: -18px;
+}
+
+.profileEditCard {
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.profileEditActions {
+  display: flex;
+  gap: 8px;
+}
+
+.profileEditActions > * {
+  flex: 1;
+}
+
+/* --- Compteurs ------------------------------------------------------------ */
+.profileStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+  padding: 14px 6px;
+  margin-bottom: 22px;
+}
+
+.profileStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  min-width: 0;
+}
+
+/* Les separateurs sont dessines en bordure plutot qu'en elements dedies :
+   une bordure suit automatiquement le nombre de colonnes. */
+.profileStat + .profileStat {
+  border-left: 1px solid var(--border);
+}
+
+.profileStatIcon {
+  color: var(--violet-primary);
+}
+
+.profileStatValue {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.profileStatLabel {
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* --- Sections de reglages -------------------------------------------------- */
+.settingsSection {
+  margin-bottom: 20px;
+}
+
+.settingsTitle {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin: 0 0 8px 4px;
+}
+
+.settingsCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.settingsRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.settingsRow:hover {
+  background: var(--bg-alt);
+}
+
+.settingsRowDivided {
+  border-bottom: 1px solid var(--border);
+}
+
+.settingsIcon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+}
+
+.settingsIconDanger {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--error);
+}
+
+.settingsRowDanger .settingsLabel {
+  color: var(--error);
+}
+
+.settingsLabelWrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.settingsLabel {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settingsValue {
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex: none;
+}
+
+.settingsRow svg:last-child {
+  color: var(--text-secondary);
+  flex: none;
+}
+
+/* Sur grand ecran, le profil n'a pas besoin de toute la largeur : une colonne
+   lisible vaut mieux qu'une ligne de reglages etiree sur 1180 px. */
+@media (min-width: 900px) {
+  .profileBody {
+    max-width: 620px;
+  }
+
+  .profileHero {
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+  }
+}

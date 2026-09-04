@@ -18,6 +18,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
+import { PASSWORD_HINT, passwordError } from "@/lib/password";
 
 export default function Inscription() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function Inscription() {
   // ce qui laissait le bouton grise quelle que soit la saisie.
   const localDigits = splitPhone(phone).local;
   const canSubmit =
-    fullName.trim().length >= 2 && localDigits.length >= 6 && password.length >= 8 && !busy;
+    fullName.trim().length >= 2 && localDigits.length >= 6 && passwordError(password) === null && !busy;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -98,7 +99,7 @@ export default function Inscription() {
             onChange={setPassword}
             autoComplete="new-password"
           />
-          <span className="fieldHint">Au moins 8 caractères.</span>
+          <span className="fieldHint">{password.length > 0 ? (passwordError(password) ?? "Mot de passe valide.") : PASSWORD_HINT}</span>
         </div>
 
         <label className="consentRow">

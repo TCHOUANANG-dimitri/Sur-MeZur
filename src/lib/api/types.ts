@@ -130,6 +130,9 @@ export interface GarmentModel {
   thumbnail_color: string;
   photo_url: string | null;
   photos: string[];
+  /** Nul pour le catalogue officiel ; identifiant de l'auteur pour un modele
+   *  propose par un membre de la communaute. */
+  created_by?: string | null;
   like_count: number;
   liked_by_me: boolean;
 }
