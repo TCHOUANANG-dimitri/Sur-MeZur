@@ -157,7 +157,23 @@ async function request<T>(
     let message = res.statusText;
     try {
       const data = await res.json();
-      message = data.detail || message;
+      const detail = data.detail;
+      // FastAPI renvoie `detail` sous trois formes selon le type d'erreur :
+      //  - une chaine (ex. HTTPException) : on l'affiche telle quelle ;
+      //  - un tableau de { loc, msg, type } (validation 422) : on extrait les
+      //    `msg` en les joignant, sinon le tableau brut est reddu en
+      //    `[object Object]` par React ;
+      //  - tout autre objet : on ne l'affiche pas tel quel.
+      if (typeof detail === "string") {
+        message = detail;
+      } else if (Array.isArray(detail)) {
+        const msgs = detail
+          .map((e) => (e && typeof e.msg === "string" ? e.msg : null))
+          .filter((m): m is string => Boolean(m));
+        if (msgs.length) message = msgs.join(". ");
+      } else if (detail && typeof detail === "object" && typeof detail.msg === "string") {
+        message = detail.msg;
+      }
     } catch {
       /* ignore */
     }
