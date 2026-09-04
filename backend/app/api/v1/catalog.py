@@ -11,6 +11,7 @@ from app.models.users import ClientProfile, TailorProfile, User
 from app.schemas.catalog import (
     AccessoryOut,
     CategoryOut,
+    CommunityModelIn,
     CompareIn,
     CompareOut,
     FabricOut,
@@ -134,6 +135,64 @@ def get_model(
     )
     if not model:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Model not found")
+    client = _client_profile_or_none(user, db)
+    return _serialize_models([model], db, client)[0]
+
+
+@router.post("/models", response_model=GarmentModelOut, status_code=status.HTTP_201_CREATED)
+def create_community_model(
+    payload: CommunityModelIn,
+    user: User = Depends(require_roles("client")),
+    db: Session = Depends(get_db),
+):
+    """Modele propose par un client, verse au catalogue commun.
+
+    La colonne `created_by` existait deja sur GarmentModel sans qu'aucune
+    route ne la renseigne : seul l'admin pouvait creer un modele. Elle porte
+    ici l'auteur, ce qui permet de distinguer le catalogue officiel des
+    propositions de la communaute et de n'autoriser l'ajout de photos qu'a
+    l'auteur (voir upload_community_model_photos).
+
+    Le prix est volontairement absent du schema d'entree : un modele est
+    confectionne sur mesure et son tarif se negocie avec le tailleur.
+    """
+    if not db.get(Category, payload.category_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Categorie introuvable")
+    model = GarmentModel(**payload.model_dump(), created_by=user.id)
+    db.add(model)
+    db.commit()
+    db.refresh(model)
+    client = _client_profile_or_none(user, db)
+    return _serialize_models([model], db, client)[0]
+
+
+@router.post("/models/{model_id}/photos", response_model=GarmentModelOut)
+def upload_community_model_photos(
+    model_id: str,
+    files: list[UploadFile] = File(...),
+    user: User = Depends(require_roles("client")),
+    db: Session = Depends(get_db),
+):
+    """Ajout de photos par l'AUTEUR du modele uniquement.
+
+    Sans ce controle, n'importe quel client pourrait deposer des images sur
+    le modele d'un autre, ou sur le catalogue officiel (dont `created_by` est
+    nul) — c'est la route d'ecriture la plus exposee de ce module.
+    """
+    model = db.get(GarmentModel, model_id)
+    if not model:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Model not found")
+    if model.created_by != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Ce modele n'est pas le votre")
+
+    saved = [save_upload(f, "garment-models") for f in files if f is not None]
+    if not saved:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Aucun fichier recu")
+    model.photos = list(model.photos or []) + saved
+    if not model.photo_url:
+        model.photo_url = model.photos[0]
+    db.commit()
+    db.refresh(model)
     client = _client_profile_or_none(user, db)
     return _serialize_models([model], db, client)[0]
 

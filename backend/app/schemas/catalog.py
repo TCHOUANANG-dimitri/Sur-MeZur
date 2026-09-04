@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.enums import MeasurementMethod
 from app.schemas.common import ORMModel
@@ -38,6 +38,10 @@ class GarmentModelOut(ORMModel):
     photos: list[str] = []
     like_count: int = 0
     liked_by_me: bool = False
+    # Nul pour le catalogue officiel, identifiant de l'auteur pour un modele
+    # propose par un membre. Permet a l'interface de marquer l'origine et de
+    # n'ouvrir l'ajout de photos qu'a l'auteur.
+    created_by: str | None = None
 
 
 class GarmentModelCreateIn(BaseModel):
@@ -46,6 +50,22 @@ class GarmentModelCreateIn(BaseModel):
     category_id: str
     base_price: float | None = None
     style_tags: list[str] = []
+    thumbnail_color: str = "#7C3AED"
+
+
+class CommunityModelIn(BaseModel):
+    """Modele propose par un client.
+
+    Volontairement plus etroit que `GarmentModelCreateIn` : pas de
+    `base_price`, un modele etant confectionne sur mesure et son tarif
+    negocie avec le tailleur. Les bornes de longueur evitent qu'un champ
+    libre ne remplisse la base.
+    """
+
+    name: str = Field(..., min_length=2, max_length=120)
+    description: str | None = Field(None, max_length=2000)
+    category_id: str
+    style_tags: list[str] = Field(default_factory=list, max_length=8)
     thumbnail_color: str = "#7C3AED"
 
 
