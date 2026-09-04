@@ -112,6 +112,20 @@
   max-width: 480px;
 }
 
+/* Logo en tete des ecrans d'authentification, comme sur le mobile. */
+.authLogo {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 12px;
+}
+
+.authLogo img {
+  width: min(240px, 70%);
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
 .authCard h1 {
   margin-bottom: 6px;
 }

@@ -1,5 +1,9 @@
 "use client";
 
+// Page de connexion — point d'entree unique du site (la racine y redirige).
+// Fidele a l'ecran de connexion mobile : logo en tete, compte telephonique et
+// mot de passe, puis bascule selon le role apres authentification.
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -25,7 +29,7 @@ export default function Connexion() {
       setTokens(res.access_token, res.refresh_token);
       startAuthTimer();
       await refresh();
-      router.replace("/accueil");
+      router.replace(res.role === "admin" ? "/admin" : "/accueil");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connexion impossible.");
     } finally {
@@ -36,6 +40,11 @@ export default function Connexion() {
   return (
     <main className="authPage">
       <div className="containerNarrow authCard">
+        <div className="authLogo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-transparent.png" alt="Sur-MeZur" />
+        </div>
+
         <h1>Se connecter</h1>
         <p className="muted">Retrouvez vos mesures et vos modèles enregistrés.</p>
 
