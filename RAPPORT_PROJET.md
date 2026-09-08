@@ -1,6 +1,6 @@
 # Sur-MeZur — Rapport de réalisation
 
-*Dernière mise à jour : 28 août 2026*
+*Dernière mise à jour : 8 septembre 2026*
 
 > Ce document décrit l'état réel du projet : ce qui fonctionne, avec quelle
 > précision, et ce qui reste à faire. Les chiffres qui y figurent sont tous
@@ -15,9 +15,18 @@
 > sections 3 à 6 restaient la référence pour l'état en production avant
 > cette date ; ce n'est plus le cas pour la partie précision, dont §6bis
 > est maintenant la source à jour. Couvre aussi plusieurs corrections de
-> cohérence trouvées en relisant le travail d'une collaboratrice (§8.15,
-> §8.16), un bug de contournement silencieux du compte admin (§8.17), et
-> un correctif d'affichage sur la fiche modèle mobile (§8.18).
+> cohérence trouvées en relisant le travail d'une collaboratrice (§8.16),
+> un bug de promotion de rôle silencieusement ignorée sur le compte admin
+> (§8.15), et un correctif d'affichage sur la fiche modèle mobile (§8.17).
+
+> **Ajout du 29 août.** Deux nouvelles sections. §6ter documente une
+> campagne d'analyse de onze expériences dont **aucune n'a été déployée** :
+> le détail des raisons est plus instructif que ne l'aurait été un
+> correctif, et il évite de refaire ces essais. §10 documente la
+> **procédure de compilation de l'application mobile**, cloud et locale,
+> après une série de neuf échecs consécutifs dont la cause a été
+> identifiée et corrigée — cette section est à lire avant toute tentative
+> de build.
 
 ---
 
@@ -30,9 +39,12 @@
 5. [Ce que les tests sur 13 personnes ont appris](#5-ce-que-les-tests-sur-13-personnes-ont-appris)
 6. [Les limites, et pourquoi elles existent](#6-les-limites-et-pourquoi-elles-existent)
    - [6bis. Nouvelle campagne de précision (25-27 août)](#6bis-nouvelle-campagne-de-précision-25-27-août-2026)
+   - [6ter. Onze expériences, aucun déploiement (29 août)](#6ter-onze-expériences-aucun-déploiement-29-août-2026)
 7. [Ce qui reste à faire](#7-ce-qui-reste-à-faire)
 8. [Historique des corrections](#8-historique-des-corrections)
 9. [Journal des versions](#9-journal-des-versions)
+10. [Compiler l'application mobile (EAS et local)](#10-compiler-lapplication-mobile-eas-et-local)
+11. [L'application web (septembre 2026)](#11-lapplication-web-septembre-2026)
 
 ---
 
@@ -583,6 +595,140 @@ appliquées** aux mesures de chaque client, pas seulement documentées :
   fichier par fichier avant de réconcilier que leur contenu était déjà
   intégralement présent sur GitHub sous un autre historique, donc sans
   perte, puis résolu par `git reset --hard origin/main`.
+
+---
+
+## 6ter. Onze expériences, aucun déploiement (29 août 2026)
+
+**Résumé : onze expériences menées, aucune retenue.** Cette section existe
+parce que le détail des échecs vaut plus qu'un correctif — il documente ce
+qui a été essayé, mesuré, et pourquoi ça n'a pas marché, ce qui évite de
+refaire ces essais. Les scripts sont dans `ml/bench/experiments/`
+(exp19 à exp29).
+
+### Ce que la campagne a découvert sur le code existant
+
+Ces constats n'étaient pas documentés et sont les acquis les plus durables
+de la journée.
+
+**1. La production ignore la photo pour poitrine, taille et hanches chez
+l'homme.** Vérifié en passant des valeurs brutes de 70 à 130 cm à
+`corriger_mesures` : la sortie ne bouge pas d'un millimètre. Les
+corrections masculines de ces trois mesures sont en `mode="direct"`
+(poitrine) ou de type `CorrectionBMI` (taille, hanches), et ces deux modes
+**n'utilisent jamais** la valeur calculée depuis les photos. En pratique,
+pour tout client masculin :
+
+```
+poitrine = 0,4055 × poids + 58,766
+taille   = 2,2005 × IMC  + 31,068
+hanches  = 1,1518 × IMC  + 67,785
+```
+
+Chez la femme, à l'inverse, aucune correction ne s'applique
+(`NON_CORRIGEES_FEMMES`) : c'est l'ellipse brute qui sort.
+
+**2. Et c'est un bon choix, pas un oubli.** Une expérience sur vidéo de
+rotation (même personne, même session, six images de face) montre que la
+valeur issue des photos porte **3 à 4 cm de bruit pur** sur le tronc, alors
+que la formule taille/poids atteint 1,9 à 2,9 cm chez l'homme. Injecter la
+photo ne pourrait que dégrader — ce qui a été vérifié expérimentalement
+(voir plus bas).
+
+**3. MediaPipe mesure le torse ~4 cm plus long de profil que de face.**
+Mesuré sur une rotation continue, donc à torse réel constant par
+construction : 56,1 cm de moyenne en vues frontales contre 60,4 cm en
+vues de profil, l'écart variant régulièrement avec l'angle. Retrouvé
+indépendamment sur les paires de photos des 20 sujets (biais systématique
+de +3,50 cm). C'est un artefact d'estimation lié à l'angle de vue, pas un
+mouvement du sujet — **déplacer la caméra au lieu de la personne ne le
+corrigerait donc pas**, contrairement à ce qu'on pouvait espérer.
+
+**4. Les cinq tours de membres n'écoutent quasiment pas la photo.** Une
+analyse de sensibilité (faire varier une entrée de +3 cm, toutes choses
+égales par ailleurs) donne : `biacromialbreadth`, `sittingheight` et
+`crotchheight` à **zéro ou presque** sur les huit tours. Les membres sont
+pilotés par le poids (biceps +1,00, cuisse +1,30 pour +3 kg) et la taille,
+c'est-à-dire par des valeurs **saisies au clavier**. Leur remarquable
+stabilité (0,2 à 0,9 cm de dispersion sur un même sujet) n'est donc pas
+une qualité de mesure : c'est le symptôme d'une table anthropométrique
+déguisée. Deux personnes de même taille et même poids obtiennent
+pratiquement le même poignet, quelle que soit leur morphologie.
+
+**5. Le déséquilibre hommes/femmes est structurel.** Sur les mêmes sujets :
+
+| Mesure | Hommes (n=10) | Femmes (n=8) |
+|---|---:|---:|
+| Poitrine | 1,90 cm | 4,99 cm |
+| Taille | 2,88 cm | 9,75 cm |
+| Hanches | 2,23 cm | 5,19 cm |
+
+La littérature confirme que ce n'est pas un défaut de la chaîne : une
+étude sur la prédiction du tour de taille attribue les écarts plus grands
+chez les femmes à *« l'hétérogénéité de l'anthropométrie féminine
+(adiposité aux hanches, cuisses, tissu mammaire) »*.
+
+### Les onze pistes testées et écartées
+
+| # | Piste | Résultat |
+|---|---|---|
+| 1 | Largeur par médiane de bande au lieu de l'extrémum | −0,04 / +0,06 / −0,30 cm : dans le bruit |
+| 2 | Échelle partagée entre face et profil | Dégrade partout |
+| 3 | Régression enrichie (les six largeurs/profondeurs) | Dégrade partout (surapprentissage) |
+| 4 | Régression séparée par sexe | Dégrade fortement (sous-échantillons trop petits) |
+| 5 | Superellipse à exposant ajusté | Gain < 1 cm, battu par la régression simple |
+| 6 | Superellipse adaptative (façon Montazerian) | Idem |
+| 7 | Rapport largeur/profondeur comme variable | Aucun effet (3,84 → 3,84) |
+| 8 | Réintégrer la photo dans le tronc | Dégrade les trois mesures (+0,59 à +1,05 cm) |
+| 9 | Formule taille/poids étendue aux femmes | Dégrade les trois mesures |
+| 10 | Rapports de forme (invariants d'échelle) | Dégrade, jusqu'à +20 cm chez les femmes |
+| 11 | Ancrage des niveaux en distance physique (cm) | **Validé sur le vrai pipeline : dégrade** |
+
+Deux résultats méritent un mot de plus.
+
+**Piste 10 — le piège de la robustesse sans information.** L'idée était
+solide : une erreur d'échelle est commune à toutes les largeurs d'une même
+photo, donc elle s'annule dans un rapport. C'est confirmé — le rapport
+poitrine/taille varie de 2,6 % contre 12,1 % pour les largeurs absolues.
+Mais un rapport à 2,6 % de dispersion **ne distingue presque pas les
+sujets entre eux** : il est stable parce qu'il est quasi constant chez
+tout le monde. Robuste et inutile à la fois.
+
+**Piste 11 — pourquoi elle a failli être déployée.** Elle corrigeait une
+incohérence réelle et démontrée (constat 3 ci-dessus) sans introduire
+aucun coefficient ajusté, et un banc d'essai la donnait gagnante
+(−0,27 cm poitrine, −0,78 cm hanches). Implémentée dans le code de
+production puis validée sur `pipeline.run()` avec les 12 mesures, elle
+**dégrade les 6 mesures affectées, sans exception** (moyenne 2,42 → 2,53 cm).
+Le gain apparent venait d'un banc d'essai reconstruit qui, lui, ne
+résolvait pas l'épaisseur de vêtement et n'alimentait les corrections
+qu'avec taille et poids. Le correctif a été retiré.
+
+**Leçon de méthode retenue** : les bancs d'essai reconstruits (exp19,
+exp22, exp23) restent valables pour comparer des variantes entre elles,
+mais leurs chiffres absolus ne prédisent pas le comportement réel. Toute
+piste candidate doit être validée directement sur `pipeline.run()`, sur
+les 12 mesures, avant toute conclusion.
+
+### Un point de prudence sur la performance masculine actuelle
+
+Un modèle XGBoost entraîné sur **60 740 participants** pour prédire le tour
+de taille depuis taille/poids/IMC/âge/sexe plafonne à **4,7 cm de RMSE**,
+et en validation externe surestime de 4,65 cm au Royaume-Uni
+« principalement par surprédiction chez les femmes ». Nos 2,88 cm chez
+l'homme, obtenus sur 10 sujets, sont donc très probablement de la chance
+d'échantillonnage plutôt qu'une performance réelle. **Cette performance ne
+devrait pas être considérée comme acquise** sans validation sur des sujets
+neufs.
+
+### Conclusion opérationnelle
+
+À 18 sujets exploitables (dont 8 femmes), presque toute idée nouvelle est
+indistinguable du bruit d'échantillonnage : un écart inférieur à ~0,5 cm
+sur une mesure isolée n'est pas interprétable. Le blocage n'est pas le
+manque d'idées — onze ont été testées en une journée — mais **le volume de
+données de calibration**, en particulier chez les femmes. C'est le même
+constat que §7 priorité 1, désormais étayé par onze échecs mesurés.
 
 ---
 
@@ -1157,6 +1303,57 @@ est conservé.
 
 **Fichiers modifiés** : `mobile/app/client/models/[id].tsx`.
 
+### 8.18 Inscription tailleur : ville/quartier en puces, et clavier masquant le mot de passe
+
+**Deux problèmes distincts signalés sur le même écran.**
+
+**Ville et quartier étaient des puces défilant horizontalement**, ce qui
+obligeait à faire défiler une longue liste latéralement pour trouver sa
+ville. Remplacé par des champs ouvrant une liste déroulante, en réutilisant
+le composant `BottomSheet` déjà employé pour le sélecteur d'indicatif
+téléphonique (`PhoneField`) — même mécanique, donc même comportement que
+ce que l'utilisateur connaît déjà ailleurs dans l'application.
+
+**Le clavier masquait le champ mot de passe** sans possibilité de faire
+défiler. `windowSoftInputMode="adjustResize"` était pourtant correctement
+déclaré dans `AndroidManifest.xml`, mais `KeyboardAvoidingView` passait
+`behavior={undefined}` sur Android, comptant uniquement sur ce
+redimensionnement de fenêtre. C'est peu fiable sur les versions récentes
+d'Android avec affichage bord-à-bord, où le redimensionnement attendu ne
+se produit plus toujours. Corrigé en donnant à Android un comportement
+explicite (`behavior="height"`), qui agit au niveau du composant plutôt
+que de dépendre de la fenêtre.
+
+**Fichiers modifiés** : `mobile/app/register.tsx`,
+`mobile/src/components/Screen.tsx` (commit `2457aea`).
+
+### 8.19 Inscription tailleur bloquée après l'OTP : colonnes absentes en base
+
+**Symptôme** : la création d'un compte tailleur échouait juste après la
+saisie du code OTP.
+
+**Cause** : les colonnes `city` et `quartier` ont été ajoutées au modèle
+`TailorProfile` (commit `18457c8`) mais le projet **n'a aucun système de
+migration** — c'est un choix d'origine assumé (`create_all()` + `seed.py`).
+Or `create_all()` crée les tables manquantes et rien d'autre : ajouter un
+attribut à une table déjà déployée ne touche pas la base. `POST /auth/register`
+vérifie donc l'OTP avec succès, puis échoue à l'insertion.
+
+**Correctif** : exécuter sur le serveur le script prévu pour ce cas, qui
+n'ajoute que les colonnes manquantes (jamais de suppression, jamais de
+perte de données, relançable sans risque) :
+
+```bash
+cd surmezur-backend
+./venv/bin/python scripts/sync_sqlite_columns.py          # aperçu
+./venv/bin/python scripts/sync_sqlite_columns.py --apply  # applique
+```
+
+**À retenir** : ce scénario s'est déjà produit le 14 août 2026 avec
+`measurements.features`. Toute évolution du schéma doit s'accompagner de
+ce script au déploiement, sans quoi le symptôme est trompeur — l'API
+démarre, répond, et seules les routes touchant cette table échouent.
+
 ---
 
 ## 9. Journal des versions
@@ -1239,3 +1436,361 @@ est conservé.
 | 27 août | **Corrections statistiques validées passées en production** (`backend/app/services/measurement_corrections.py`, câblées dans `_measure()`) — vérifié bout en bout sur un sujet réel, déployé sur O2Switch (§6bis) |
 | 27 août | Divergence git découverte et résolue sur le clone serveur (`repo-source`) — 4 commits locaux jamais poussés depuis le 22 août, vérifiés sans perte avant réconciliation (§6bis) |
 | 27 août | **Fiche modèle mobile corrigée** : image affichée entière, barre du bas fixe pour le bouton d'essayage (§8.17) |
+| 28 août | Inscription tailleur bloquée après l'OTP : colonnes `city`/`quartier` absentes en base de production (§8.19) |
+| 28 août | Ville/quartier en liste déroulante à l'inscription tailleur ; correctif du clavier masquant le mot de passe (§8.18) |
+| 28 août | **Cause des échecs de build identifiée et corrigée** — adresse de secours du backend pointant vers l'émulateur, et `ninja` 1.10.2 incompatible chemins longs (§10) |
+| 29 août | **Onze expériences d'amélioration des mesures, aucune retenue** — dont la découverte que la production ignore la photo pour le tronc chez l'homme, et que c'est justifié (§6ter) |
+
+---
+
+## 10. Compiler l'application mobile (EAS et local)
+
+Cette section existe parce que **neuf tentatives de build ont échoué
+d'affilée** avant que les causes ne soient identifiées. Elle est à lire
+avant toute tentative.
+
+### 10.1 Build cloud EAS — la voie normale
+
+```bash
+cd mobile
+npx eas-cli build --platform android --profile preview --non-interactive
+```
+
+**Le nom du paquet compte.** `npx eas build` installe `eas@0.1.0`, un
+paquet réservé sans exécutable, et échoue sur
+`could not determine executable to run`. C'est **`eas-cli`** qu'il faut,
+pas `eas`.
+
+**L'archive fait 466 Mo et c'est normal.** Le fichier `.easignore` exclut
+déjà `node_modules`, `.expo`, `dist` et les artefacts Gradle. Ce qui reste
+est volumineux surtout à cause du dossier `/android`, **volontairement
+conservé** : il contient `network_security_config.xml`, sans lequel
+l'APK ne peut joindre aucun backend en HTTP (voir §10.3). Ne pas
+l'exclure pour accélérer l'upload.
+
+**L'upload est le point fragile.** Sur une connexion instable, il échoue
+par `ECONNRESET` ou `socket hang up`, à des points variables (255 Ko,
+73 Mo, 115 Mo sur 466 Mo). Huit tentatives ont échoué ainsi avant qu'une
+neuvième passe **sans aucun changement de configuration** — l'upload
+complet prend alors ~23 minutes. Il n'y a pas de correctif : c'est un
+problème de réseau, pas de projet. La conduite à tenir est de relancer,
+et de basculer sur le build local (§10.2) si les échecs persistent.
+
+### 10.2 Build local Gradle — le secours
+
+**`eas build --local` ne fonctionne pas sous Windows** : il exige macOS ou
+Linux (`Unsupported platform, macOS or Linux is required to build apps for
+Android`). Il faut passer par Gradle directement :
+
+```bash
+cd mobile/android
+# ANDROID_HOME doit pointer vers le SDK ; local.properties le contient déjà
+./gradlew.bat assembleRelease --no-daemon
+```
+
+L'APK sort dans `mobile/android/app/build/outputs/apk/release/app-release.apk`.
+Compter ~48 minutes à froid. **Attention** : cet APK est signé avec le
+keystore de debug local, pas celui d'EAS — utilisable pour tester, à ne
+pas confondre avec un build de production signé.
+
+#### Le blocage à connaître : `ninja` et les chemins de plus de 260 caractères
+
+Le build local échouait sur :
+
+```
+ninja: error: Stat(...safeareacontextJSI-generated.cpp.o):
+Filename longer than 260 characters
+```
+
+CMake imbrique le chemin source complet **à l'intérieur** du chemin de
+l'objet compilé, ce qui dépasse largement la limite historique de Windows.
+
+**Ce qui ne marche pas** : le réglage système `LongPathsEnabled` était
+**déjà à 1** — il ne suffit pas, car un binaire doit en plus être déclaré
+compatible pour en bénéficier.
+
+**Ce qui ne marche pas non plus** : mapper un lecteur court avec `subst`
+pour raccourcir les chemins. Node ne remonte pas correctement
+l'arborescence depuis un lecteur virtuel, et le build casse plus tôt, à
+l'autolinking Expo (`Couldn't find "package.json" up from path "S:\android"`).
+
+**La solution** : le `ninja` livré avec le SDK Android est en **1.10.2**,
+or le support des chemins longs sous Windows n'est arrivé qu'en **1.12.0**.
+Il faut le remplacer :
+
+```powershell
+# 1. Télécharger ninja 1.12.1 (275 Ko)
+curl -sL -o ninja-win.zip https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-win.zip
+
+# 2. Sauvegarder l'original puis le remplacer
+cd "$env:LOCALAPPDATA\Android\Sdk\cmake\3.22.1\bin"
+Copy-Item ninja.exe ninja-1.10.2-original.exe   # sauvegarde
+# puis y copier le ninja.exe extrait de l'archive
+
+# 3. Vérifier
+./ninja.exe --version    # doit afficher 1.12.1
+```
+
+Après ce remplacement, le build passe. CMake émet encore un avertissement
+sur des chemins de 250 caractères, mais il n'est plus bloquant.
+
+**Nature du changement** : il modifie un binaire de l'outillage Android
+local, pas le projet. Il est donc à refaire sur chaque poste de
+développement, et la sauvegarde `ninja-1.10.2-original.exe` permet de
+revenir en arrière.
+
+### 10.3 Le piège qui a fait croire à un problème de réseau
+
+Un symptôme distinct et trompeur : l'application affichait *« Connexion
+impossible. Vérifiez votre connexion Internet. »* sur un téléphone
+pourtant connecté, avec un serveur qui répondait normalement
+(`POST /api/auth/login` → HTTP 401 en 0,6 à 4,9 s).
+
+**Cause** : l'adresse de secours de `mobile/src/config.ts` pointait vers
+`http://10.0.2.2:8000`, l'adresse de l'**émulateur** Android — inexistante
+sur un appareil réel. Dès que `EXPO_PUBLIC_API_URL` n'était pas injecté au
+bundling, chaque requête échouait instantanément. Le message affiché est
+`error.offline` (« Vérifiez votre connexion »), pas `error.timeout`, ce
+qui accusait à tort la connexion de l'utilisateur alors que le serveur
+n'était jamais contacté.
+
+**Corrigé** (commit `3118541`) : en build release, l'adresse de secours est
+celle de production ; en développement, le comportement émulateur/LAN est
+conservé — y pointer vers la production masquerait un backend local non
+démarré. Un correctif complémentaire (`fc5a9ee`) ajoute des réessais
+automatiques sur coupure réseau transitoire pour les lectures et
+l'authentification.
+
+**À vérifier aussi** en cas de symptôme réseau : `network_security_config.xml`
+doit exister dans `android/app/src/main/res/xml/` et être référencé par
+`AndroidManifest.xml` (`android:networkSecurityConfig`). Sans lui, Android
+bloque tout trafic HTTP en clair sur les builds release et **toutes** les
+requêtes échouent — le backend n'ayant pas encore de certificat HTTPS.
+
+---
+
+## 11. L'application web (septembre 2026)
+
+Une version web est venue s'ajouter à l'application mobile. Elle ne la
+duplique pas : elle en extrait **la seule fonctionnalité qui vaut d'être
+ouverte au navigateur**, la prise de mesure, et laisse tout le reste —
+commande, négociation, paiement, essayage 3D — à l'application mobile.
+
+### 11.1 Ce qu'elle fait, et ce qu'elle ne fait pas
+
+| Disponible sur le web | Réservé au mobile |
+|---|---|
+| Création de compte client | Compte tailleur |
+| Catalogue des modèles | Essayage 3D et avatar |
+| Prise de mesure par photos | Commande, devis, négociation |
+| Fiches à télécharger | Paiement Mobile Money |
+| Modèles proposés par la communauté | Chat, livraison, avis |
+| Section administrateur complète | |
+
+Il n'y a **aucun côté tailleur** dans la version web. C'est un choix, pas un
+manque : un tailleur travaille depuis son téléphone, et dupliquer huit écrans
+métier aurait coûté cher pour un usage qui n'existe pas.
+
+### 11.2 Architecture
+
+**Next.js 15** (App Router, TypeScript), déployé sur **Vercel**, dépôt
+autonome `korah-agency/Sur-MeZur-web-App`. Le code n'est pas partagé avec le
+mobile ; seul le backend l'est.
+
+Le point d'architecture qui compte : le client web n'appelle **jamais** l'API
+directement. `next.config.ts` réécrit `/api/*` et `/uploads/*` vers
+`API_ORIGIN`, si bien que le code garde des chemins relatifs. Trois
+conséquences, dont une inattendue :
+
+- aucune requête cross-origin, donc **aucune configuration CORS** à maintenir
+  côté backend ;
+- la réécriture s'exécute **côté serveur Vercel**, pas dans le navigateur : un
+  site servi en HTTPS peut donc appeler une API en HTTP sans déclencher de
+  blocage pour contenu mixte. C'est ce qui rend le déploiement possible alors
+  qu'AutoSSL n'a jamais émis de certificat pour l'API (§7, *Autres chantiers*) ;
+- le même code fonctionne en développement contre `localhost:8000` et en
+  production contre `api.gitingeniering.com`, sans condition dans le code.
+
+### 11.3 Les mesures en langage naturel
+
+C'est la différence de fond avec l'application mobile, qui affiche la sortie
+brute du pipeline : à côté des douze mesures utiles, elle laisse apparaître
+les variables intermédiaires du modèle (`chestbreadth`, `buttockdepth`,
+`biacromialbreadth`, les profondeurs, les scores de confiance).
+
+Ce sont des **grandeurs de travail**. Elles servent à calculer les tours et
+n'ont aucune traduction en couture. Le web ne montre que les douze mesures
+qu'un tailleur relève au mètre ruban, **groupées par partie du corps** —
+buste, bras, hanches et jambes — plutôt que par nature de grandeur, et
+chacune accompagnée de l'endroit où elle se prend et de son rôle dans le
+vêtement :
+
+> **Tour de bras** — 33,0 cm
+> Au plus fort du bras, le bras relâché le long du corps.
+> *Détermine la largeur de la manche en haut.*
+
+Le tri est fait par construction dans `web/src/lib/measurements.ts`, pas
+masqué par du style : une clé inconnue du vocabulaire est écartée
+silencieusement plutôt qu'affichée brute. Aucune mention de MediaPipe, de
+silhouette ou de modèle n'apparaît dans l'interface publique.
+
+### 11.4 Deux fiches, et non une
+
+Le téléchargement produit **deux documents distincts** : la fiche de mesures
+et la fiche des modèles à coudre. Les séparer n'est pas cosmétique — un
+tailleur imprime volontiers une liste de chiffres, beaucoup moins des photos
+pleine page. Les réunir aurait imposé l'impression des visuels à chaque fois.
+
+Le PDF est produit par **l'impression du navigateur** (`@media print` puis
+« Enregistrer en PDF »), et non par une bibliothèque serveur. La raison est
+matérielle : aucune bibliothèque PDF n'est installée côté backend, et
+l'hébergement mutualisé n'a ni Cairo ni Pango, ce qui exclut WeasyPrint. Le
+« Enregistrer en PDF » natif existe sur Android, iOS et ordinateur — zéro
+dépendance nouvelle, zéro risque au déploiement.
+
+### 11.5 Modèles proposés par la communauté
+
+La colonne `garment_models.created_by` existait depuis l'origine **sans
+qu'aucune route ne la renseigne** : seul un administrateur pouvait créer un
+modèle. Deux routes l'ont ouverte aux clients :
+
+| Route | Contrôle |
+|---|---|
+| `POST /api/models` | client authentifié ; `created_by` porte l'auteur |
+| `POST /api/models/{id}/photos` | **auteur du modèle uniquement** |
+
+Le contrôle sur les photos est le point sensible : sans lui, n'importe quel
+client pourrait déposer des images sur le modèle d'un autre, ou sur le
+catalogue officiel dont `created_by` est nul.
+
+Le schéma d'entrée est volontairement plus étroit que celui de l'admin : pas
+de `base_price`, un modèle étant confectionné sur mesure et son tarif négocié
+avec le tailleur.
+
+Vérifié de bout en bout : création en 201 avec `created_by` renseigné, dépôt
+de photo par un autre client refusé en 403, dépôt par l'auteur accepté en 200,
+modèle visible dans le catalogue commun, nom trop court refusé en 422.
+
+### 11.6 Cohérence visuelle avec le mobile
+
+L'interface reprend l'application mobile écran par écran : connexion, accueil
+et profil sont calqués sur leurs équivalents natifs, avec les mêmes tokens de
+couleur, les mêmes rayons et les mêmes polices.
+
+Deux décisions techniques y contribuent plus que le reste.
+
+**Les icônes sont des SVG `lucide-react`**, la version web exacte du
+`lucide-react-native` employé par le mobile — le même trait, dessiné par le
+même projet. Les emoji ont été entièrement retirés. Un emoji est rendu par la
+police du système : il change d'aspect entre Android, iOS et Windows, ne se
+colore pas avec le thème, et ne s'aligne sur aucune grille optique commune.
+Les drapeaux du sélecteur d'indicatif en étaient le cas limite — sur Windows
+ils s'affichent en deux lettres grises.
+
+**Les styles vivent dans des feuilles CSS**, pas dans des objets de style en
+ligne. C'est la raison technique pour laquelle l'ancien frontend Vite ne
+pouvait pas être adaptable : un style en ligne ne porte pas de media query.
+C'était, autant que sa colonne fixe de 420 px, ce qui l'empêchait d'être
+responsive.
+
+### 11.7 Responsive, réellement
+
+L'ancien frontend Vite dessinait une **colonne fixe de 420 px centrée** : sur
+un ordinateur on voyait un téléphone entouré de vide. La version Next est
+mobile-first stricte — les règles de base décrivent le téléphone, les media
+queries `min-width` n'ajoutent que ce que les grands écrans gagnent.
+
+Trois paliers seulement : base, 720 px, 1024 px. Au-delà de 1024 px, la barre
+d'onglets du bas devient une colonne latérale — **le même balisage**, sans
+rendu conditionnel en JavaScript, donc rien qui puisse diverger entre « la
+version mobile » et « la version bureau ».
+
+Deux défauts réels corrigés au passage :
+
+- la **barre d'action passait sous la barre d'onglets**, toutes deux collées
+  en bas : le bouton principal était partiellement masqué sur toutes les pages
+  du parcours client ;
+- un seul élément trop large rendait la page entière déplaçable
+  latéralement — coupé à la racine.
+
+L'écran de connexion tient dans une fenêtre **sans défilement**, y compris sur
+un téléphone court : hauteur en `100dvh` (et non `100vh`, qui ignore la barre
+d'adresse mobile et déborde donc sur iOS), logo dimensionné en unités de vue,
+effacé sous 460 px de haut plutôt que de repousser le bouton hors du cadre.
+
+### 11.8 Capture des photos : pourquoi pas la caméra en direct
+
+Le web utilise un champ de fichier avec attribut `capture`, qui ouvre
+l'appareil photo natif du téléphone, et **non** `getUserMedia` avec silhouette
+guide comme le mobile.
+
+La raison est bloquante et non négociable : `getUserMedia` exige un **contexte
+sécurisé HTTPS**. L'API est servie en HTTP et aucun certificat n'a été émis
+pour le domaine. Tant que ce point n'est pas réglé, la caméra en direct est
+inaccessible ailleurs que sur `localhost`.
+
+Conséquence à assumer : la version web **n'a pas le guidage de capture**, or
+le rapport identifie ce guidage comme le levier n°1 de précision (§5.3, le
+vêtement ample pesant jusqu'à 24 cm). Les mesures prises depuis le web sont
+donc, à photo équivalente, plus exposées au bruit vestimentaire que celles du
+mobile. Le jour où HTTPS sera en place, cette seule étape pourra basculer sans
+toucher au reste du parcours.
+
+### 11.9 Vérification de bout en bout (8 septembre 2026)
+
+La chaîne complète a été testée contre l'API de **production**, et non
+simulée :
+
+| Étape | Résultat |
+|---|---|
+| Chaîne de vision (`/measurements/capabilities`) | `vision_enabled`, MediaPipe, SAM et les deux modèles Ridge : tous disponibles |
+| Ouverture de session | HTTP 200 |
+| Envoi des deux photos | HTTP 200 en 1,0 s |
+| Traitement complet | **7 secondes** |
+| Mesures renvoyées | **12 sur 12** |
+
+Le point le plus incertain était le worker : depuis le 13 août les mesures
+sont traitées par une tâche planifiée **hors du cycle Passenger** (§2.3). Ce
+test confirme qu'il tourne — 7 secondes de bout en bout, très en deçà des
+trois minutes que la page web accorde avant d'abandonner.
+
+Ce test valide la **connexion**, pas la précision : les photos employées
+proviennent du jeu de test et leurs mensurations réelles sont inconnues.
+
+Un compte de test (`+237634201648`, « ZZ Test Web Mesure ») et sa session
+subsistent en production et restent à supprimer, comme le compte
+`+23760000001` déjà signalé au §7.
+
+### 11.10 Défauts trouvés et corrigés pendant le développement
+
+**Le bouton de connexion restait grisé quelle que soit la saisie.** Pour
+vérifier la longueur du numéro, les trois écrans d'authentification
+retiraient l'indicatif par une expression régulière dont le quantificateur
+était **gourmand** : il consommait tous les chiffres, pas seulement
+l'indicatif. Pour `+237696982953` le résultat n'était donc pas `696982953`
+mais une chaîne vide, et la condition « au moins six chiffres » ne pouvait
+jamais être vraie. Connexion, inscription et mot de passe oublié étaient tous
+les trois inutilisables. Le découpage passe désormais par `splitPhone`, qui
+coupe sur les indicatifs **connus**.
+
+**La règle de mot de passe était fausse.** Le backend exige **exactement six
+caractères**, avec au moins une lettre et un chiffre
+(`app/schemas/auth.py::validate_password`) — une règle inhabituelle, la
+plupart des formulaires imposant un minimum. Le formulaire web en exigeait
+huit : il refusait des mots de passe valides et en laissait passer que le
+serveur rejetait ensuite.
+
+**Le logo pesait 1,5 Mo.** Inenvisageable sur les connexions visées. Trois
+déclinaisons produites par quantification de palette : 29 Ko pour l'écran de
+connexion, 9 Ko pour la marque de navigation, 6 Ko pour le favicon — 44 Ko au
+total, sans perte visible.
+
+### 11.11 Ce qui reste ouvert côté web
+
+| Sujet | État |
+|---|---|
+| **Rendu visuel** | jamais vérifié dans un navigateur ; le build et le typecheck ne disent rien d'une mise en page |
+| **Thème sombre** | présent sur le mobile, non porté ; les tokens `--surface` et `--violet-tint` préparent le terrain |
+| **Guidage de capture** | impossible sans HTTPS (§11.8) |
+| **Sélection de modèles** | conservée dans le navigateur, donc propre à l'appareil — rien côté API ne relie un modèle à une mesure tant qu'aucune commande n'existe, et le web n'en passe pas. Les favoris, eux, sont bien enregistrés côté serveur |
+| **Deux avis `postcss`** | corrigibles seulement par une montée en Next 16 ; ce sont des failles de compilation sur nos propres feuilles de style, sans surface d'attaque ici |

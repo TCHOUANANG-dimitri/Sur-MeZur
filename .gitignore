@@ -17,3 +17,10 @@ node_modules/
 .expo/
 dist/
 build/
+
+# Application web Next.js : depot independant
+# (https://github.com/korah-agency/Sur-MeZur-web-App.git)
+web/
+
+# Rapport genere depuis RAPPORT_PROJET.md
+RAPPORT_PROJET.docx
