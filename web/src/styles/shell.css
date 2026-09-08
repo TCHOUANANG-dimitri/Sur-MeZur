@@ -1,0 +1,274 @@
+/* ============================================================================
+   Coquille applicative — la piece maitresse du responsive.
+
+   Un seul composant de navigation, trois presentations :
+     - telephone   : barre d'onglets fixee en bas (pouce)
+     - tablette+   : meme barre, mais elements plus espaces
+     - ordinateur  : la barre devient une navigation laterale permanente,
+                     et le contenu s'ouvre sur toute la largeur utile
+
+   Rien n'est duplique : c'est le meme balisage qui se reorganise, ce qui
+   evite le piege classique d'une version "mobile" et d'une version "bureau"
+   qui divergent avec le temps.
+   ========================================================================= */
+
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.shellMain {
+  flex: 1;
+  width: 100%;
+  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Conteneur de contenu : pleine largeur au telephone, borne ensuite pour que
+   les lignes de texte ne deviennent pas illisibles sur un grand ecran. */
+.container {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.containerNarrow {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+/* --- Barre d'onglets (telephone) ----------------------------------------- */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.tabItem {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: var(--tabbar-h);
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.1;
+}
+
+/* Cinq onglets sur 320 px laissent 64 px chacun : un libelle trop long doit
+   etre coupe, sinon il passe sur deux lignes et fait grandir la barre. */
+.tabItem > span:last-child {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabIcon {
+  display: grid;
+  place-items: center;
+}
+
+.tabItemActive {
+  color: var(--violet-primary);
+}
+
+/* --- Navigation laterale (ordinateur) ------------------------------------ */
+.sidenav {
+  display: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 18px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--indigo-text);
+}
+
+.brandMark {
+  width: 30px;
+  height: auto;
+  flex: none;
+  object-fit: contain;
+}
+
+@media (min-width: 1024px) {
+  .shell {
+    flex-direction: row;
+  }
+
+  .sidenav {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100dvh;
+    width: var(--sidenav-w);
+    flex: none;
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+  }
+
+  .sidenav .tabbar {
+    position: static;
+    flex-direction: column;
+    border-top: 0;
+    padding: 8px;
+    gap: 2px;
+  }
+
+  .sidenav .tabItem {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: var(--radius-button);
+    font-size: 14px;
+  }
+
+  .sidenav .tabItemActive {
+    background: var(--bg-alt);
+  }
+
+  .shellMain {
+    padding-bottom: 0;
+    min-width: 0; /* sans cela une grille enfant peut forcer un debordement */
+  }
+}
+
+/* --- En-tete de page ------------------------------------------------------ */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--header-h);
+  padding: 8px var(--gutter);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.headerTitle {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.backBtn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bg-alt);
+  color: var(--indigo-text);
+  font-size: 18px;
+  cursor: pointer;
+  flex: none;
+}
+
+/* --- Grilles fluides ------------------------------------------------------ */
+/* `auto-fill` + `minmax` : le nombre de colonnes decoule de la largeur
+   disponible, sans qu'aucun palier ne soit ecrit a la main. Une carte ne
+   descend jamais sous 150px et le nombre de colonnes suit naturellement. */
+.grid {
+  display: grid;
+  gap: var(--gutter);
+  grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
+}
+
+.gridWide {
+  display: grid;
+  gap: var(--gutter);
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+}
+
+/* Rangee defilante horizontale (carrousels du telephone), qui redevient une
+   grille classique des qu'il y a la place. */
+.rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 62%;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+.rail > * {
+  scroll-snap-align: start;
+}
+
+@media (min-width: 720px) {
+  .rail {
+    grid-auto-columns: 30%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .rail {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    overflow-x: visible;
+  }
+}
+
+.section {
+  padding: var(--gutter) 0;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* La barre du bas et la colonne laterale portent le meme balisage : on
+   n'affiche que l'une des deux selon la largeur, sans rendu conditionnel en
+   JavaScript (qui provoquerait un saut a l'hydratation). */
+@media (min-width: 1024px) {
+  [data-mobile-nav] {
+    display: none;
+  }
+}

@@ -1,0 +1,202 @@
+/* ============================================================================
+   Sur-MeZur — socle visuel de la version web
+
+   Approche MOBILE-FIRST stricte : les regles de base decrivent le telephone,
+   les `@media (min-width: ...)` n'ajoutent que ce que les grands ecrans
+   gagnent. C'est l'inverse de l'ancien frontend Vite, qui dessinait une
+   colonne fixe de 420 px au milieu de l'ecran (`.app-shell { max-width:
+   420px }`) : sur un ordinateur on voyait un telephone entoure de vide, et
+   sur une tablette la mise en page ne s'adaptait jamais.
+
+   Trois paliers seulement, choisis sur les usages reels et non sur des
+   tailles d'appareils precises :
+     - base            telephone, une colonne
+     - >= 720px        tablette / grand telephone paysage, grilles a 2-3 col.
+     - >= 1024px       ordinateur, navigation laterale permanente
+   ========================================================================= */
+
+:root {
+  /* Couleurs — reprises telles quelles de frontend/src/theme/tokens.ts pour
+     que le web et le mobile restent identiques a l'oeil. */
+  --violet-primary: #5b21b6;
+  --violet-vivid: #7c3aed;
+  --violet-deep: #4c1d95;
+  --indigo-text: #1f2a44;
+  --bg: #ffffff;
+  --bg-alt: #f4f2f8;
+  /* `surface` est distinct de `bg` dans les tokens du mobile : il designe le
+     fond d'un element pose SUR la page (carte, champ, feuille). Les deux se
+     confondent en theme clair, mais les separer des maintenant evite d'avoir
+     a reprendre chaque composant le jour ou le theme sombre est porte. */
+  --surface: #ffffff;
+  /* Voile violet leger derriere les petites tuiles d'icone (mobile: violetTint). */
+  --violet-tint: #ede9fe;
+  --bg-page: #eceaf2;
+  --border: #e5e1ee;
+  --text-secondary: #6b7280;
+  --success: #16a34a;
+  --error: #dc2626;
+  --pending: #d97706;
+
+  --gradient: linear-gradient(135deg, var(--violet-vivid), var(--violet-deep));
+
+  --radius-card: 16px;
+  --radius-button: 12px;
+  --radius-chip: 999px;
+
+  --shadow-sm: 0 1px 3px rgba(31, 42, 68, 0.06);
+  --shadow: 0 4px 16px rgba(31, 42, 68, 0.08);
+  --shadow-lg: 0 12px 32px rgba(31, 42, 68, 0.12);
+
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* Gouttiere fluide : 16px sur un petit telephone, jusqu'a 24px ensuite.
+     Evite d'empiler des media queries juste pour du padding. */
+  --gutter: clamp(16px, 4vw, 24px);
+
+  /* Hauteur de la barre d'onglets du bas, reservee en bas de page pour que
+     le dernier element d'une liste ne soit jamais masque (le defaut de
+     cadrage deja rencontre sur l'ecran avatar du mobile). */
+  --tabbar-h: 64px;
+  --sidenav-w: 244px;
+  --header-h: 56px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* Empeche iOS de grossir les textes en paysage sans desactiver le zoom
+     manuel de l'utilisateur (ce que `user-scalable=no` ferait, au prix de
+     l'accessibilite). */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--indigo-text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+a {
+  color: var(--violet-primary);
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Sur iOS, un champ dont la police fait moins de 16px declenche un zoom
+   automatique a la mise au point, qui decale toute la page. */
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(24px, 6vw, 34px);
+}
+h2 {
+  font-size: clamp(19px, 4.5vw, 24px);
+}
+h3 {
+  font-size: clamp(16px, 3.5vw, 19px);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-chip);
+}
+
+/* Cible de pointage : 44px est le minimum recommande pour le doigt. */
+.tap {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Impression — utilisee pour la fiche de mesures.
+   Le choix retenu est l'impression navigateur plutot qu'une bibliotheque PDF
+   cote serveur : aucune dependance nouvelle a installer sur l'hebergement
+   mutualise, et le "Enregistrer en PDF" natif fonctionne aussi bien sur
+   Android et iOS que sur ordinateur.
+   ------------------------------------------------------------------------ */
+@media print {
+  :root {
+    --bg-page: #ffffff;
+  }
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: revert !important;
+  }
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+}
+
+.print-only {
+  display: none;
+}

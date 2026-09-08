@@ -1,0 +1,242 @@
+/* ============================================================================
+   Ajustements d'experience mobile.
+
+   Cette feuille corrige des defauts qui n'apparaissent QUE sur telephone :
+   chevauchement d'elements fixes, zones de contact trop petites, debordements
+   horizontaux, encoches. Elle est chargee en dernier pour pouvoir affiner ce
+   que les feuilles precedentes posent.
+   ========================================================================= */
+
+/* --- Barre d'action et barre d'onglets ------------------------------------
+   DEFAUT CORRIGE : `.actionBar` est collee en bas (`sticky; bottom: 0`) et la
+   barre d'onglets est fixee au meme endroit. Le bouton principal passait donc
+   SOUS la navigation, partiellement masque, sur toutes les pages du parcours
+   client. Il faut le remonter de la hauteur exacte de la barre.               */
+.shell .actionBar {
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  padding-bottom: 12px;
+  /* Le degrade de fond doit couvrir toute la zone, sinon le contenu qui defile
+     apparait derriere le bouton. */
+  background: linear-gradient(to top, var(--bg) 60%, rgba(255, 255, 255, 0));
+}
+
+/* Hors coquille (ecrans d'authentification), il n'y a pas de barre d'onglets. */
+.authScreen .actionBar {
+  bottom: 0;
+}
+
+@media (min-width: 1024px) {
+  .shell .actionBar {
+    bottom: 0;
+  }
+}
+
+/* --- Debordement horizontal ------------------------------------------------
+   Un seul element trop large suffit a rendre toute la page deplacable
+   lateralement, ce qui est tres desagreable au doigt. On coupe a la racine.  */
+html,
+body {
+  overflow-x: hidden;
+}
+
+/* Les elements naturellement larges defilent DANS leur propre boite. */
+.ficheTable,
+.tableScroll {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 720px) {
+  .ficheTable {
+    display: table;
+    overflow-x: visible;
+  }
+}
+
+/* Un mot tres long (nom de modele, adresse) ne doit pas elargir la page. */
+.measureName,
+.modelCardName,
+.headerTitle,
+.countryName {
+  overflow-wrap: anywhere;
+}
+
+/* --- Zones de contact ------------------------------------------------------
+   44px est le minimum confortable au doigt. Les liens de texte en font
+   rarement autant ; on elargit leur zone sensible sans changer l'apparence. */
+@media (pointer: coarse) {
+  .authLink {
+    display: inline-block;
+    padding: 8px 12px;
+  }
+
+  .chip {
+    min-height: 40px;
+  }
+
+  .homeSectionHead a {
+    padding: 6px 0 6px 10px;
+  }
+}
+
+/* --- En-tete collant -------------------------------------------------------
+   Sur un telephone, l'en-tete colle mange une part importante de la hauteur.
+   On le compacte, et on lui donne le fond opaque necessaire sous l'encoche.  */
+@media (max-width: 719px) {
+  .header {
+    min-height: 52px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    background: var(--bg);
+    backdrop-filter: none;
+  }
+
+  .headerTitle {
+    font-size: 16px;
+  }
+
+  .backBtn {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* --- Densite de contenu ----------------------------------------------------
+   Au telephone on resserre les respirations verticales : le contenu utile doit
+   apparaitre sans defilement des l'arrivee sur la page.                       */
+@media (max-width: 719px) {
+  .section {
+    padding: 14px 0 20px;
+  }
+
+  .measureGroup {
+    margin-bottom: 20px;
+  }
+
+  .measureItem {
+    padding: 12px 14px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  h2 {
+    margin-bottom: 4px;
+  }
+}
+
+/* --- Grille du catalogue ---------------------------------------------------
+   Deux colonnes des 340 px de large : une seule colonne gaspille l'ecran et
+   oblige a beaucoup defiler pour parcourir un catalogue.                      */
+@media (max-width: 719px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+@media (max-width: 339px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Rangee defilante ------------------------------------------------------
+   Un debord visible de la carte suivante indique qu'on peut faire defiler ;
+   sans lui, beaucoup d'utilisateurs ne devinent pas le geste.                 */
+@media (max-width: 719px) {
+  .rail {
+    grid-auto-columns: 44%;
+    /* Le rail deborde volontairement la gouttiere pour aller au bord de
+       l'ecran, ce qui rend le defilement plus evident. */
+    margin-inline: calc(var(--gutter) * -1);
+    padding-inline: var(--gutter);
+  }
+}
+
+/* --- Selecteur de photo ----------------------------------------------------
+   C'est l'element central du parcours : au doigt il doit etre franchement
+   cliquable, avec un retour visuel a l'appui.                                 */
+.photoPicker {
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.photoPicker:active {
+  background: var(--bg-alt);
+  border-color: var(--violet-vivid);
+}
+
+@media (max-width: 719px) {
+  .photoPreview,
+  .photoPlaceholder {
+    width: 64px;
+    height: 86px;
+  }
+}
+
+/* --- Formulaires -----------------------------------------------------------
+   Les champs cote a cote reviennent en pile sous 560 px (deja gere par
+   `.fieldRow`) ; ici on evite juste que le clavier virtuel ne masque le champ
+   actif en laissant de la place a defiler sous le dernier champ.             */
+@media (max-width: 719px) {
+  .containerNarrow form:last-child,
+  .authForm {
+    scroll-margin-bottom: 120px;
+  }
+
+  .input {
+    /* 16px minimum : en dessous, iOS zoome a la mise au point et decale
+       toute la page. Deja pose dans globals.css, rappele ici parce que
+       plusieurs regles locales tentent de reduire la taille des champs. */
+    font-size: 16px;
+  }
+}
+
+/* --- Fiche imprimable a l'ecran -------------------------------------------
+   Sur telephone, la fiche est d'abord une page a lire ; la mise en tableau
+   serree du papier n'y convient pas.                                          */
+@media (max-width: 719px) {
+  .fiche {
+    padding: 16px;
+  }
+
+  .ficheHeader {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .ficheMeta {
+    text-align: left;
+  }
+
+  .ficheContext {
+    gap: 14px;
+  }
+}
+
+/* --- Etats vides ----------------------------------------------------------- */
+.emptyIcon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+}
+
+/* --- Tuiles de statistiques (admin) ---------------------------------------- */
+.statIcon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+  margin-bottom: 8px;
+}

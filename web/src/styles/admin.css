@@ -1,0 +1,381 @@
+/* ============================================================================
+   Styles propres a la section admin.
+
+   Importe depuis `src/app/admin/layout.tsx`. Rien ici ne doit etre ajoute
+   aux feuilles partagees (globals/shell/ui), reservees au parcours client.
+
+   MAPPING RESPONSIVE (cf. exigences) :
+     - mobile-first : les regles de base decrivent le telephone ;
+     - a partir de 720px  les tableaux redeviennent des tableaux ;
+     - a partir de 1024px  ajustements fins (cartes sur une ligne, etc.).
+   Aucune largeur fixe en pixels sur un conteneur : tout est fluide.
+   ========================================================================= */
+
+/* --- Sections et titres ---------------------------------------------------- */
+.adminIntro {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin: 0 0 var(--gutter);
+}
+
+.adminStack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* --- Tuiles de la vue d'ensemble ------------------------------------------- */
+/* Grille a 2 colonnes au telephone, puis 4 quand il y a la place. */
+.statGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+}
+
+.statIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--bg-alt);
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+
+.statValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--indigo-text);
+  line-height: 1.1;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.statHint {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Ligne de revenus (volume / commission), une par ligne au telephone. */
+.moneyRow {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.moneyItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.moneyValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--indigo-text);
+}
+
+.moneyLabel {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Barres « commandes par statut ». */
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.barLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 0 0 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barTrack {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-alt);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--violet-primary);
+}
+
+.barCount {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--indigo-text);
+  flex: 0 0 24px;
+  text-align: right;
+}
+
+/* --- Tableaux de donnees : cartes empilees au telephone -------------------- */
+/* Principe : sur mobile on n'affiche pas l'en-tete de colonne, chaque type de
+   contenu rend son propre libelle ; a partir de 720px le balisage devient un
+   vrai tableau. On structure donc chaque cellule avec un libelle mobile via
+   `data-label` (affiché au telephone, masqué au tableau) et on cache
+   l'en-tête par défaut. */
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* En-tete de colonnes : masque au telephone (les lignes portent leurs
+   libelles), affiche a partir de 720px. */
+.dataTable thead {
+  display: none;
+}
+
+.dataTable thead th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dataTable tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+/* Cellule : devenu une carte empilee au telephone. */
+.dataTable tbody tr {
+  display: block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 4px;
+  margin-bottom: 12px;
+}
+
+.dataTable tbody td {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 8px;
+  text-align: right;
+}
+
+.dataTable tbody tr:last-child td {
+  border-bottom: 1px solid var(--border);
+}
+
+.dataTable tbody tr:last-child td:last-child {
+  border-bottom: 0;
+}
+
+/* Libelle mobile : prefixe de chaque valeur. */
+.dataTable tbody td::before {
+  content: attr(data-label);
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: left;
+  flex: 1;
+}
+
+@media (min-width: 720px) {
+  .dataTable thead {
+    display: table-header-group;
+  }
+
+  .dataTable tbody tr {
+    display: table-row;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  .dataTable tbody td {
+    display: table-cell;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    padding: 12px;
+  }
+
+  .dataTable tbody tr:nth-child(even) td {
+    background: var(--bg-alt);
+  }
+
+  .dataTable tbody td::before {
+    content: none;
+  }
+}
+
+/* --- Rangee d'actions (boutons d'une carte) -------------------------------- */
+.adminActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+@media (min-width: 560px) {
+  .adminActions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+/* --- Miniatures de documents / photos -------------------------------------- */
+.imgThumb {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-button);
+  background: var(--bg-alt);
+  object-fit: cover;
+  display: block;
+}
+
+.imgChip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 92px;
+}
+
+.imgChipLabel {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.imgRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* --- Verification obligatoire (checklist) ---------------------------------- */
+.checklist {
+  background: var(--bg-alt);
+  border-radius: var(--radius-card);
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.checklistTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--indigo-text);
+  margin-bottom: 6px;
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  cursor: pointer;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.checkBox {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 6px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.checkBoxActive {
+  background: var(--violet-primary);
+  border-color: var(--violet-primary);
+}
+
+.checkText {
+  flex: 1;
+  min-width: 0;
+}
+
+.checkLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--indigo-text);
+}
+
+.checkDesc {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* --- Recherche et filtres --------------------------------------------------- */
+.adminSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.adminSearch .input {
+  flex: 1;
+}
+
+/* --- Etiquette inline de statut (ligne de tableau) -------------------------- */
+.statusInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.rowTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rowLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--indigo-text);
+  min-width: 0;
+}
+
+.rowMeta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
