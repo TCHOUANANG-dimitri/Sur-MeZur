@@ -1,0 +1,24 @@
+Resolved "preview" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "preview" environment on EAS.
+Environment variables loaded from the "preview" build profile "env" configuration: EXPO_PUBLIC_API_URL.
+
+
+
+✔ Using remote Android credentials (Expo server)
+✔ Using Keystore from configuration: Build Credentials WsRPrPVgLK (default)
+
+Compressing project files and uploading to EAS Build. Learn more: https://expo.fyi/eas-build-archive
+- Compressing project files
+Your project archive is 466 MB. You can reduce its size and the time it takes to upload by excluding files that are unnecessary for the build process in .easignore file. Learn more: https://expo.fyi/eas-build-archive
+- Uploading to EAS Build (0 / 466 MB)
+✔ Uploaded to EAS 40m 9s
+- Computing project fingerprint
+⌛️ Computing the project fingerprint is taking longer than expected...
+⏩ To skip this step, set the environment variable: EAS_SKIP_AUTO_FINGERPRINT=1
+✔ Computed project fingerprint
+Failed to upload fingerprint to EAS
+
+Reason: request to https://storage.googleapis.com/updates-runtime-fingerprints-production/production/a6cfb808-3206-4d93-a799-b4d7091cd54a/6a223817-acaf-4fdc-9a53-6e7a4c00387e?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260831%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260831T084249Z&X-Goog-Expires=3600&X-Goog-SignedHeaders=host%3Bx-goog-content-length-range&X-Goog-Signature=2f6afd125aaff24f9e7f9731bb04eda0da9b4ab33cbea5e31aedbc280d1efc1383b38f4708517d9f90dba879b70a15355d1c2cc455e316f729f95d1b5f007179e6cee1bf665d9fc70a46b2d0dec8df8b39169f52b10b33a2541e914cea02bd900b41ad4913e4c4234de685b76eb4029c81dc4e9f159b6c4c739d5c5ef3448c223daf05d62fc6b83f6938900f47cd81426d134e592a382214f666490b6821cb6733fa21163a73f71295b059d8460d9e00d701f3fb9ffd8fa6c5e7133c65f35e561c642d23106f67dd098c42c102b27f6e8ee3d83d09c02c38fb89efbbf1a98b793fac32182783495144f54d8d5caa47269d34b98699baf0df55779290582c9732 failed, reason: socket hang up
+
+See logs: https://expo.dev/accounts/dim39/projects/sur-mezur/builds/51a615fe-3a32-4766-a790-7f0ee0fb67a2
+

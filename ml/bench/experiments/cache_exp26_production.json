@@ -1,0 +1,644 @@
+[
+  {
+    "id": "orig-1",
+    "gender": "male",
+    "height_cm": 182,
+    "weight_kg": 68.0,
+    "gt": {
+      "chest": 84,
+      "waist": 71,
+      "hips": 91
+    },
+    "calc": {
+      "chest": 87.2,
+      "waist": 82.6,
+      "hips": 98.5
+    },
+    "features": {
+      "stature_m": 182.0,
+      "weight_kg": 68.0,
+      "biacromialbreadth": 42.3,
+      "bideltoidbreadth": 51.6,
+      "hipbreadth": 41.4,
+      "sittingheight": 96.1,
+      "crotchheight": 88.9,
+      "chestbreadth": 37.8,
+      "waistbreadth": 36.2,
+      "chestdepth": 22.4,
+      "waistdepth": 21.1,
+      "buttockdepth": 26.2,
+      "chestbreadth_body": 34.9,
+      "chestdepth_body": 19.5,
+      "waistbreadth_body": 33.3,
+      "waistdepth_body": 18.2,
+      "hipbreadth_body": 38.5,
+      "buttockdepth_body": 23.3
+    }
+  },
+  {
+    "id": "orig-3",
+    "gender": "male",
+    "height_cm": 182,
+    "weight_kg": 60.0,
+    "gt": {
+      "chest": 83,
+      "waist": 74,
+      "hips": 91
+    },
+    "calc": {
+      "chest": 87.5,
+      "waist": 82.3,
+      "hips": 89.2
+    },
+    "features": {
+      "stature_m": 182.0,
+      "weight_kg": 60.0,
+      "biacromialbreadth": 42.9,
+      "bideltoidbreadth": 52.3,
+      "hipbreadth": 40.4,
+      "sittingheight": 96.3,
+      "crotchheight": 86.2,
+      "chestbreadth": 40.4,
+      "waistbreadth": 39.0,
+      "chestdepth": 24.3,
+      "waistdepth": 22.2,
+      "buttockdepth": 25.6,
+      "chestbreadth_body": 35.3,
+      "chestdepth_body": 19.2,
+      "waistbreadth_body": 33.9,
+      "waistdepth_body": 17.1,
+      "hipbreadth_body": 35.3,
+      "buttockdepth_body": 20.5
+    }
+  },
+  {
+    "id": "orig-4",
+    "gender": "male",
+    "height_cm": 193,
+    "weight_kg": 70.0,
+    "gt": {
+      "chest": 88.2,
+      "waist": 74.9,
+      "hips": 89
+    },
+    "calc": {
+      "chest": 85.8,
+      "waist": 79.7,
+      "hips": 92.4
+    },
+    "features": {
+      "stature_m": 193.0,
+      "weight_kg": 70.0,
+      "biacromialbreadth": 40.5,
+      "bideltoidbreadth": 49.4,
+      "hipbreadth": 36.7,
+      "sittingheight": 97.9,
+      "crotchheight": 97.1,
+      "chestbreadth": 32.1,
+      "waistbreadth": 29.4,
+      "chestdepth": 24.7,
+      "waistdepth": 23.6,
+      "buttockdepth": 23.8,
+      "chestbreadth_body": 30.9,
+      "chestdepth_body": 23.5,
+      "waistbreadth_body": 28.2,
+      "waistdepth_body": 22.4,
+      "hipbreadth_body": 35.5,
+      "buttockdepth_body": 22.6
+    }
+  },
+  {
+    "id": "orig-5",
+    "gender": "male",
+    "height_cm": 175,
+    "weight_kg": 83.0,
+    "gt": {
+      "chest": 94,
+      "waist": 92,
+      "hips": 99
+    },
+    "calc": {
+      "chest": 92.6,
+      "waist": 93.8,
+      "hips": 114.3
+    },
+    "features": {
+      "stature_m": 175.0,
+      "weight_kg": 83.0,
+      "biacromialbreadth": 42.1,
+      "bideltoidbreadth": 51.4,
+      "hipbreadth": 41.5,
+      "sittingheight": 94.2,
+      "crotchheight": 82.6,
+      "chestbreadth": 31.8,
+      "waistbreadth": 32.0,
+      "chestdepth": 23.9,
+      "waistdepth": 24.5,
+      "buttockdepth": 27.6,
+      "chestbreadth_body": 33.3,
+      "chestdepth_body": 25.4,
+      "waistbreadth_body": 33.5,
+      "waistdepth_body": 26.0,
+      "hipbreadth_body": 43.0,
+      "buttockdepth_body": 29.1
+    }
+  },
+  {
+    "id": "orig-6",
+    "gender": "male",
+    "height_cm": 178,
+    "weight_kg": 67.0,
+    "gt": {
+      "chest": 83.1,
+      "waist": 78.4,
+      "hips": 100.2
+    },
+    "calc": {
+      "chest": 85.2,
+      "waist": 82.8,
+      "hips": 100.3
+    },
+    "features": {
+      "stature_m": 178.0,
+      "weight_kg": 67.0,
+      "biacromialbreadth": 39.5,
+      "bideltoidbreadth": 48.2,
+      "hipbreadth": 37.2,
+      "sittingheight": 90.2,
+      "crotchheight": 87.1,
+      "chestbreadth": 28.3,
+      "waistbreadth": 27.3,
+      "chestdepth": 22.8,
+      "waistdepth": 22.3,
+      "buttockdepth": 22.8,
+      "chestbreadth_body": 29.8,
+      "chestdepth_body": 24.3,
+      "waistbreadth_body": 28.8,
+      "waistdepth_body": 23.8,
+      "hipbreadth_body": 38.7,
+      "buttockdepth_body": 24.3
+    }
+  },
+  {
+    "id": "orig-7",
+    "gender": "male",
+    "height_cm": 193,
+    "weight_kg": 71.0,
+    "gt": {
+      "chest": 87.1,
+      "waist": 71.2,
+      "hips": 91
+    },
+    "calc": {
+      "chest": 84.3,
+      "waist": 77.7,
+      "hips": 102.7
+    },
+    "features": {
+      "stature_m": 193.0,
+      "weight_kg": 71.0,
+      "biacromialbreadth": 43.1,
+      "bideltoidbreadth": 52.6,
+      "hipbreadth": 35.2,
+      "sittingheight": 93.7,
+      "crotchheight": 96.7,
+      "chestbreadth": 29.2,
+      "waistbreadth": 27.0,
+      "chestdepth": 22.9,
+      "waistdepth": 20.9,
+      "buttockdepth": 28.6,
+      "chestbreadth_body": 29.9,
+      "chestdepth_body": 23.6,
+      "waistbreadth_body": 27.7,
+      "waistdepth_body": 21.6,
+      "hipbreadth_body": 35.9,
+      "buttockdepth_body": 29.3
+    }
+  },
+  {
+    "id": "orig-8",
+    "gender": "female",
+    "height_cm": 166,
+    "weight_kg": 62.0,
+    "gt": {
+      "chest": 62,
+      "waist": 93,
+      "hips": 98
+    },
+    "calc": {
+      "chest": 83.1,
+      "waist": 79.2,
+      "hips": 100.1
+    },
+    "features": {
+      "stature_m": 166.0,
+      "weight_kg": 62.0,
+      "biacromialbreadth": 40.2,
+      "bideltoidbreadth": 49.0,
+      "hipbreadth": 35.9,
+      "sittingheight": 80.5,
+      "crotchheight": 80.2,
+      "chestbreadth": 28.6,
+      "waistbreadth": 27.1,
+      "chestdepth": 22.5,
+      "waistdepth": 21.6,
+      "buttockdepth": 25.8,
+      "chestbreadth_body": 29.4,
+      "chestdepth_body": 23.3,
+      "waistbreadth_body": 27.9,
+      "waistdepth_body": 22.4,
+      "hipbreadth_body": 36.7,
+      "buttockdepth_body": 26.6
+    }
+  },
+  {
+    "id": "orig-9",
+    "gender": "male",
+    "height_cm": 170,
+    "weight_kg": 59.0,
+    "gt": {
+      "chest": 85.8,
+      "waist": 75.4,
+      "hips": 91.2
+    },
+    "calc": {
+      "chest": 77.4,
+      "waist": 74.9,
+      "hips": 85.6
+    },
+    "features": {
+      "stature_m": 170.0,
+      "weight_kg": 59.0,
+      "biacromialbreadth": 40.9,
+      "bideltoidbreadth": 49.9,
+      "hipbreadth": 34.1,
+      "sittingheight": 90.5,
+      "crotchheight": 77.0,
+      "chestbreadth": 29.7,
+      "waistbreadth": 28.5,
+      "chestdepth": 25.3,
+      "waistdepth": 24.9,
+      "buttockdepth": 25.9,
+      "chestbreadth_body": 26.8,
+      "chestdepth_body": 22.4,
+      "waistbreadth_body": 25.6,
+      "waistdepth_body": 22.0,
+      "hipbreadth_body": 31.2,
+      "buttockdepth_body": 23.0
+    }
+  },
+  {
+    "id": "orig-10",
+    "gender": "female",
+    "height_cm": 159,
+    "weight_kg": 49.0,
+    "gt": {
+      "chest": 77,
+      "waist": 77,
+      "hips": 89
+    },
+    "calc": {
+      "chest": 75.4,
+      "waist": 72.6,
+      "hips": 88.1
+    },
+    "features": {
+      "stature_m": 159.0,
+      "weight_kg": 49.0,
+      "biacromialbreadth": 36.1,
+      "bideltoidbreadth": 44.0,
+      "hipbreadth": 32.9,
+      "sittingheight": 81.2,
+      "crotchheight": 78.9,
+      "chestbreadth": 27.7,
+      "waistbreadth": 26.2,
+      "chestdepth": 21.3,
+      "waistdepth": 21.1,
+      "buttockdepth": 24.0,
+      "chestbreadth_body": 27.1,
+      "chestdepth_body": 20.7,
+      "waistbreadth_body": 25.6,
+      "waistdepth_body": 20.5,
+      "hipbreadth_body": 32.3,
+      "buttockdepth_body": 23.4
+    }
+  },
+  {
+    "id": "orig-11",
+    "gender": "female",
+    "height_cm": 165,
+    "weight_kg": 66.0,
+    "gt": {
+      "chest": 89,
+      "waist": 75.8,
+      "hips": 107
+    },
+    "calc": {
+      "chest": 88.8,
+      "waist": 82.1,
+      "hips": 110.4
+    },
+    "features": {
+      "stature_m": 165.0,
+      "weight_kg": 66.0,
+      "biacromialbreadth": 36.8,
+      "bideltoidbreadth": 44.9,
+      "hipbreadth": 39.2,
+      "sittingheight": 83.6,
+      "crotchheight": 80.7,
+      "chestbreadth": 28.3,
+      "waistbreadth": 27.2,
+      "chestdepth": 26.4,
+      "waistdepth": 23.2,
+      "buttockdepth": 28.9,
+      "chestbreadth_body": 29.2,
+      "chestdepth_body": 27.3,
+      "waistbreadth_body": 28.1,
+      "waistdepth_body": 24.1,
+      "hipbreadth_body": 40.1,
+      "buttockdepth_body": 29.8
+    }
+  },
+  {
+    "id": "orig-12",
+    "gender": "female",
+    "height_cm": 175,
+    "weight_kg": 78.0,
+    "gt": {
+      "chest": 93,
+      "waist": 90,
+      "hips": 109
+    },
+    "calc": {
+      "chest": 93.7,
+      "waist": 90.5,
+      "hips": 108.4
+    },
+    "features": {
+      "stature_m": 175.0,
+      "weight_kg": 78.0,
+      "biacromialbreadth": 39.1,
+      "bideltoidbreadth": 47.7,
+      "hipbreadth": 38.8,
+      "sittingheight": 85.5,
+      "crotchheight": 87.2,
+      "chestbreadth": 30.3,
+      "waistbreadth": 29.1,
+      "chestdepth": 26.9,
+      "waistdepth": 26.1,
+      "buttockdepth": 27.3,
+      "chestbreadth_body": 31.5,
+      "chestdepth_body": 28.1,
+      "waistbreadth_body": 30.3,
+      "waistdepth_body": 27.3,
+      "hipbreadth_body": 40.0,
+      "buttockdepth_body": 28.5
+    }
+  },
+  {
+    "id": "orig-13",
+    "gender": "female",
+    "height_cm": 160,
+    "weight_kg": 54.0,
+    "gt": {
+      "chest": 84,
+      "waist": 65,
+      "hips": 99
+    },
+    "calc": {
+      "chest": 88.8,
+      "waist": 80.7,
+      "hips": 100.0
+    },
+    "features": {
+      "stature_m": 160.0,
+      "weight_kg": 54.0,
+      "biacromialbreadth": 36.3,
+      "bideltoidbreadth": 44.3,
+      "hipbreadth": 39.6,
+      "sittingheight": 79.8,
+      "crotchheight": 79.8,
+      "chestbreadth": 28.7,
+      "waistbreadth": 26.8,
+      "chestdepth": 30.4,
+      "waistdepth": 27.2,
+      "buttockdepth": 25.9,
+      "chestbreadth_body": 27.4,
+      "chestdepth_body": 29.1,
+      "waistbreadth_body": 25.5,
+      "waistdepth_body": 25.9,
+      "hipbreadth_body": 38.3,
+      "buttockdepth_body": 24.6
+    }
+  },
+  {
+    "id": "new-1",
+    "gender": "female",
+    "height_cm": 171,
+    "weight_kg": 62,
+    "gt": {
+      "chest": 86.9,
+      "waist": 67,
+      "hips": 87
+    },
+    "calc": {
+      "chest": 86.0,
+      "waist": 77.5,
+      "hips": 103.5
+    },
+    "features": {
+      "stature_m": 171.0,
+      "weight_kg": 62.0,
+      "biacromialbreadth": 37.5,
+      "bideltoidbreadth": 45.8,
+      "hipbreadth": 37.6,
+      "sittingheight": 83.8,
+      "crotchheight": 84.5,
+      "chestbreadth": 27.3,
+      "waistbreadth": 25.7,
+      "chestdepth": 24.6,
+      "waistdepth": 20.7,
+      "buttockdepth": 24.9,
+      "chestbreadth_body": 28.7,
+      "chestdepth_body": 26.0,
+      "waistbreadth_body": 27.1,
+      "waistdepth_body": 22.1,
+      "hipbreadth_body": 39.0,
+      "buttockdepth_body": 26.3
+    }
+  },
+  {
+    "id": "new-2",
+    "gender": "female",
+    "height_cm": 162,
+    "weight_kg": 62,
+    "gt": {
+      "chest": 80.3,
+      "waist": 96.4,
+      "hips": 94.5
+    },
+    "calc": {
+      "chest": 82.8,
+      "waist": 82.4,
+      "hips": 96.9
+    },
+    "features": {
+      "stature_m": 162.0,
+      "weight_kg": 62.0,
+      "biacromialbreadth": 35.0,
+      "bideltoidbreadth": 42.7,
+      "hipbreadth": 32.7,
+      "sittingheight": 80.9,
+      "crotchheight": 82.8,
+      "chestbreadth": 26.1,
+      "waistbreadth": 25.4,
+      "chestdepth": 21.7,
+      "waistdepth": 22.2,
+      "buttockdepth": 23.9,
+      "chestbreadth_body": 28.5,
+      "chestdepth_body": 24.1,
+      "waistbreadth_body": 27.8,
+      "waistdepth_body": 24.6,
+      "hipbreadth_body": 35.1,
+      "buttockdepth_body": 26.3
+    }
+  },
+  {
+    "id": "new-3",
+    "gender": "male",
+    "height_cm": 180,
+    "weight_kg": 82,
+    "gt": {
+      "chest": 89.5,
+      "waist": 80,
+      "hips": 98
+    },
+    "calc": {
+      "chest": 90.7,
+      "waist": 89.1,
+      "hips": 108.7
+    },
+    "features": {
+      "stature_m": 180.0,
+      "weight_kg": 82.0,
+      "biacromialbreadth": 38.8,
+      "bideltoidbreadth": 47.3,
+      "hipbreadth": 37.5,
+      "sittingheight": 91.5,
+      "crotchheight": 86.2,
+      "chestbreadth": 30.6,
+      "waistbreadth": 30.2,
+      "chestdepth": 23.5,
+      "waistdepth": 22.9,
+      "buttockdepth": 28.0,
+      "chestbreadth_body": 32.3,
+      "chestdepth_body": 25.2,
+      "waistbreadth_body": 31.9,
+      "waistdepth_body": 24.6,
+      "hipbreadth_body": 39.2,
+      "buttockdepth_body": 29.7
+    }
+  },
+  {
+    "id": "new-4",
+    "gender": "male",
+    "height_cm": 181,
+    "weight_kg": 95,
+    "gt": {
+      "chest": 98.4,
+      "waist": 93.2,
+      "hips": 103.4
+    },
+    "calc": {
+      "chest": 96.6,
+      "waist": 93.6,
+      "hips": 107.3
+    },
+    "features": {
+      "stature_m": 181.0,
+      "weight_kg": 95.0,
+      "biacromialbreadth": 42.4,
+      "bideltoidbreadth": 51.7,
+      "hipbreadth": 40.4,
+      "sittingheight": 98.2,
+      "crotchheight": 85.9,
+      "chestbreadth": 34.4,
+      "waistbreadth": 33.0,
+      "chestdepth": 29.4,
+      "waistdepth": 28.9,
+      "buttockdepth": 29.9,
+      "chestbreadth_body": 33.2,
+      "chestdepth_body": 28.2,
+      "waistbreadth_body": 31.8,
+      "waistdepth_body": 27.7,
+      "hipbreadth_body": 39.2,
+      "buttockdepth_body": 28.7
+    }
+  },
+  {
+    "id": "new-5",
+    "gender": "male",
+    "height_cm": 176,
+    "weight_kg": 66,
+    "gt": {
+      "chest": 89.5,
+      "waist": 73,
+      "hips": 86
+    },
+    "calc": {
+      "chest": 95.1,
+      "waist": 80.1,
+      "hips": 100.9
+    },
+    "features": {
+      "stature_m": 176.0,
+      "weight_kg": 66.0,
+      "biacromialbreadth": 42.8,
+      "bideltoidbreadth": 52.2,
+      "hipbreadth": 37.3,
+      "sittingheight": 96.3,
+      "crotchheight": 86.9,
+      "chestbreadth": 32.2,
+      "waistbreadth": 29.3,
+      "chestdepth": 28.3,
+      "waistdepth": 21.4,
+      "buttockdepth": 26.5
+    }
+  },
+  {
+    "id": "new-7",
+    "gender": "female",
+    "height_cm": 152,
+    "weight_kg": 63.6,
+    "gt": {
+      "chest": 81,
+      "waist": 74,
+      "hips": 94
+    },
+    "calc": {
+      "chest": 89.1,
+      "waist": 86.8,
+      "hips": 108.6
+    },
+    "features": {
+      "stature_m": 152.0,
+      "weight_kg": 63.6,
+      "biacromialbreadth": 36.5,
+      "bideltoidbreadth": 44.5,
+      "hipbreadth": 34.3,
+      "sittingheight": 76.0,
+      "crotchheight": 71.1,
+      "chestbreadth": 26.6,
+      "waistbreadth": 26.3,
+      "chestdepth": 21.6,
+      "waistdepth": 20.4,
+      "buttockdepth": 26.2,
+      "chestbreadth_body": 30.8,
+      "chestdepth_body": 25.8,
+      "waistbreadth_body": 30.5,
+      "waistdepth_body": 24.6,
+      "hipbreadth_body": 38.5,
+      "buttockdepth_body": 30.4
+    }
+  }
+]
