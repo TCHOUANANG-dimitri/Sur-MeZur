@@ -33,6 +33,11 @@ const Ctx = createContext<AuthState>({
   logout: () => {},
 });
 
+/** Pages accessibles sans compte. Une session expiree n'y est pas une erreur :
+ *  un nouvel invite sera cree au besoin, et renvoyer vers la connexion
+ *  casserait le parcours d'un visiteur en pleine prise de mesure. */
+const PUBLIC_PATHS = ["/mesurer", "/connexion", "/inscription", "/mot-de-passe-oublie"];
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,7 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     startAuthTimer();
     setOnAuthFailure(() => {
       setUser(null);
-      router.replace("/connexion");
+      const path = window.location.pathname;
+      const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+      if (!isPublic) router.replace("/connexion");
     });
     void refresh();
     return () => {

@@ -29,6 +29,9 @@ export interface User {
   language: Language;
   photo_consent: boolean;
   is_active: boolean;
+  /** Compte cree a la volee pour prendre ses mesures avant de s'inscrire.
+   *  Le serveur ne lui renvoie qu'une partie de ses mensurations. */
+  is_guest?: boolean;
   created_at: string;
 }
 
@@ -97,6 +100,9 @@ export interface Measurement {
   data: Record<string, number>;
   confidence: Record<string, number> | null;
   is_active: boolean;
+  /** Mesures calculees mais retenues par le serveur pour un invite : leurs
+   *  noms sont connus, leurs valeurs ne sont jamais envoyees. */
+  locked_keys?: string[];
 }
 
 export interface Avatar {

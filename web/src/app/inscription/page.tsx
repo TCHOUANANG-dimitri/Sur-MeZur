@@ -10,19 +10,23 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { AuthApi } from "@/lib/api/endpoints";
 import { setTokens, startAuthTimer } from "@/lib/api/client";
+import { guestClaimToken, safeNext } from "@/lib/guest";
 import { useAuth } from "@/components/AuthProvider";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
 import { PASSWORD_HINT, passwordError } from "@/lib/password";
 
-export default function Inscription() {
+function InscriptionInner() {
   const router = useRouter();
   const { refresh } = useAuth();
+  // Retour prevu apres inscription, typiquement les mesures completes de
+  // la personne qui vient de les prendre sans compte.
+  const next = safeNext(useSearchParams().get("suite"));
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState(COUNTRIES[0].dial);
   const [password, setPassword] = useState("");
@@ -54,11 +58,15 @@ export default function Inscription() {
         password,
         language: "fr",
         photo_consent: consent,
+        // Si des mesures ont ete prises sans compte, le serveur convertit ce
+        // compte invite sur place : elles restent attachees a la personne.
+        // Il ignore silencieusement tout jeton qui n'est pas celui d'un invite.
+        guest_token: guestClaimToken(),
       });
       setTokens(res.access_token, res.refresh_token);
       startAuthTimer();
       await refresh();
-      router.replace("/accueil");
+      router.replace(next ?? "/accueil");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Création du compte impossible.");
     } finally {
@@ -81,6 +89,11 @@ export default function Inscription() {
         </div>
 
         <h1 className="authTitle">Créer un compte</h1>
+        {next && (
+          <p className="authSubtitle">
+            Vos mesures sont prêtes : un compte suffit pour les voir en entier.
+          </p>
+        )}
 
         <ErrorBanner message={error} />
 
@@ -119,11 +132,23 @@ export default function Inscription() {
         </Button>
 
         <div className="authLinks">
-          <Link href="/connexion" className="authLink">
+          <Link
+            href={next ? `/connexion?suite=${encodeURIComponent(next)}` : "/connexion"}
+            className="authLink"
+          >
             J&apos;ai déjà un compte
           </Link>
         </div>
       </form>
     </main>
+  );
+}
+
+export default function Inscription() {
+  // `useSearchParams` impose une frontiere Suspense en App Router.
+  return (
+    <Suspense fallback={null}>
+      <InscriptionInner />
+    </Suspense>
   );
 }

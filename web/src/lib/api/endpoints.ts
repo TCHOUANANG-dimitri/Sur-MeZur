@@ -36,9 +36,17 @@ export const AuthApi = {
     password: string;
     language: "fr" | "en";
     photo_consent: boolean;
+    /** Jeton du compte invite : ses mesures suivent le compte cree. */
+    guest_token?: string;
   }) => api.post<TokenResponse>("/auth/register", body, { auth: false }),
-  login: (phone: string, password: string) =>
-    api.post<TokenResponse>("/auth/login", { phone, password }, { auth: false }),
+  login: (phone: string, password: string, guest_token?: string) =>
+    api.post<TokenResponse>(
+      "/auth/login",
+      { phone, password, ...(guest_token ? { guest_token } : {}) },
+      { auth: false }
+    ),
+  /** Compte invite pour prendre ses mesures sans s'inscrire d'abord. */
+  guest: () => api.post<TokenResponse>("/auth/guest", undefined, { auth: false }),
   otpRequest: (phone: string) =>
     api.post<{ sent: boolean; dev_code: string }>("/auth/otp/request", { phone }, { auth: false }),
   otpVerify: (phone: string, code: string) =>

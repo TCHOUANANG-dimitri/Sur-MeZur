@@ -1,0 +1,258 @@
+/* ============================================================================
+   Prise de mesure sans compte : barre publique, consignes de posture,
+   resultat partiel et invitation a creer un compte.
+   ========================================================================= */
+
+/* --- Barre publique ---------------------------------------------------------
+   Pas de navigation applicative ici : ses liens menent a des pages reservees
+   aux inscrits. Juste la marque, et l'acces a la connexion.                  */
+.publicShell {
+  min-height: 100dvh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.publicTopbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--header-h);
+  padding: max(8px, env(safe-area-inset-top)) var(--gutter) 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.publicBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--indigo-text);
+}
+
+.publicBrand img {
+  width: 26px;
+  height: auto;
+}
+
+.publicLogin {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--violet-primary);
+  padding: 8px 0 8px 8px;
+}
+
+.publicMain {
+  flex: 1;
+  width: 100%;
+}
+
+/* --- Consignes de posture --------------------------------------------------- */
+.guideRules {
+  list-style: none;
+  margin: 16px 0 20px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 560px) {
+  .guideRules {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.guideRule {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--bg-alt);
+  font-size: 13px;
+}
+
+.guideRuleIcon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+}
+
+.guideRule strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+/* Face et profil : empiles au telephone, cote a cote des qu'il y a la place,
+   pour que les deux postures se comparent d'un regard. */
+.guidePoses {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+  margin-bottom: 8px;
+}
+
+@media (min-width: 560px) {
+  .guidePoses {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.guidePose {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.guideFigure {
+  width: 64px;
+  height: 166px;
+  flex: none;
+  color: var(--violet-primary);
+}
+
+.guidePose h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.guidePoseList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.guidePoseList li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.guidePoseList svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--success);
+}
+
+.guideRecall {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--violet-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* --- Valeurs retenues --------------------------------------------------------
+   Le chiffre floute est FACTICE : la vraie valeur n'a jamais quitte le
+   serveur. `user-select: none` evite juste qu'on selectionne le faux chiffre
+   en croyant copier une mesure.                                              */
+.measureItemLocked .measureName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.measureLockIcon {
+  color: var(--violet-primary);
+  flex: none;
+}
+
+.measureValueLocked {
+  filter: blur(7px);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* --- Invitation a creer un compte -------------------------------------------- */
+.unlockCard {
+  display: grid;
+  gap: 14px;
+  margin: 8px 0 22px;
+  padding: 20px;
+  border-radius: var(--radius-card);
+  background: var(--gradient);
+  color: #fff;
+}
+
+.unlockCard h2 {
+  color: #fff;
+  font-size: clamp(19px, 4.8vw, 23px);
+  margin-bottom: 4px;
+}
+
+.unlockCard p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.94;
+}
+
+.unlockCard .btnPrimary {
+  background: #fff;
+  color: var(--violet-primary);
+}
+
+.unlockLogin {
+  justify-self: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (min-width: 720px) {
+  .unlockCard {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 24px 26px;
+  }
+
+  .unlockActions {
+    display: grid;
+    gap: 8px;
+    min-width: 240px;
+  }
+}
+
+/* Rappel colle en bas au telephone : l'invitation reste a portee du pouce
+   pendant qu'on fait defiler les mesures. Inutile sur grand ecran, ou la
+   carte ci-dessus reste visible. */
+.unlockBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--bg) 70%, rgba(255, 255, 255, 0));
+}
+
+@media (min-width: 720px) {
+  .unlockBar {
+    display: none;
+  }
+}

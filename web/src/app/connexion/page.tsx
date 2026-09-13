@@ -15,19 +15,21 @@
  */
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import Image from "next/image";
 import { AuthApi } from "@/lib/api/endpoints";
 import { setTokens, startAuthTimer } from "@/lib/api/client";
+import { guestClaimToken, safeNext } from "@/lib/guest";
 import { useAuth } from "@/components/AuthProvider";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
 
-export default function Connexion() {
+function ConnexionInner() {
   const router = useRouter();
   const { refresh } = useAuth();
+  const next = safeNext(useSearchParams().get("suite"));
   const [phone, setPhone] = useState(COUNTRIES[0].dial);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -45,11 +47,13 @@ export default function Connexion() {
     setError("");
     setBusy(true);
     try {
-      const res = await AuthApi.login(phone.trim(), password);
+      // Quelqu'un qui avait deja un compte et vient de prendre ses mesures
+      // sans etre connecte : le serveur les rattache a ce compte.
+      const res = await AuthApi.login(phone.trim(), password, guestClaimToken());
       setTokens(res.access_token, res.refresh_token);
       startAuthTimer();
       await refresh();
-      router.replace(res.role === "admin" ? "/admin" : "/accueil");
+      router.replace(res.role === "admin" ? "/admin" : (next ?? "/accueil"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connexion impossible.");
     } finally {
@@ -90,11 +94,23 @@ export default function Connexion() {
           <Link href="/mot-de-passe-oublie" className="authLink">
             Mot de passe oublié ?
           </Link>
-          <Link href="/inscription" className="authLink">
+          <Link
+            href={next ? `/inscription?suite=${encodeURIComponent(next)}` : "/inscription"}
+            className="authLink"
+          >
             Créer un compte
           </Link>
         </div>
       </form>
     </main>
+  );
+}
+
+export default function Connexion() {
+  // `useSearchParams` impose une frontiere Suspense en App Router.
+  return (
+    <Suspense fallback={null}>
+      <ConnexionInner />
+    </Suspense>
   );
 }

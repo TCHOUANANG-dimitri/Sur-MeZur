@@ -7,6 +7,7 @@ import "@/styles/landing.css";
 import "@/styles/catalog.css";
 import "@/styles/mesures.css";
 import "@/styles/profile.css";
+import "@/styles/mesurer.css";
 // Charge en dernier : affine ce que les feuilles precedentes posent.
 import "@/styles/mobile.css";
 import { AuthProvider } from "@/components/AuthProvider";

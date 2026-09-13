@@ -165,3 +165,27 @@ export function presentableGroups(data: Record<string, number> | null | undefine
 export function formatCm(value: number): string {
   return `${value.toFixed(1).replace(".", ",")} cm`;
 }
+
+/**
+ * Comme `presentableGroups`, mais en conservant les mesures RETENUES par le
+ * serveur pour un compte invite. Leur valeur est `null` : elle n'a jamais ete
+ * envoyee, l'interface affiche a la place un chiffre factice floute.
+ */
+export function presentableGroupsWithLocked(
+  data: Record<string, number> | null | undefined,
+  lockedKeys: string[] = []
+) {
+  const locked = new Set(lockedKeys);
+  const values = data ?? {};
+  return MEASURE_GROUPS.map((group) => ({
+    ...group,
+    items: group.keys
+      .filter((k) => locked.has(k) || (typeof values[k] === "number" && isFinite(values[k])))
+      .map((k) => ({
+        key: k,
+        info: MEASURES[k],
+        value: locked.has(k) ? null : values[k],
+        locked: locked.has(k),
+      })),
+  })).filter((g) => g.items.length > 0);
+}

@@ -47,4 +47,11 @@ export {
   RefreshCw as IconRetry,
   Info as IconInfo,
   ShieldCheck as IconShield,
+
+  // Prise de mesure sans compte
+  Lock as IconLock,
+  UserPlus as IconUserPlus,
+  Smartphone as IconPhone,
+  ScanLine as IconFrame,
+  Sun as IconLight,
 } from "lucide-react";
