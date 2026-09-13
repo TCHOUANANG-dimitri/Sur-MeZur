@@ -12,11 +12,19 @@
  * profil est le maillon le plus fragile de toute la chaine. Un bandeau se
  * survole ; un ecran dedie, avec les deux silhouettes, se lit.
  *
- * CAPTURE. `<input type="file" capture>` ouvre l'appareil photo natif, et non
- * `getUserMedia` : ce dernier exige HTTPS, que l'API n'a pas encore.
+ * POSTURE DES BRAS. De profil, bras colles le long du corps : c'est la
+ * posture pour laquelle la bande d'effacement du bras est calibree (voir
+ * Silhouettes.tsx). De face en revanche, les bras restent ecartes : colles,
+ * cette meme bande — plus large de face — rognerait le bord du torse et
+ * sous-estimerait poitrine, taille et hanches.
+ *
+ * PHOTOS. Chaque photo se prend a l'appareil ou s'importe depuis la galerie.
+ * Deux champs distincts, car c'est l'attribut `capture` qui decide : present,
+ * le telephone ouvre directement l'appareil photo ; absent, il propose la
+ * galerie. `getUserMedia` (video en direct) reste exclu faute de HTTPS.
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MeasurementsApi } from "@/lib/api/endpoints";
 import { ensureSession } from "@/lib/guest";
 import { useAuth } from "./AuthProvider";
@@ -25,6 +33,7 @@ import {
   IconCamera,
   IconCheck,
   IconFrame,
+  IconGallery,
   IconInfo,
   IconLight,
   IconModels,
@@ -111,12 +120,12 @@ export function MeasureFlow({
   }, [front, side, height, weight, gender, guest, refresh, onDone, go]);
 
   return (
-    <>
+    <div className="measureFlow">
       <Steps total={4} current={STEP_INDEX[step]} />
       <ErrorBanner message={error} />
 
       {step === "infos" && (
-        <>
+        <div className="flowForm">
           <h2>Quelques informations</h2>
           <p className="muted">
             Votre taille et votre poids servent à convertir ce que voient les photos en
@@ -159,18 +168,18 @@ export function MeasureFlow({
             </Select>
           </Field>
 
-          <div className="actionBar">
+          <div className="actionBar flowActions">
             <Button block disabled={!infosValid} onClick={() => go("consignes")}>
               Continuer
             </Button>
           </div>
-        </>
+        </div>
       )}
 
       {step === "consignes" && (
         <>
           <h2>Avant vos photos</h2>
-          <p className="muted">
+          <p className="muted flowLead">
             La précision de vos mesures dépend presque entièrement de ces quelques règles.
             Prenez un instant pour les lire.
           </p>
@@ -213,18 +222,18 @@ export function MeasureFlow({
               Figure={SilhouetteProfil}
               points={[
                 "De profil, l'épaule tournée vers l'appareil",
-                "Mains croisées dans le dos, dos droit",
-                "Jambes jointes",
+                "Bras collés le long du corps, mains détendues",
+                "Dos droit, jambes jointes",
               ]}
             />
           </div>
 
-          <div className="actionBar">
+          <div className="actionBar flowActions">
             <Button variant="secondary" onClick={() => go("infos")}>
               Retour
             </Button>
             <Button block onClick={() => go("photos")}>
-              J&apos;ai compris, prendre mes photos
+              J&apos;ai compris
             </Button>
           </div>
         </>
@@ -233,24 +242,30 @@ export function MeasureFlow({
       {step === "photos" && (
         <>
           <h2>Vos deux photos</h2>
+          <p className="muted flowLead">
+            Prenez-les maintenant avec votre appareil, ou importez-les si elles sont déjà
+            dans votre galerie.
+          </p>
           <button type="button" className="guideRecall" onClick={() => go("consignes")}>
             <IconInfo size={15} aria-hidden /> Revoir les consignes de posture
           </button>
 
-          <PhotoPicker
-            label="Photo de face"
-            hint="Face à l'appareil, bras écartés, corps entier dans le cadre."
-            file={front}
-            onPick={setFront}
-          />
-          <PhotoPicker
-            label="Photo de profil"
-            hint="De profil, mains croisées dans le dos."
-            file={side}
-            onPick={setSide}
-          />
+          <div className="photoCards">
+            <PhotoPicker
+              label="Photo de face"
+              hint="Face à l'appareil, bras écartés, corps entier dans le cadre."
+              file={front}
+              onPick={setFront}
+            />
+            <PhotoPicker
+              label="Photo de profil"
+              hint="De profil, bras collés le long du corps."
+              file={side}
+              onPick={setSide}
+            />
+          </div>
 
-          <div className="actionBar">
+          <div className="actionBar flowActions">
             <Button variant="secondary" onClick={() => go("consignes")}>
               Retour
             </Button>
@@ -262,14 +277,14 @@ export function MeasureFlow({
       )}
 
       {step === "analyse" && (
-        <div style={{ paddingTop: 40 }}>
+        <div className="flowAnalyse">
           <Spinner label="Analyse de vos photos…" />
-          <p className="muted" style={{ textAlign: "center" }}>
+          <p className="muted">
             Cela prend généralement moins d&apos;une minute. Ne fermez pas cette page.
           </p>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -298,8 +313,10 @@ function Pose({
 }) {
   return (
     <section className="guidePose">
-      <Figure className="guideFigure" />
-      <div>
+      <div className="guideFigureWrap">
+        <Figure className="guideFigure" />
+      </div>
+      <div className="guidePoseText">
         <h3>{title}</h3>
         <ul className="guidePoseList">
           {points.map((p) => (
@@ -325,48 +342,75 @@ function PhotoPicker({
   file: File | null;
   onPick: (f: File) => void;
 }) {
-  const ref = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
+  // L'URL d'apercu garde l'image en memoire tant qu'elle n'est pas revoquee.
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+  function handle(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    // Remise a zero : sans elle, choisir deux fois le meme fichier (apres une
+    // erreur d'analyse, par exemple) ne declencherait aucun evenement.
+    e.target.value = "";
+    if (!f) return;
+    onPick(f);
+    setPreview(URL.createObjectURL(f));
+  }
+
   return (
-    <button type="button" className="photoPicker" onClick={() => ref.current?.click()}>
-      <input
-        ref={ref}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        hidden
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          onPick(f);
-          setPreview((old) => {
-            if (old) URL.revokeObjectURL(old);
-            return URL.createObjectURL(f);
-          });
-        }}
-      />
-      {preview ? (
-        // next/image n'apporte rien sur une URL blob locale, et imposerait des
-        // dimensions connues a l'avance.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt={`Aperçu - ${label}`} className="photoPreview" />
-      ) : (
-        <span className="photoPlaceholder" aria-hidden>
-          <IconCamera size={26} strokeWidth={1.7} />
-        </span>
-      )}
-      <span className="photoPickerText">
-        <span className="photoPickerLabel">
+    <section className={`photoCard ${file ? "photoCardDone" : ""}`}>
+      <div className="photoCardMedia">
+        {preview ? (
+          // next/image n'apporte rien sur une URL blob locale, et imposerait des
+          // dimensions connues a l'avance.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt={`Aperçu - ${label}`} />
+        ) : (
+          <span className="photoCardPlaceholder" aria-hidden>
+            <IconCamera size={26} strokeWidth={1.7} />
+          </span>
+        )}
+      </div>
+
+      <div className="photoCardBody">
+        <h3 className="photoCardTitle">
           {label}
           {file ? (
             <span className="photoDone" aria-label="Photo choisie">
               <IconCheck size={15} strokeWidth={3} />
             </span>
           ) : null}
-        </span>
-        <span className="fieldHint">{file ? "Appuyez pour reprendre" : hint}</span>
-      </span>
-    </button>
+        </h3>
+        <p className="fieldHint">{file ? "Photo prête. Vous pouvez la remplacer." : hint}</p>
+
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={handle} />
+        <input ref={galleryRef} type="file" accept="image/*" hidden onChange={handle} />
+
+        <div className="photoCardActions">
+          <button
+            type="button"
+            className="btn btnSecondary photoCameraBtn"
+            onClick={() => cameraRef.current?.click()}
+          >
+            <IconCamera size={17} aria-hidden />
+            {file ? "Reprendre" : "Prendre la photo"}
+          </button>
+          <button
+            type="button"
+            className="btn btnGhost"
+            onClick={() => galleryRef.current?.click()}
+          >
+            <IconGallery size={17} aria-hidden />
+            {file ? "Changer" : "Importer"}
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }

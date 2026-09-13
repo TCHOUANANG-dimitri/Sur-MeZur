@@ -1,6 +1,10 @@
 /* ============================================================================
-   Prise de mesure sans compte : barre publique, consignes de posture,
-   resultat partiel et invitation a creer un compte.
+   Prise de mesure sans compte : barre publique, parcours en quatre etapes,
+   consignes de posture, photos, resultat partiel et invitation a creer un
+   compte.
+
+   Mobile-first : les regles de base decrivent le telephone. Paliers a 560 px
+   (grand telephone), 720 px (tablette) et 1024 px (ordinateur).
    ========================================================================= */
 
 /* --- Barre publique ---------------------------------------------------------
@@ -22,7 +26,9 @@
   justify-content: space-between;
   gap: 12px;
   min-height: var(--header-h);
-  padding: max(8px, env(safe-area-inset-top)) var(--gutter) 8px;
+  /* Le contenu de la barre s'aligne sur celui de la page (1180 px au plus)
+     au lieu de courir aux bords d'un grand ecran. */
+  padding: max(8px, env(safe-area-inset-top)) max(var(--gutter), calc((100% - 1180px) / 2)) 8px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
@@ -46,7 +52,7 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--violet-primary);
-  padding: 8px 0 8px 8px;
+  padding: 10px 0 10px 12px;
 }
 
 .publicMain {
@@ -54,19 +60,88 @@
   width: 100%;
 }
 
-/* --- Consignes de posture --------------------------------------------------- */
+/* --- Conteneur du parcours --------------------------------------------------
+   Plus large que `containerNarrow` (640 px) : les consignes posent deux
+   postures cote a cote et les photos deux cartes, ce qui etouffait a 640. Le
+   formulaire d'informations, lui, reste etroit pour ne pas etirer les champs. */
+.flowWrap {
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.flowForm {
+  max-width: 520px;
+}
+
+.flowLead {
+  margin: 4px 0 0;
+  max-width: 60ch;
+}
+
+.measureFlow h2 {
+  font-size: clamp(21px, 5.4vw, 27px);
+}
+
+.flowAnalyse {
+  min-height: 55dvh;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 4px;
+  padding: 24px 0;
+}
+
+.flowAnalyse p {
+  margin: 0;
+  max-width: 34ch;
+}
+
+/* --- Barre d'action du parcours ---------------------------------------------
+   Au telephone, les boutons de `.actionBar` s'empilent : deux boutons pleins
+   largeur prenaient plus de 110 px de hauteur, colles en bas de chaque etape.
+   Ici « Retour » reste compact a gauche et l'action principale occupe le
+   reste de la ligne — une seule rangee, et le bouton principal sous le pouce. */
+.flowActions {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.flowActions .btn:not(.btnBlock) {
+  flex: none;
+  padding-inline: 16px;
+}
+
+.flowActions .btnBlock {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+@media (min-width: 720px) {
+  .flowActions .btnBlock {
+    flex: none;
+    min-width: 220px;
+  }
+}
+
+/* --- Consignes : regles generales ------------------------------------------- */
 .guideRules {
   list-style: none;
-  margin: 16px 0 20px;
+  margin: 16px 0 18px;
   padding: 0;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-template-columns: 1fr;
 }
 
 @media (min-width: 560px) {
   .guideRules {
     grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 }
 
@@ -74,10 +149,11 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 11px 12px;
   border-radius: var(--radius-card);
   background: var(--bg-alt);
   font-size: 13px;
+  line-height: 1.45;
 }
 
 .guideRuleIcon {
@@ -94,19 +170,21 @@
 .guideRule strong {
   display: block;
   font-size: 14px;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
-/* Face et profil : empiles au telephone, cote a cote des qu'il y a la place,
-   pour que les deux postures se comparent d'un regard. */
+/* --- Consignes : postures ---------------------------------------------------
+   Au telephone, silhouette a gauche et consignes a droite. Deux colonnes
+   seulement a partir de 720 px : a 560 px, chaque carte ne laissait qu'environ
+   150 px au texte, qui passait sur cinq ou six lignes.                        */
 .guidePoses {
   display: grid;
   gap: 12px;
   grid-template-columns: 1fr;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
-@media (min-width: 560px) {
+@media (min-width: 720px) {
   .guidePoses {
     grid-template-columns: 1fr 1fr;
   }
@@ -114,18 +192,51 @@
 
 .guidePose {
   display: flex;
-  gap: 14px;
+  align-items: center;
+  gap: 16px;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
 }
 
-.guideFigure {
-  width: 64px;
-  height: 166px;
+.guideFigureWrap {
+  display: grid;
+  place-items: center;
   flex: none;
+  width: 76px;
+  padding: 8px 0;
+  border-radius: 12px;
+  background: var(--violet-tint);
+}
+
+.guideFigure {
+  width: 58px;
+  height: 152px;
   color: var(--violet-primary);
+}
+
+@media (min-width: 720px) {
+  .guidePose {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+    padding: 16px;
+  }
+
+  .guideFigureWrap {
+    width: 100%;
+    padding: 14px 0;
+  }
+
+  .guideFigure {
+    width: 74px;
+    height: 192px;
+  }
+}
+
+.guidePoseText {
+  min-width: 0;
 }
 
 .guidePose h3 {
@@ -138,8 +249,9 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: 7px;
   font-size: 13px;
+  line-height: 1.4;
 }
 
 .guidePoseList li {
@@ -154,11 +266,25 @@
   color: var(--success);
 }
 
+/* Sur un tres petit ecran, la silhouette passe au-dessus du texte plutot que
+   de lui voler un tiers de la largeur. */
+@media (max-width: 359px) {
+  .guidePose {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .guideFigureWrap {
+    width: 100%;
+  }
+}
+
 .guideRecall {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 2px 0 14px;
+  min-height: 40px;
+  margin: 6px 0 10px;
   padding: 0;
   border: 0;
   background: none;
@@ -166,6 +292,135 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* --- Photos : prendre ou importer -------------------------------------------- */
+.photoCards {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 720px) {
+  .photoCards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.photoCard {
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  transition: border-color 0.15s ease;
+}
+
+.photoCardDone {
+  border-style: solid;
+  border-color: var(--violet-primary);
+}
+
+/* Vignette et cadre vide partagent la meme empreinte : la mise en page ne
+   bouge pas au moment ou la photo est choisie. */
+.photoCardMedia {
+  width: 84px;
+  aspect-ratio: 3 / 4;
+  flex: none;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-alt);
+}
+
+.photoCardMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoCardPlaceholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--violet-primary);
+}
+
+.photoCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.photoCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.photoCardBody .fieldHint {
+  margin: 0;
+}
+
+.photoCardActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.photoCardActions .btn {
+  min-height: 42px;
+  padding: 9px 10px;
+  font-size: 13px;
+}
+
+/* Sur ordinateur, `capture` est ignore : « Prendre la photo » ouvrirait le
+   meme selecteur de fichiers qu'« Importer ». On ne garde que l'import, sans
+   doublon trompeur. */
+@media (hover: hover) and (pointer: fine) {
+  .photoCameraBtn {
+    display: none;
+  }
+
+  .photoCardActions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 720px) {
+  .photoCard {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .photoCardMedia {
+    width: 100%;
+    max-height: 260px;
+  }
+
+  .photoCardMedia img {
+    object-fit: contain;
+  }
+}
+
+@media (max-width: 359px) {
+  .photoCard {
+    flex-direction: column;
+  }
+
+  .photoCardMedia {
+    width: 100%;
+    max-height: 220px;
+  }
 }
 
 /* --- Valeurs retenues --------------------------------------------------------
@@ -194,7 +449,7 @@
   display: grid;
   gap: 14px;
   margin: 8px 0 22px;
-  padding: 20px;
+  padding: 18px;
   border-radius: var(--radius-card);
   background: var(--gradient);
   color: #fff;
@@ -217,8 +472,14 @@
   color: var(--violet-primary);
 }
 
+.unlockActions {
+  display: grid;
+  gap: 6px;
+}
+
 .unlockLogin {
   justify-self: center;
+  padding: 8px 12px;
   font-size: 13px;
   font-weight: 600;
   color: #fff;
@@ -234,8 +495,6 @@
   }
 
   .unlockActions {
-    display: grid;
-    gap: 8px;
     min-width: 240px;
   }
 }

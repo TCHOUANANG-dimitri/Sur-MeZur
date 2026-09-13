@@ -20,7 +20,7 @@ function NouvelleMesureInner() {
   return (
     <>
       <PageHeader title="Prendre mes mesures" back />
-      <div className="containerNarrow section">
+      <div className="flowWrap section">
         <MeasureFlow
           onDone={(id) =>
             router.replace(`/mesures/${id}${modeleId ? `?modele=${modeleId}` : ""}`)

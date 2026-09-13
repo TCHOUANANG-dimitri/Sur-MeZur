@@ -37,6 +37,7 @@ export {
   Eye as IconEye,
   EyeOff as IconEyeOff,
   Camera as IconCamera,
+  ImagePlus as IconGallery,
   Check as IconCheck,
   Download as IconDownload,
   Printer as IconPrint,

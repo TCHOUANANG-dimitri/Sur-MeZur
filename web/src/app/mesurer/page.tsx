@@ -27,7 +27,7 @@ export default function Mesurer() {
   if (registered) return null;
 
   return (
-    <div className="containerNarrow section">
+    <div className="flowWrap section">
       <MeasureFlow guest onDone={(id) => router.replace(`/mesurer/resultat/${id}`)} />
     </div>
   );
