@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { CatalogApi, MeasurementsApi } from "@/lib/api/endpoints";
+import { friendlyError, withRetry } from "@/lib/retry";
 import type { GarmentModel, Measurement } from "@/lib/api/types";
 import { formatCm, presentableGroups } from "@/lib/measurements";
 import { Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
@@ -34,10 +35,10 @@ function DetailMesureInner() {
     if (!id) return;
     // Il n'existe pas de route `GET /measurements/{id}` cote backend : on
     // recupere la liste et on y retrouve la mesure voulue.
-    MeasurementsApi.list()
+    withRetry(() => MeasurementsApi.list())
       .then((list) => setMeasurement(list.find((m) => m.id === id) ?? null))
       .catch((e) => {
-        setError(e instanceof Error ? e.message : "Mesures introuvables.");
+        setError(friendlyError(e, "réessayez"));
         setMeasurement(null);
       });
   }, [id]);

@@ -28,6 +28,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MeasurementsApi } from "@/lib/api/endpoints";
 import { ensureSession } from "@/lib/guest";
+import { compressForMeasurement } from "@/lib/imageCompress";
+import { friendlyError, withRetry } from "@/lib/retry";
 import { useAuth } from "./AuthProvider";
 import { Button, ErrorBanner, Field, Input, Select, Spinner, Steps } from "./ui";
 import {
@@ -71,6 +73,10 @@ export function MeasureFlow({
   const [front, setFront] = useState<File | null>(null);
   const [side, setSide] = useState<File | null>(null);
   const [error, setError] = useState("");
+  // L'envoi des photos et leur analyse sont deux attentes distinctes, de
+  // durees et de causes differentes (reseau d'un cote, serveur de l'autre) :
+  // les confondre sous un meme message empechait de savoir ce qui bloquait.
+  const [phase, setPhase] = useState<"envoi" | "analyse">("envoi");
 
   const infosValid =
     Number(height) >= 100 &&
@@ -90,22 +96,28 @@ export function MeasureFlow({
   const analyse = useCallback(async () => {
     if (!front || !side) return;
     setError("");
+    setPhase("envoi");
     go("analyse");
     try {
       // Le compte invite n'est cree qu'ici, au moment d'envoyer les photos :
       // un visiteur qui abandonne sur les consignes ne laisse aucune trace.
       if (guest && (await ensureSession())) await refresh();
 
-      const session = await MeasurementsApi.createSession({
-        height_cm: Number(height),
-        weight_kg: Number(weight),
-        gender,
-      });
-      let current = await MeasurementsApi.uploadPhotos(session.id, front, side);
+      const session = await withRetry(() =>
+        MeasurementsApi.createSession({
+          height_cm: Number(height),
+          weight_kg: Number(weight),
+          gender,
+        })
+      );
+      // Reessayer l'envoi est sans risque : le serveur remplace les photos
+      // precedentes de la session au lieu de les accumuler.
+      let current = await withRetry(() => MeasurementsApi.uploadPhotos(session.id, front, side));
+      setPhase("analyse");
 
       for (let i = 0; i < POLL_MAX && current.status === "processing"; i++) {
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-        current = await MeasurementsApi.getSession(session.id);
+        current = await withRetry(() => MeasurementsApi.getSession(session.id));
       }
 
       if (current.status !== "ready" || !current.measurement_id) {
@@ -116,7 +128,7 @@ export function MeasureFlow({
       }
       onDone(current.measurement_id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "L'analyse a échoué.");
+      setError(friendlyError(e));
       go("photos");
     }
   }, [front, side, height, weight, gender, guest, refresh, onDone, go]);
@@ -282,9 +294,11 @@ export function MeasureFlow({
 
       {step === "analyse" && (
         <div className="flowAnalyse">
-          <Spinner label="Analyse de vos photos…" />
+          <Spinner label={phase === "envoi" ? "Envoi de vos photos…" : "Analyse de vos photos…"} />
           <p className="muted">
-            Cela prend généralement moins d&apos;une minute. Ne fermez pas cette page.
+            {phase === "envoi"
+              ? "Selon votre connexion, cela peut prendre quelques instants."
+              : "Cela prend généralement moins d'une minute. Ne fermez pas cette page."}
           </p>
         </div>
       )}
@@ -352,6 +366,7 @@ function PhotoPicker({
   const galleryRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [preparing, setPreparing] = useState(false);
 
   // L'URL d'apercu garde l'image en memoire tant qu'elle n'est pas revoquee.
   useEffect(() => {
@@ -360,9 +375,17 @@ function PhotoPicker({
     };
   }, [preview]);
 
-  function accept(f: File) {
-    onPick(f);
+  async function accept(f: File) {
+    // Apercu immediat sur l'original ; la version reduite, envoyee au
+    // serveur, n'est transmise qu'une fois prete. Tant qu'elle ne l'est pas,
+    // la photo n'est pas consideree comme choisie et l'analyse reste bloquee.
     setPreview(URL.createObjectURL(f));
+    setPreparing(true);
+    try {
+      onPick(await compressForMeasurement(f));
+    } finally {
+      setPreparing(false);
+    }
   }
 
   function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
@@ -402,7 +425,9 @@ function PhotoPicker({
             </span>
           ) : null}
         </h3>
-        <p className="fieldHint">{file ? "Photo prête. Vous pouvez la remplacer." : hint}</p>
+        <p className="fieldHint">
+          {preparing ? "Préparation de la photo…" : file ? "Photo prête. Vous pouvez la remplacer." : hint}
+        </p>
       </div>
 
       {/* Boutons hors du bloc de texte : places sur toute la largeur de la

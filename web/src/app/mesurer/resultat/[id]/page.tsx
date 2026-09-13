@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { MeasurementsApi } from "@/lib/api/endpoints";
+import { friendlyError, isTransientError, withRetry } from "@/lib/retry";
 import type { Measurement } from "@/lib/api/types";
 import { formatCm, presentableGroupsWithLocked } from "@/lib/measurements";
 import { useAuth } from "@/components/AuthProvider";
@@ -32,6 +33,10 @@ export default function ResultatInvite() {
   const { user, loading } = useAuth();
   const [measurement, setMeasurement] = useState<Measurement | null | undefined>(undefined);
   const [error, setError] = useState("");
+  // Echec de CHARGEMENT (serveur sature, reseau coupe), a ne pas confondre
+  // avec des mesures reellement absentes : dans le premier cas, elles sont
+  // bien enregistrees et il suffit de reessayer.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   // Deja inscrit (compte converti, ou client connecte) : la page complete
   // existe, garder le floutage n'aurait aucun sens.
@@ -41,10 +46,11 @@ export default function ResultatInvite() {
 
   useEffect(() => {
     if (!id) return;
-    MeasurementsApi.list()
+    withRetry(() => MeasurementsApi.list())
       .then((list) => setMeasurement(list.find((m) => m.id === id) ?? null))
       .catch((e) => {
-        setError(e instanceof Error ? e.message : "Mesures introuvables.");
+        setLoadFailed(isTransientError(e));
+        setError(friendlyError(e, "réessayez"));
         setMeasurement(null);
       });
   }, [id]);
@@ -54,6 +60,20 @@ export default function ResultatInvite() {
   const loginHref = `/connexion?suite=${encodeURIComponent(next)}`;
 
   if (measurement === undefined) return <Spinner label="Chargement de vos mesures…" />;
+
+  if (measurement === null && loadFailed) {
+    return (
+      <div className="containerNarrow section">
+        <ErrorBanner message={error} />
+        <EmptyState
+          icon={<IconMeasure size={30} strokeWidth={1.6} />}
+          title="Vos mesures ne peuvent pas s'afficher pour l'instant"
+          body="Elles ont bien été calculées et enregistrées. Réessayez dans un instant."
+          action={<Button onClick={() => window.location.reload()}>Réessayer</Button>}
+        />
+      </div>
+    );
+  }
 
   if (measurement === null) {
     return (
