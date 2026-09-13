@@ -17,6 +17,15 @@ class User(Base, IDMixin, TimestampMixin):
     language: Mapped[Language] = mapped_column(String(2), default=Language.fr)
     photo_consent: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Compte invite, cree a la volee pour qu'un visiteur de la version web
+    # prenne ses mesures AVANT de s'inscrire. Il n'a ni vrai telephone ni mot
+    # de passe utilisable, et le serveur ne lui renvoie qu'une partie de ses
+    # mensurations (voir measurements.py::_serialize_for). A l'inscription il
+    # est converti sur place, ce qui evite de transferer ses mesures.
+    #
+    # `server_default` est indispensable : sans lui, sync_sqlite_columns.py
+    # refuse d'ajouter une colonne NOT NULL a une table deja peuplee.
+    is_guest: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     client_profile: Mapped["ClientProfile"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"

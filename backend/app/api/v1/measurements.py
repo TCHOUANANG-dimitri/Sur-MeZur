@@ -14,7 +14,7 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.deps import get_current_user, get_db, require_roles
+from app.core.deps import get_db, require_client_or_guest, require_roles
 from app.db.base import SessionLocal
 from app.models.enums import JobStatus, MeasurementSource
 from app.models.measurements import Measurement, MeasurementSession
@@ -48,7 +48,9 @@ def debug_analyze(
     height_cm: float = Form(...),
     weight_kg: float = Form(...),
     gender: str = Form(...),
-    user: User = Depends(get_current_user),
+    # Tous les roles, SAUF les invites : cette route renvoie l'integralite des
+    # predictions et contournerait sinon le masquage des mesures non debloquees.
+    user: User = Depends(require_roles("client", "tailor", "admin")),
 ):
     """
     Renvoie **toute la trace intermédiaire** de la chaîne de mesure : les 33
@@ -273,7 +275,7 @@ def _fail_session(db: Session, session_id: str, message: str) -> None:
 @router.post("/session", response_model=MeasurementSessionOut)
 def create_session(
     payload: MeasurementSessionCreateIn,
-    user: User = Depends(require_roles("client")),
+    user: User = Depends(require_client_or_guest),
     db: Session = Depends(get_db),
 ):
     client = _client_profile(user, db)
@@ -296,7 +298,7 @@ def upload_photos(
     background_tasks: BackgroundTasks,
     front: UploadFile = File(...),
     side: UploadFile = File(...),
-    user: User = Depends(require_roles("client")),
+    user: User = Depends(require_client_or_guest),
     db: Session = Depends(get_db),
 ):
     client = _client_profile(user, db)
@@ -332,7 +334,7 @@ def upload_photos(
 
 @router.get("/session/{session_id}", response_model=MeasurementSessionOut)
 def get_session(
-    session_id: str, user: User = Depends(require_roles("client")), db: Session = Depends(get_db)
+    session_id: str, user: User = Depends(require_client_or_guest), db: Session = Depends(get_db)
 ):
     client = _client_profile(user, db)
     session_row = db.get(MeasurementSession, session_id)
@@ -344,15 +346,47 @@ def get_session(
     return session_row
 
 
+# Mesures laissees lisibles a un invite. Choisies parce que tout le monde les
+# connait et peut les verifier d'un coup d'oeil : elles prouvent que l'analyse
+# a fonctionne sans rien livrer de ce qui justifie l'inscription.
+GUEST_VISIBLE_KEYS = ("chest", "waist", "hips", "shoulder", "inseam")
+
+
+def _serialize_for(user: User, measurement: Measurement) -> MeasurementOut:
+    """Serialisation d'une mesure selon qui la demande.
+
+    Pour un invite, le filtrage se fait ICI, sur le serveur, et non dans le
+    navigateur : un flou purement visuel laisserait les valeurs lisibles dans
+    les outils de developpement. Les valeurs retenues ne sont donc jamais
+    envoyees ; seuls leurs noms le sont, pour que l'interface puisse montrer
+    ce qui reste a debloquer.
+
+    `features` et `confidence` sont retires aussi : les largeurs et
+    profondeurs brutes permettraient de recalculer les tours manquants.
+    """
+    out = MeasurementOut.model_validate(measurement)
+    if not getattr(user, "is_guest", False):
+        return out
+    data = measurement.data or {}
+    return out.model_copy(
+        update={
+            "data": {k: v for k, v in data.items() if k in GUEST_VISIBLE_KEYS},
+            "locked_keys": [k for k in data if k not in GUEST_VISIBLE_KEYS],
+            "features": None,
+            "confidence": None,
+        }
+    )
+
+
 @router.get("", response_model=list[MeasurementOut])
 def list_measurements(
     limit: int = 50,
     offset: int = 0,
-    user: User = Depends(require_roles("client")),
+    user: User = Depends(require_client_or_guest),
     db: Session = Depends(get_db),
 ):
     client = _client_profile(user, db)
-    return (
+    rows = (
         db.query(Measurement)
         .filter(Measurement.client_id == client.id)
         .order_by(Measurement.created_at.desc())
@@ -360,6 +394,7 @@ def list_measurements(
         .limit(min(max(limit, 1), 100))
         .all()
     )
+    return [_serialize_for(user, m) for m in rows]
 
 
 @router.patch("/{measurement_id}", response_model=MeasurementOut)

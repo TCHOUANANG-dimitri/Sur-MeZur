@@ -54,8 +54,26 @@ def get_current_user_optional(
 
 def require_roles(*roles: str):
     def _checker(user: User = Depends(get_current_user)) -> User:
+        # Un compte invite porte le role "client" pour reutiliser la chaine de
+        # mesure telle quelle, mais il ne doit RIEN pouvoir faire d'autre :
+        # ni avatar, ni essayage, ni commande, ni modele communautaire. Le
+        # refus se fait ici, une fois pour toutes, plutot que route par route
+        # ou un oubli ouvrirait une breche. Les seules routes ouvertes aux
+        # invites passent par `require_client_or_guest`.
+        if getattr(user, "is_guest", False):
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, "Creez un compte pour acceder a cette fonctionnalite"
+            )
         if user.role not in roles:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Insufficient role permissions")
         return user
 
     return _checker
+
+
+def require_client_or_guest(user: User = Depends(get_current_user)) -> User:
+    """Client inscrit OU invite. Reservee a la prise de mesure : c'est le seul
+    parcours que la version web ouvre avant l'inscription."""
+    if user.role != "client":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Insufficient role permissions")
+    return user

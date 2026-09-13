@@ -15,6 +15,9 @@ class UserOut(ORMModel):
     language: Language
     photo_consent: bool
     is_active: bool
+    # Le front s'en sert pour savoir s'il affiche le resultat partiel et
+    # l'invitation a creer un compte, ou l'application complete.
+    is_guest: bool = False
     created_at: datetime
     # Uniquement pertinent pour role == tailor ; None pour client/admin.
     # Peuplé manuellement par l'endpoint (pas une colonne de `User`), pour que

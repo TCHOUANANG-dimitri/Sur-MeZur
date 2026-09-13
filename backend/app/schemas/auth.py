@@ -31,6 +31,10 @@ class RegisterIn(BaseModel):
     photo_consent: bool = False
     city: str | None = None
     quartier: str | None = None
+    # Jeton (acces ou renouvellement) du compte invite avec lequel la personne
+    # a pris ses mesures : s'il est valide, ce compte est converti sur place
+    # et les mesures suivent sans aucun transfert.
+    guest_token: str | None = None
 
     @field_validator("password")
     @classmethod
@@ -53,6 +57,9 @@ class RegisterIn(BaseModel):
 class LoginIn(BaseModel):
     phone: str
     password: str
+    # Meme role qu'a l'inscription, pour quelqu'un qui avait deja un compte :
+    # les mesures prises en invite sont rattachees au compte existant.
+    guest_token: str | None = None
 
 
 class RefreshIn(BaseModel):

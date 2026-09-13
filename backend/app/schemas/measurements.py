@@ -47,6 +47,10 @@ class MeasurementOut(ORMModel):
     features: dict | None
     confidence: dict | None
     is_active: bool
+    # Mesures calculees mais retenues par le serveur, pour un compte invite :
+    # leurs noms sont connus du client (il les affiche floutees), leurs
+    # valeurs ne quittent jamais le serveur. Vide pour un client inscrit.
+    locked_keys: list[str] = []
 
 
 class MeasurementPatchIn(BaseModel):
