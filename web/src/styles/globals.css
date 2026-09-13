@@ -51,9 +51,9 @@
   --font-display: "Playfair Display", Georgia, serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  /* Gouttiere fluide : 16px sur un petit telephone, jusqu'a 24px ensuite.
+  /* Gouttiere fluide : 18px sur un petit telephone, jusqu'a 32px sur grand ecran.
      Evite d'empiler des media queries juste pour du padding. */
-  --gutter: clamp(16px, 4vw, 24px);
+  --gutter: clamp(18px, 5vw, 32px);
 
   /* Hauteur de la barre d'onglets du bas, reservee en bas de page pour que
      le dernier element d'une liste ne soit jamais masque (le defaut de

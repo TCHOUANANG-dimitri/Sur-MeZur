@@ -107,8 +107,10 @@ body {
    Au telephone on resserre les respirations verticales : le contenu utile doit
    apparaitre sans defilement des l'arrivee sur la page.                       */
 @media (max-width: 719px) {
+  /* Vertical seulement : voir `.section` dans shell.css. La forme abregee
+     `14px 0 20px` annulait la marge laterale du conteneur. */
   .section {
-    padding: 14px 0 20px;
+    padding-block: 14px 20px;
   }
 
   .measureGroup {

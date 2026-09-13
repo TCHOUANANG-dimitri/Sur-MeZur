@@ -307,9 +307,19 @@
   }
 }
 
+/* Telephone : vignette a gauche, titre et consigne a droite, puis les deux
+   boutons sur toute la largeur de la carte. A cote de la vignette, chacun ne
+   gardait qu'une centaine de pixels et « Prendre la photo » passait sur deux
+   lignes. */
 .photoCard {
-  display: flex;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-areas:
+    "media body"
+    "actions actions";
+  column-gap: 14px;
+  row-gap: 12px;
+  align-items: center;
   padding: 12px;
   border: 1.5px dashed var(--border);
   border-radius: var(--radius-card);
@@ -325,9 +335,9 @@
 /* Vignette et cadre vide partagent la meme empreinte : la mise en page ne
    bouge pas au moment ou la photo est choisie. */
 .photoCardMedia {
-  width: 84px;
+  grid-area: media;
+  width: 100%;
   aspect-ratio: 3 / 4;
-  flex: none;
   border-radius: 10px;
   overflow: hidden;
   background: var(--bg-alt);
@@ -348,11 +358,11 @@
 }
 
 .photoCardBody {
+  grid-area: body;
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-  flex: 1;
 }
 
 .photoCardTitle {
@@ -370,56 +380,50 @@
 }
 
 .photoCardActions {
+  grid-area: actions;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-top: auto;
-  padding-top: 8px;
 }
 
 .photoCardActions .btn {
-  min-height: 42px;
-  padding: 9px 10px;
+  min-height: 44px;
+  padding: 10px 8px;
+  gap: 6px;
   font-size: 13px;
 }
 
-/* Sur ordinateur, `capture` est ignore : « Prendre la photo » ouvrirait le
-   meme selecteur de fichiers qu'« Importer ». On ne garde que l'import, sans
-   doublon trompeur. */
-@media (hover: hover) and (pointer: fine) {
-  .photoCameraBtn {
-    display: none;
-  }
-
-  .photoCardActions {
-    grid-template-columns: 1fr;
-  }
-}
-
+/* Tablette et ordinateur : les deux cartes sont cote a cote, chacune en
+   colonne, avec une grande vignette qui ne rogne pas la photo. */
 @media (min-width: 720px) {
   .photoCard {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "media"
+      "body"
+      "actions";
     align-items: stretch;
   }
 
   .photoCardMedia {
-    width: 100%;
-    max-height: 260px;
+    aspect-ratio: auto;
+    height: 260px;
   }
 
   .photoCardMedia img {
     object-fit: contain;
   }
+
+  .photoCardActions .btn {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
 }
 
-@media (max-width: 359px) {
-  .photoCard {
-    flex-direction: column;
-  }
-
-  .photoCardMedia {
-    width: 100%;
-    max-height: 220px;
+/* Tres petit ecran : boutons l'un sous l'autre plutot que tronques. */
+@media (max-width: 339px) {
+  .photoCardActions {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -513,5 +517,252 @@
 @media (min-width: 720px) {
   .unlockBar {
     display: none;
+  }
+}
+
+/* --- Camera dans la page -----------------------------------------------------
+   Plein ecran sur fond sombre, comme l'appareil photo natif : la personne se
+   cadre sur la silhouette sans le reste de l'interface autour.               */
+.camera {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  background: #0b0a10;
+  color: #fff;
+}
+
+.cameraStage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #000;
+}
+
+.cameraVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Apercu en miroir pour la camera frontale, comme un miroir de salle de
+   bains ; la photo enregistree, elle, n'est pas inversee. */
+.cameraMirror {
+  transform: scaleX(-1);
+}
+
+/* Calque aligne sur l'image reellement affichee : sa taille est fixee en
+   JavaScript (CameraCapture::measureFrame), faute de quoi la silhouette
+   deborderait des bandes noires d'un flux en paysage. */
+.cameraGuide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.cameraSilhouette {
+  height: 90%;
+  width: auto;
+  max-width: 80%;
+  color: rgba(255, 255, 255, 0.92);
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
+}
+
+.cameraCount {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: clamp(96px, 30vw, 200px);
+  font-weight: 700;
+  text-shadow: 0 4px 28px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.cameraTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(12px, env(safe-area-inset-top)) var(--gutter) 16px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
+}
+
+.cameraTitle {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.cameraIconBtn {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  cursor: pointer;
+}
+
+.cameraIconBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cameraBottom {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 12px var(--gutter) max(18px, env(safe-area-inset-bottom));
+  background: #0b0a10;
+}
+
+.cameraHint {
+  margin: 0;
+  max-width: 40ch;
+  font-size: 13px;
+  text-align: center;
+  opacity: 0.88;
+}
+
+.cameraDelays {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cameraDelaysLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 2px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.cameraDelays .chip {
+  min-height: 36px;
+  padding: 6px 14px;
+}
+
+.cameraDelays .chip {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+
+.cameraDelays .chipActive {
+  background: #fff;
+  border-color: #fff;
+  color: var(--violet-primary);
+}
+
+.cameraDelays .chip:disabled {
+  opacity: 0.5;
+}
+
+.cameraControls {
+  display: grid;
+  grid-template-columns: 46px auto 46px;
+  align-items: center;
+  gap: 40px;
+}
+
+.cameraSpacer {
+  width: 46px;
+  height: 46px;
+}
+
+.cameraShutter {
+  width: 74px;
+  height: 74px;
+  padding: 5px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cameraShutter span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease, border-radius 0.15s ease, background 0.15s ease;
+}
+
+.cameraShutter:active span {
+  transform: scale(0.9);
+}
+
+.cameraShutter:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Pendant le decompte, le declencheur devient un carre rouge : un second
+   appui annule, comme sur un appareil photo. */
+.cameraShutterCounting span {
+  transform: scale(0.5);
+  border-radius: 8px;
+  background: var(--error);
+}
+
+.cameraError {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 16px;
+  padding: 0 var(--gutter);
+  text-align: center;
+  background: #0b0a10;
+}
+
+.cameraError p {
+  margin: 0;
+  max-width: 38ch;
+}
+
+/* Sur ordinateur, la camera reste un calque : un cadre arrondi autour de la
+   video plutot qu'un flux colle aux bords d'un grand ecran. */
+@media (min-width: 1024px) {
+  .camera {
+    padding: 24px;
+    background: #0b0a10;
+  }
+
+  .cameraStage {
+    border-radius: var(--radius-card);
+  }
+
+  .cameraTop {
+    top: 24px;
+    left: 24px;
+    right: 24px;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+  }
+
+  .cameraBottom {
+    background: transparent;
   }
 }

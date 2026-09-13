@@ -18,10 +18,11 @@
  * cette meme bande — plus large de face — rognerait le bord du torse et
  * sous-estimerait poitrine, taille et hanches.
  *
- * PHOTOS. Chaque photo se prend a l'appareil ou s'importe depuis la galerie.
- * Deux champs distincts, car c'est l'attribut `capture` qui decide : present,
- * le telephone ouvre directement l'appareil photo ; absent, il propose la
- * galerie. `getUserMedia` (video en direct) reste exclu faute de HTTPS.
+ * PHOTOS. Chaque photo se prend a la camera OU s'importe depuis la galerie,
+ * sur telephone comme sur ordinateur. La prise de vue passe par la camera du
+ * navigateur (CameraCapture), avec silhouette et retardateur ; si la page
+ * n'est pas en contexte securise, elle retombe sur `<input capture>`, qui
+ * ouvre l'appareil photo natif du telephone.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -40,6 +41,7 @@ import {
   IconPhone,
 } from "./icons";
 import { SilhouetteFace, SilhouetteProfil } from "./Silhouettes";
+import { CameraCapture, cameraSupported, type CaptureTarget } from "./CameraCapture";
 
 type Step = "infos" | "consignes" | "photos" | "analyse";
 
@@ -252,12 +254,14 @@ export function MeasureFlow({
 
           <div className="photoCards">
             <PhotoPicker
+              target="front"
               label="Photo de face"
               hint="Face à l'appareil, bras écartés, corps entier dans le cadre."
               file={front}
               onPick={setFront}
             />
             <PhotoPicker
+              target="side"
               label="Photo de profil"
               hint="De profil, bras collés le long du corps."
               file={side}
@@ -332,19 +336,22 @@ function Pose({
 }
 
 function PhotoPicker({
+  target,
   label,
   hint,
   file,
   onPick,
 }: {
+  target: CaptureTarget;
   label: string;
   hint: string;
   file: File | null;
   onPick: (f: File) => void;
 }) {
-  const cameraRef = useRef<HTMLInputElement>(null);
+  const nativeCameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   // L'URL d'apercu garde l'image en memoire tant qu'elle n'est pas revoquee.
   useEffect(() => {
@@ -353,14 +360,22 @@ function PhotoPicker({
     };
   }, [preview]);
 
-  function handle(e: React.ChangeEvent<HTMLInputElement>) {
+  function accept(f: File) {
+    onPick(f);
+    setPreview(URL.createObjectURL(f));
+  }
+
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     // Remise a zero : sans elle, choisir deux fois le meme fichier (apres une
     // erreur d'analyse, par exemple) ne declencherait aucun evenement.
     e.target.value = "";
-    if (!f) return;
-    onPick(f);
-    setPreview(URL.createObjectURL(f));
+    if (f) accept(f);
+  }
+
+  function openCamera() {
+    if (cameraSupported()) setCameraOpen(true);
+    else nativeCameraRef.current?.click();
   }
 
   return (
@@ -388,29 +403,36 @@ function PhotoPicker({
           ) : null}
         </h3>
         <p className="fieldHint">{file ? "Photo prête. Vous pouvez la remplacer." : hint}</p>
-
-        <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={handle} />
-        <input ref={galleryRef} type="file" accept="image/*" hidden onChange={handle} />
-
-        <div className="photoCardActions">
-          <button
-            type="button"
-            className="btn btnSecondary photoCameraBtn"
-            onClick={() => cameraRef.current?.click()}
-          >
-            <IconCamera size={17} aria-hidden />
-            {file ? "Reprendre" : "Prendre la photo"}
-          </button>
-          <button
-            type="button"
-            className="btn btnGhost"
-            onClick={() => galleryRef.current?.click()}
-          >
-            <IconGallery size={17} aria-hidden />
-            {file ? "Changer" : "Importer"}
-          </button>
-        </div>
       </div>
+
+      {/* Boutons hors du bloc de texte : places sur toute la largeur de la
+          carte, sous la vignette. A cote d'elle, chacun ne gardait qu'une
+          centaine de pixels au telephone. */}
+      <div className="photoCardActions">
+        <button type="button" className="btn btnSecondary" onClick={openCamera}>
+          <IconCamera size={17} aria-hidden />
+          {file ? "Reprendre" : "Prendre la photo"}
+        </button>
+        <button type="button" className="btn btnGhost" onClick={() => galleryRef.current?.click()}>
+          <IconGallery size={17} aria-hidden />
+          {file ? "Changer" : "Importer"}
+        </button>
+      </div>
+
+      {/* Repli hors contexte securise : appareil photo natif du telephone. */}
+      <input ref={nativeCameraRef} type="file" accept="image/*" capture="environment" hidden onChange={handleInput} />
+      <input ref={galleryRef} type="file" accept="image/*" hidden onChange={handleInput} />
+
+      {cameraOpen && (
+        <CameraCapture
+          target={target}
+          onCapture={(f) => {
+            setCameraOpen(false);
+            accept(f);
+          }}
+          onClose={() => setCameraOpen(false)}
+        />
+      )}
     </section>
   );
 }

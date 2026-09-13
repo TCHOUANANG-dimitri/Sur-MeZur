@@ -254,8 +254,14 @@
   }
 }
 
+/* Espacement VERTICAL seulement. `.section` se combine toujours avec un
+   conteneur (`container`, `containerNarrow`, `flowWrap`) qui porte, lui, la
+   marge laterale. L'ancienne forme abregee `padding: var(--gutter) 0`
+   remettait cette marge a zero — et comme `.section` est declaree apres le
+   conteneur, c'est elle qui l'emportait : sur telephone, le contenu de toutes
+   les pages touchait les bords de l'ecran. */
 .section {
-  padding: var(--gutter) 0;
+  padding-block: var(--gutter);
 }
 
 .stack {
