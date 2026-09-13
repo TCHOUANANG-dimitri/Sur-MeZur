@@ -766,3 +766,19 @@
     background: transparent;
   }
 }
+
+/* --- Diagnostic d'erreur -----------------------------------------------------
+   Etape en echec et erreur brute, en petit sous le message comprehensible :
+   assez discret pour ne pas inquieter, assez precis pour qu'une capture
+   d'ecran permette de diagnostiquer le probleme a distance.                  */
+.errorDetail {
+  margin: -8px 0 14px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.fieldHintError {
+  color: var(--error);
+}

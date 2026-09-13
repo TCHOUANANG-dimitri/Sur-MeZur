@@ -28,7 +28,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MeasurementsApi } from "@/lib/api/endpoints";
 import { ensureSession } from "@/lib/guest";
-import { compressForMeasurement } from "@/lib/imageCompress";
+import { UnreadablePhotoError, compressForMeasurement } from "@/lib/imageCompress";
 import { friendlyError, withRetry } from "@/lib/retry";
 import { useAuth } from "./AuthProvider";
 import { Button, ErrorBanner, Field, Input, Select, Spinner, Steps } from "./ui";
@@ -73,6 +73,10 @@ export function MeasureFlow({
   const [front, setFront] = useState<File | null>(null);
   const [side, setSide] = useState<File | null>(null);
   const [error, setError] = useState("");
+  // Etape en echec et erreur brute, affichees en petit sous le message : sans
+  // elles, « connexion interrompue » ne disait ni quelle requete avait echoue
+  // ni pourquoi, et le probleme restait impossible a diagnostiquer a distance.
+  const [errorDetail, setErrorDetail] = useState("");
   // L'envoi des photos et leur analyse sont deux attentes distinctes, de
   // durees et de causes differentes (reseau d'un cote, serveur de l'autre) :
   // les confondre sous un meme message empechait de savoir ce qui bloquait.
@@ -96,12 +100,16 @@ export function MeasureFlow({
   const analyse = useCallback(async () => {
     if (!front || !side) return;
     setError("");
+    setErrorDetail("");
     setPhase("envoi");
     go("analyse");
+    let stage = "création de la session";
     try {
       // Le compte invite n'est cree qu'ici, au moment d'envoyer les photos :
       // un visiteur qui abandonne sur les consignes ne laisse aucune trace.
-      if (guest && (await ensureSession())) await refresh();
+      if (guest && (await withRetry(() => ensureSession()))) await refresh();
+
+      stage = "ouverture de la mesure";
 
       const session = await withRetry(() =>
         MeasurementsApi.createSession({
@@ -110,10 +118,12 @@ export function MeasureFlow({
           gender,
         })
       );
+      stage = "envoi des photos";
       // Reessayer l'envoi est sans risque : le serveur remplace les photos
       // precedentes de la session au lieu de les accumuler.
       let current = await withRetry(() => MeasurementsApi.uploadPhotos(session.id, front, side));
       setPhase("analyse");
+      stage = "suivi de l'analyse";
 
       for (let i = 0; i < POLL_MAX && current.status === "processing"; i++) {
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
@@ -129,6 +139,7 @@ export function MeasureFlow({
       onDone(current.measurement_id);
     } catch (e) {
       setError(friendlyError(e));
+      setErrorDetail(`${stage} · ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`);
       go("photos");
     }
   }, [front, side, height, weight, gender, guest, refresh, onDone, go]);
@@ -137,6 +148,7 @@ export function MeasureFlow({
     <div className="measureFlow">
       <Steps total={4} current={STEP_INDEX[step]} />
       <ErrorBanner message={error} />
+      {error && errorDetail && <p className="errorDetail">Détail : {errorDetail}</p>}
 
       {step === "infos" && (
         <div className="flowForm">
@@ -297,7 +309,7 @@ export function MeasureFlow({
           <Spinner label={phase === "envoi" ? "Envoi de vos photos…" : "Analyse de vos photos…"} />
           <p className="muted">
             {phase === "envoi"
-              ? "Selon votre connexion, cela peut prendre quelques instants."
+              ? "Selon votre connexion, cela peut prendre quelques instants. Gardez cette page ouverte."
               : "Cela prend généralement moins d'une minute. Ne fermez pas cette page."}
           </p>
         </div>
@@ -367,6 +379,7 @@ function PhotoPicker({
   const [preview, setPreview] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [preparing, setPreparing] = useState(false);
+  const [pickError, setPickError] = useState("");
 
   // L'URL d'apercu garde l'image en memoire tant qu'elle n'est pas revoquee.
   useEffect(() => {
@@ -381,8 +394,16 @@ function PhotoPicker({
     // la photo n'est pas consideree comme choisie et l'analyse reste bloquee.
     setPreview(URL.createObjectURL(f));
     setPreparing(true);
+    setPickError("");
     try {
       onPick(await compressForMeasurement(f));
+    } catch (e) {
+      setPreview(null);
+      setPickError(
+        e instanceof UnreadablePhotoError
+          ? "Cette photo n'a pas pu être lue. Choisissez-la à nouveau, ou prenez-la avec l'appareil."
+          : "Cette photo n'a pas pu être préparée. Essayez-en une autre."
+      );
     } finally {
       setPreparing(false);
     }
@@ -425,8 +446,9 @@ function PhotoPicker({
             </span>
           ) : null}
         </h3>
-        <p className="fieldHint">
-          {preparing ? "Préparation de la photo…" : file ? "Photo prête. Vous pouvez la remplacer." : hint}
+        <p className={`fieldHint ${pickError ? "fieldHintError" : ""}`}>
+          {pickError ||
+            (preparing ? "Préparation de la photo…" : file ? "Photo prête. Vous pouvez la remplacer." : hint)}
         </p>
       </div>
 
