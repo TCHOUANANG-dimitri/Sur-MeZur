@@ -225,7 +225,9 @@ export default function MeasurementFlow() {
     setConfirming(true);
     try {
       await MeasurementsApi.patch(measurementId, { data });
-      router.push({ pathname: "/client/avatar", params: { measurementId } });
+      // L'avatar 3D est mis de cote : une fois les mesures confirmees, la
+      // personne arrive sur sa fiche de mesures, d'ou elle peut commander.
+      router.replace("/client/my-measurements");
     } catch (e) {
       // Les corrections tapées en review ne doivent pas se perdre en silence :
       // on reste sur l'écran, avec l'erreur affichée, plutôt que de continuer

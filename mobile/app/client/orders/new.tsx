@@ -2,8 +2,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { userMessage, ApiError } from "../../../src/api/client";
-import { CatalogApi, OrdersApi, TailorsApi } from "../../../src/api/endpoints";
-import type { Accessory, Fabric, GarmentModel, TailorProfile } from "../../../src/api/types";
+import { CatalogApi, MeasurementsApi, OrdersApi, TailorsApi } from "../../../src/api/endpoints";
+import type { Accessory, Fabric, GarmentModel, Measurement, TailorProfile } from "../../../src/api/types";
 import { Button } from "../../../src/components/Button";
 import { Card } from "../../../src/components/Card";
 import { ErrorBanner, Field, Header, Input, Spinner } from "../../../src/components/Misc";
@@ -25,12 +25,15 @@ export default function OrderCreate() {
   const { t } = useI18n();
 
   const modelId = params.modelId || "";
-  const measurementId = params.measurementId || "";
   const fabricId = params.fabricId || "";
   const accessoryIds = (params.accessories || "").split(",").filter(Boolean);
 
   const [tailorId, setTailorId] = useState(params.tailorId || "");
   const [tailors, setTailors] = useState<TailorProfile[]>([]);
+  // Commander ne demande plus qu'un modele et des mesures : quand l'ecran est
+  // ouvert depuis une fiche modele, les mesures se choisissent ici.
+  const [measurementId, setMeasurementId] = useState(params.measurementId || "");
+  const [measurements, setMeasurements] = useState<Measurement[] | null>(null);
   const [model, setModel] = useState<GarmentModel | null>(null);
   const [fabric, setFabric] = useState<Fabric | null>(null);
   const [accessories, setAccessories] = useState<Accessory[]>([]);
@@ -46,6 +49,7 @@ export default function OrderCreate() {
     if (fabricId) CatalogApi.fabrics().then((list) => setFabric(list.find((f) => f.id === fabricId) || null));
     CatalogApi.accessories().then(setAccessories);
     if (!tailorId) TailorsApi.search({ sort: "rating" }).then(setTailors);
+    if (!measurementId) MeasurementsApi.list().then(setMeasurements).catch(() => setMeasurements([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelId, fabricId]);
 
@@ -82,6 +86,7 @@ export default function OrderCreate() {
   };
 
   if (!tailorId && tailors.length === 0) return <Spinner />;
+  if (tailorId && !measurementId && measurements === null) return <Spinner />;
 
   return (
     <Screen>
@@ -98,6 +103,29 @@ export default function OrderCreate() {
                 <Text style={styles.tailorCity}>{tl.city}</Text>
               </Card>
             ))}
+          </>
+        ) : !measurementId ? (
+          <>
+            <Text style={styles.sectionTitle}>{t("order.chooseMeasurement")}</Text>
+            {measurements && measurements.length > 0 ? (
+              measurements.map((m) => (
+                <Card key={m.id} onPress={() => setMeasurementId(m.id)} style={{ marginBottom: 8 }}>
+                  <Text style={styles.tailorName}>
+                    {t("measurement.version")} {m.version}
+                  </Text>
+                  <Text style={styles.tailorCity}>
+                    {Object.keys(m.data).length} {t("order.measurementsCount")} · {m.height_cm} cm
+                  </Text>
+                </Card>
+              ))
+            ) : (
+              <>
+                <Text style={styles.detail}>{t("order.noMeasurements")}</Text>
+                <Button fullWidth onPress={() => router.push("/client/measurements")} style={{ marginTop: 12 }}>
+                  {t("order.takeMeasurements")}
+                </Button>
+              </>
+            )}
           </>
         ) : (
           <>

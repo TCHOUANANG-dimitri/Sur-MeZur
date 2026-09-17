@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, Package, Search, Shirt, User } from "lucide-react-native";
+import { Home, Package, Search, User } from "lucide-react-native";
 import React from "react";
 import { useI18n } from "../../../src/i18n/I18nProvider";
 import { useTheme } from "../../../src/theme/ThemeProvider";
@@ -27,10 +27,7 @@ export default function ClientTabsLayout() {
         name="search"
         options={{ title: t("nav.search"), tabBarIcon: ({ color, size }) => <Search color={color} size={size} /> }}
       />
-      <Tabs.Screen
-        name="tryon"
-        options={{ title: t("nav.tryon"), tabBarIcon: ({ color, size }) => <Shirt color={color} size={size} /> }}
-      />
+      <Tabs.Screen name="tryon" options={{ href: null }} />
       <Tabs.Screen
         name="orders"
         options={{ title: t("nav.orders"), tabBarIcon: ({ color, size }) => <Package color={color} size={size} /> }}

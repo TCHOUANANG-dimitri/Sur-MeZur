@@ -65,12 +65,14 @@ export default function MyMeasurements() {
               </>
             )}
 
+            {/* L'avatar 3D est mis de cote : avec ces mesures, la suite utile
+                est de choisir un modele et de commander. */}
             <Button
               fullWidth
-              onPress={() => router.push({ pathname: "/client/avatar", params: { measurementId: latest.id } })}
+              onPress={() => router.push("/client/models")}
               style={{ marginTop: 20 }}
             >
-              {t("profile.createAvatar")}
+              {t("order.orderAModel")}
             </Button>
             <Button
               variant="secondary"

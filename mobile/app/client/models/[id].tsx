@@ -24,6 +24,7 @@ import { Screen } from "../../../src/components/Screen";
 import { StatusChip } from "../../../src/components/Chip";
 import { useTheme, useThemedStyles } from "../../../src/theme/ThemeProvider";
 import { fonts, radii, type ThemeColors } from "../../../src/theme/tokens";
+import { useI18n } from "../../../src/i18n/I18nProvider";
 
 export default function ModelDetail() {
   const { colors } = useTheme();
@@ -38,6 +39,7 @@ export default function ModelDetail() {
     liked_only?: string;
   }>();
   const router = useRouter();
+  const { t } = useI18n();
   const [models, setModels] = useState<GarmentModel[] | null>(null);
   const [index, setIndex] = useState(0);
   const [zoomTarget, setZoomTarget] = useState<GarmentModel | null>(null);
@@ -83,9 +85,11 @@ export default function ModelDetail() {
     }
   };
 
-  const goTryOn = (item: GarmentModel) =>
+  // L'essayage 3D n'etant pas operationnel, ce modele mene directement a la
+  // commande : le tailleur et les mesures se choisissent sur l'ecran suivant.
+  const goOrder = (item: GarmentModel) =>
     router.push({
-      pathname: "/client/(tabs)/tryon",
+      pathname: "/client/orders/new",
       params: { modelId: item.id, ...(params.tailorId ? { tailorId: params.tailorId } : {}) },
     });
 
@@ -150,8 +154,8 @@ export default function ModelDetail() {
               </Text>
             ))}
           </View>
-          <Button fullWidth onPress={() => goTryOn(current)}>
-            Essayer sur mon avatar
+          <Button fullWidth onPress={() => goOrder(current)}>
+            {t("order.orderThisModel")}
           </Button>
         </View>
       )}
