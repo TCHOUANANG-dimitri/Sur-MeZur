@@ -6,6 +6,7 @@ from app.models.catalog import (
     GarmentModelLike,
     ReadyToWear,
 )
+from app.models.collecte import DatasetPhoto, DatasetSubject
 from app.models.measurements import (
     Avatar,
     Measurement,
@@ -24,6 +25,8 @@ __all__ = [
     "ChatMessage",
     "ClientProfile",
     "CommissionTier",
+    "DatasetPhoto",
+    "DatasetSubject",
     "Delivery",
     "Fabric",
     "GarmentAsset",

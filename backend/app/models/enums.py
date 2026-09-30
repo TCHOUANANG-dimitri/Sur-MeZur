@@ -5,6 +5,11 @@ class UserRole(str, enum.Enum):
     client = "client"
     tailor = "tailor"
     admin = "admin"
+    # Agent de terrain de la campagne de collecte (application `collecte/`) :
+    # saisit des sujets mesures au metre ruban et leurs photos, rien d'autre.
+    # La colonne `users.role` est un String(16) : ajouter une valeur ici ne
+    # demande aucune modification du schema en production.
+    collector = "collector"
 
 
 class TailorType(str, enum.Enum):

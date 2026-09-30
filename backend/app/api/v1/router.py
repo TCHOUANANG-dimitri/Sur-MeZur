@@ -6,6 +6,7 @@ from app.api.v1 import (
     avatars,
     catalog,
     chat,
+    collecte,
     deliveries,
     measurements,
     modifications,
@@ -40,3 +41,4 @@ api_router.include_router(deliveries.router)
 api_router.include_router(reviews.router)
 api_router.include_router(notifications.router)
 api_router.include_router(admin.router)
+api_router.include_router(collecte.router)

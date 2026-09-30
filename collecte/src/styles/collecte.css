@@ -1,0 +1,985 @@
+/* ============================================================================
+   Sur-MeZur Collecte — styles propres a l'application de collecte.
+
+   Le socle (tokens de couleur, polices, boutons, champs, coquille) est repris
+   tel quel de la version web : globals.css, ui.css, shell.css, auth.css,
+   camera.css. Ce fichier n'ajoute que les ecrans de la collecte, avec les
+   memes tokens — aucune couleur en dur hors palette.
+   ========================================================================= */
+
+/* --- Correctifs repris de web/src/styles/mobile.css ----------------------- */
+html,
+body {
+  overflow-x: hidden;
+}
+
+/* La barre d'action collee en bas passerait SOUS la barre d'onglets fixe. */
+.shell .actionBar {
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  padding-bottom: 12px;
+  background: linear-gradient(to top, var(--bg) 60%, rgba(255, 255, 255, 0));
+}
+
+@media (min-width: 1024px) {
+  .shell .actionBar {
+    bottom: 0;
+  }
+}
+
+/* --- Utilitaires ------------------------------------------------------------ */
+.small {
+  font-size: 12px;
+}
+
+.grow {
+  flex: 1;
+}
+
+.btnSmall {
+  min-height: 38px;
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+.linkBtn {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--violet-primary);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.iconBtn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bg-alt);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.rowBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rowGap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  margin-bottom: 10px;
+}
+
+.groupTitle {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.linkMore {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.okText {
+  color: var(--success);
+}
+
+.warnText {
+  color: var(--pending);
+}
+
+.chipRowWrap {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+.bannerBody {
+  min-width: 0;
+  line-height: 1.5;
+}
+
+.bannerBody > svg:first-child {
+  display: inline-block;
+  vertical-align: -3px;
+  margin-right: 6px;
+}
+
+.bannerWarn {
+  background: rgba(217, 119, 6, 0.1);
+  color: #92400e;
+}
+
+code {
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 1px 5px;
+  border-radius: 6px;
+  word-break: break-all;
+}
+
+/* --- Coquille : marque et pied de colonne ----------------------------------- */
+/* Libelle court dans la barre du bas, complet dans la colonne laterale. */
+.labelLong {
+  display: none;
+}
+
+.sidenav .labelLong {
+  display: inline;
+}
+
+.sidenav .labelShort {
+  display: none;
+}
+
+.brand span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.brandSub {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--violet-primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sideFooter {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px 18px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.sideUser {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.syncBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-chip);
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.syncBadgeOffline {
+  background: rgba(217, 119, 6, 0.12);
+  color: var(--pending);
+}
+
+/* --- Tableau de bord -------------------------------------------------------- */
+.ctaCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--radius-card);
+  background: var(--gradient);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.ctaIcon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.18);
+  flex: none;
+}
+
+.ctaText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  opacity: 0.95;
+}
+
+.ctaText strong {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 720px) {
+  .statGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.statTile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px;
+  border-radius: var(--radius-card);
+  background: var(--bg-alt);
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--violet-primary);
+}
+
+.statLabel {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.statHint {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* --- File d'envoi ----------------------------------------------------------- */
+.outbox {
+  border-color: var(--violet-tint);
+  background: #faf8ff;
+}
+
+.outboxHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.outboxHead .sectionTitle {
+  margin: 0;
+}
+
+.outboxList {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.outboxItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-button);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.outboxMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.outboxSide {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+/* --- Liste des fiches ------------------------------------------------------- */
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.searchBox svg {
+  position: absolute;
+  left: 14px;
+  pointer-events: none;
+}
+
+.searchInput {
+  padding-left: 42px;
+}
+
+.subjectCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--indigo-text);
+  transition: box-shadow 0.15s ease;
+}
+
+.subjectCard:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.subjectMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subjectTop {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.subjectCode {
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+.subjectMeta {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.subjectMeta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.subjectChevron {
+  color: var(--text-secondary);
+  flex: none;
+}
+
+/* --- Formulaire ------------------------------------------------------------- */
+.formHead {
+  margin-bottom: 8px;
+}
+
+.formHead .steps {
+  margin-bottom: 8px;
+}
+
+.stepName {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.fieldGrid2,
+.fieldGrid3 {
+  display: grid;
+  gap: 0 14px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.fieldGrid3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 380px) {
+  .fieldGrid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fieldGrid2 .field,
+.fieldGrid3 .field {
+  margin-bottom: 12px;
+}
+
+.hintTop {
+  margin-top: -6px;
+}
+
+.checkError,
+.checkWarn {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.checkError {
+  color: var(--error);
+}
+
+.checkWarn {
+  color: var(--pending);
+}
+
+.checkError svg,
+.checkWarn svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.consentBox {
+  padding: 14px;
+  border-radius: var(--radius-card);
+  background: var(--bg-alt);
+}
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.checkRow input {
+  width: 22px;
+  height: 22px;
+  margin: 1px 0 0;
+  flex: none;
+  accent-color: var(--violet-primary);
+}
+
+.consentBox .field {
+  margin-bottom: 0;
+}
+
+.measureGroup {
+  padding-bottom: 4px;
+}
+
+.measureRow {
+  display: grid;
+  grid-template-columns: 1fr 128px;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.measureGroup .groupTitle + .measureRow {
+  border-top: 0;
+}
+
+.measureLabel {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.measureInputWrap {
+  position: relative;
+}
+
+.measureInput {
+  padding-right: 38px;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.measureUnit {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.measureRow-warn .measureInput {
+  border-color: var(--pending);
+}
+
+.measureRow-error .measureInput {
+  border-color: var(--error);
+}
+
+.measureHow,
+.measureRow .checkError,
+.measureRow .checkWarn {
+  grid-column: 1 / -1;
+}
+
+.measureHow summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--violet-primary);
+  cursor: pointer;
+  list-style: none;
+}
+
+.measureHow summary::-webkit-details-marker {
+  display: none;
+}
+
+.measureHow p {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-button);
+  background: var(--bg-alt);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.rules {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.recap {
+  margin: 0;
+}
+
+.recapRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.recapRow:last-child {
+  border-bottom: 0;
+}
+
+.recapRow dt {
+  color: var(--text-secondary);
+}
+
+.recapRow dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.recap-warn dd {
+  color: var(--pending);
+}
+
+.recap-error dd {
+  color: var(--error);
+}
+
+.missing {
+  color: var(--pending);
+  font-weight: 500;
+  font-style: italic;
+}
+
+/* Au telephone : « Retour » compact, action principale sur le reste de la
+   ligne (meme choix que .flowActions de la version web). */
+.formActions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.formActions .btn {
+  flex: none;
+}
+
+.formActions .btn.grow {
+  flex: 1;
+}
+
+/* --- Emplacement photo ------------------------------------------------------ */
+.photoSlot {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 14px;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg);
+}
+
+.photoSlotFilled {
+  border-style: solid;
+}
+
+.photoThumb {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 128px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-alt);
+  color: var(--text-secondary);
+}
+
+.photoThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.photoTitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.req,
+.opt {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-chip);
+}
+
+.req {
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+}
+
+.opt {
+  background: var(--bg-alt);
+  color: var(--text-secondary);
+}
+
+.photoOk {
+  color: var(--success);
+}
+
+.photoPose {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.photoPending {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pending);
+}
+
+.photoError {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--error);
+}
+
+.photoActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.photoPlaceholder {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  background: var(--bg-alt);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.photoLoading {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* --- Detail ----------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  .detailGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    gap: var(--gutter);
+  }
+}
+
+.detailTitle {
+  font-size: 18px;
+  margin: 12px 0;
+}
+
+.infoList {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.infoList div {
+  display: flex;
+  gap: 10px;
+}
+
+.infoList dt {
+  min-width: 110px;
+  color: var(--text-secondary);
+}
+
+.infoList dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.notes {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-button);
+  background: var(--bg-alt);
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+.measureBlock + .measureBlock {
+  margin-top: 12px;
+}
+
+.blockTitle {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--violet-primary);
+}
+
+.photoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.photoFigure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.photoZoomBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.photoFull {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 12px;
+  background: var(--bg-alt);
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  background: rgba(15, 12, 30, 0.92);
+  cursor: zoom-out;
+}
+
+.lightboxImg {
+  max-width: 100%;
+  max-height: calc(100dvh - 80px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.lightboxImg.photoPlaceholder {
+  width: 200px;
+  height: 260px;
+}
+
+.lightboxCaption {
+  margin: 0;
+  color: #fff;
+  font-size: 13px;
+}
+
+.dangerZone {
+  border-color: rgba(220, 38, 38, 0.25);
+}
+
+.dangerZone p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* --- Protocole -------------------------------------------------------------- */
+.poseGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+
+@media (min-width: 720px) {
+  .poseGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.poseCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  border-radius: var(--radius-card);
+  background: var(--bg-alt);
+  text-align: center;
+  font-size: 14px;
+}
+
+.poseSilhouette {
+  width: 56px;
+  height: auto;
+  color: var(--violet-primary);
+}
+
+.protocolList {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.protocolList dt {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.protocolList dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* --- Export et equipe ------------------------------------------------------- */
+.exportCard,
+.memberRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.exportIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+  flex: none;
+}
+
+.exportText,
+.memberMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.memberSide {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .exportCard {
+    flex-wrap: wrap;
+  }
+  .exportCard .btn {
+    width: 100%;
+  }
+  .memberRow {
+    flex-wrap: wrap;
+  }
+}

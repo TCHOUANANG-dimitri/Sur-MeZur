@@ -43,6 +43,7 @@ Ne sont JAMAIS touches (donnees et configuration) :
   surmezur-backend/uploads/   photos des clients
   surmezur-backend/data/      base de donnees
   surmezur-backend/ml/        poids des modeles (mobile_sam.pt)
+  surmezur-backend/dataset_store/  photos de la campagne de collecte (volontaires)
   surmezur-backend/.env       configuration du serveur
 
 
@@ -155,3 +156,35 @@ d'un processus paie l'import de torch (~9 s) et de mobile_sam (~8 s), et
 jusqu'a ~56 s quand le disque est froid, AVANT meme de commencer a calculer.
 Le mobile abandonne alors et affiche « Echec de l'analyse » alors que rien
 n'a echoue.
+
+
+-----------------------------------------------------------------------------
+CAMPAGNE DE COLLECTE  (application collecte/, ajoutee le 30/09/2026)
+-----------------------------------------------------------------------------
+Base de donnees : RIEN a lancer a la main. Les deux tables nouvelles
+(dataset_subjects, dataset_photos) sont creees par create_all() au premier
+demarrage qui suit la copie du code. Le role « collector » ne demande aucune
+colonne nouvelle (users.role est un texte libre). Lancer quand meme
+sync_sqlite_columns.py comme apres chaque mise a jour : il ne trouvera rien.
+
+Photos : elles vont dans DATASET_DIR (defaut ./dataset_store, relatif au
+dossier de lancement). A fixer explicitement dans le .env du serveur, a cote
+de la base :
+
+  DATASET_DIR=/home/sc1jsgw2086/surmezur-backend/dataset_store
+
+Ce dossier est HORS de uploads/ exprès : uploads/ est servi publiquement,
+alors que ces photos ne doivent sortir que par l'API, apres controle du role.
+Il ne doit jamais etre ecrase par une mise a jour, et il FAUT le sauvegarder
+avec la base : sans lui, les fiches existent mais leurs photos sont perdues.
+Sauvegarde conseillee (a planifier en cron, ou a faire avant toute operation) :
+
+  cd /home/sc1jsgw2086/surmezur-backend
+  tar czf ~/sauvegardes/collecte-$(date +%Y%m%d).tgz data/ dataset_store/
+
+Premier agent : se connecter a l'application de collecte avec le compte
+administrateur, onglet « Equipe », « Nouvel agent de collecte ».
+
+Verifier le deploiement :
+  curl -s http://api.gitingeniering.com/openapi.json | grep -c '"/api/collecte/stats"'
+  0 -> ancien code ; 1 -> routes de collecte en place.

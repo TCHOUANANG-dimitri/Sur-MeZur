@@ -77,6 +77,15 @@ class Settings(BaseSettings):
     # placer sous /uploads le rendrait accessible à quiconque connaît l'URL,
     # sans passer par ce contrôle.
     avatar_output_dir: str = "./avatar_store"
+
+    # --- Campagne de collecte (application `collecte/`) --------------------
+    # Photos des sujets de la verite terrain. Meme raisonnement que pour
+    # `avatar_output_dir` : HORS de `upload_dir`, qui est servi publiquement
+    # sous /uploads. Ce sont des photos de corps de volontaires ; elles ne
+    # doivent sortir que par GET /collecte/subjects/{id}/photos/{vue}, qui
+    # verifie le role. Une sous-arborescence par sujet (`SMZ-0001/...`) pour
+    # rester lisible a qui ouvre le dossier sur le serveur.
+    dataset_dir: str = "./dataset_store"
     # Timeout en secondes pour le subprocess Blender. Une génération typique
     # prend 5-15 s sur CPU ; 60 s laisse une marge confortable sur un
     # hébergement contraint.
@@ -90,3 +99,4 @@ class Settings(BaseSettings):
 settings = Settings()
 os.makedirs(settings.upload_dir, exist_ok=True)
 os.makedirs(settings.avatar_output_dir, exist_ok=True)
+os.makedirs(settings.dataset_dir, exist_ok=True)

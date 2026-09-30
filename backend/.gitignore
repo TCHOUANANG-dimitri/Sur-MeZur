@@ -10,3 +10,7 @@ uploads/
 # mobile/assets/ (c'est là qu'ils sont réellement utilisés) ; les garder ici
 # aussi doublerait inutilement leur poids dans l'historique git.
 app/services/avatar/base_meshes/
+
+# Photos des volontaires de la campagne de collecte : donnees personnelles,
+# jamais versionnees. Elles ne vivent que sur le serveur (et dans les exports).
+dataset_store/

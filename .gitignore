@@ -20,3 +20,7 @@ build/
 
 # Rapport genere depuis RAPPORT_PROJET.md
 RAPPORT_PROJET.docx
+
+# Campagne de collecte synchronisee en local (ml/scripts/telecharger_collecte.py) :
+# photos de volontaires, jamais versionnees.
+ml/data/collecte/
