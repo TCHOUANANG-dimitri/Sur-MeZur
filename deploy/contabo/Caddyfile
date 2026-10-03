@@ -1,0 +1,45 @@
+# /etc/caddy/Caddyfile
+#
+# Caddy obtient et renouvelle seul le certificat HTTPS (Let's Encrypt) des que
+# le DNS de api.gitingeniering.com pointe vers ce serveur.
+
+api.gitingeniering.com {
+	# Photos de mesure et de collecte : quelques Mo au plus par requete.
+	request_body {
+		max_size 30MB
+	}
+
+	reverse_proxy 127.0.0.1:8000 {
+		transport http {
+			# Envoi de photos sur reseau mobile lent + analyse : large marge.
+			read_timeout 180s
+			write_timeout 180s
+		}
+	}
+
+	log {
+		output file /var/log/caddy/surmezur-api.log {
+			roll_size 20MiB
+			roll_keep 5
+		}
+	}
+}
+
+# TRANSITION : les APK deja installees appellent http://api.gitingeniering.com.
+# Une simple redirection vers HTTPS ne suffit pas : Android abandonne l'en-tete
+# Authorization en suivant une redirection http -> https (autre port), et toute
+# requete authentifiee repondrait 401. On sert donc aussi l'API en HTTP, sans
+# redirection, tant que l'ancienne APK circule.
+# A SUPPRIMER une fois la nouvelle APK (adresse en https) installee partout ;
+# Caddy redirigera alors automatiquement le HTTP vers le HTTPS.
+http://api.gitingeniering.com {
+	request_body {
+		max_size 30MB
+	}
+	reverse_proxy 127.0.0.1:8000 {
+		transport http {
+			read_timeout 180s
+			write_timeout 180s
+		}
+	}
+}

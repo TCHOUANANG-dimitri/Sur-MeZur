@@ -1,0 +1,9 @@
+# Environnement de la nouvelle chaine (etapes 2 a 4) : Python 3.12 requis
+# (clad-body l'exige). L'etape 1 (perception) tourne dans le venv du backend.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1
+anny==0.6.1
+clad-body[anny]==0.6.1
+numpy
+scipy
+trimesh

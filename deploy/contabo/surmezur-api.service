@@ -1,0 +1,44 @@
+# /etc/systemd/system/surmezur-api.service
+#
+# API Sur-MeZur (FastAPI) lancee par uvicorn, derriere Caddy.
+# Installation et usage : voir DEPLOIEMENT_CONTABO.md a la racine du depot.
+
+[Unit]
+Description=Sur-MeZur API (FastAPI / uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=surmezur
+Group=surmezur
+WorkingDirectory=/srv/surmezur/app/backend
+
+# Configuration hors du depot : un `git pull` ne peut jamais l'ecraser.
+EnvironmentFile=/etc/surmezur/api.env
+
+# L'API n'ecoute que sur la boucle locale ; seul Caddy est expose.
+# app/main.py refuse par defaut de demarrer sur 127.0.0.1 (garde-fou du poste
+# de developpement, ou le telephone doit joindre l'API) : on l'autorise ici.
+Environment=SURMEZUR_ALLOW_LOCALHOST=1
+
+# 2 processus : chacun charge torch + MobileSAM (~1 a 1,5 Go de RAM).
+ExecStart=/srv/surmezur/venv/bin/python -m uvicorn app.main:app \
+    --host 127.0.0.1 --port 8000 --workers 2 \
+    --proxy-headers --forwarded-allow-ips 127.0.0.1 \
+    --timeout-keep-alive 30
+
+Restart=always
+RestartSec=5
+# Le prechauffage MediaPipe/SAM peut prendre ~20 s au premier demarrage.
+TimeoutStartSec=180
+
+# Durcissement
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
