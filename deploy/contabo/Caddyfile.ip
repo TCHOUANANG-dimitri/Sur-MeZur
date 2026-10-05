@@ -1,0 +1,34 @@
+# /etc/caddy/Caddyfile — VARIANTE SANS NOM DE DOMAINE (provisoire)
+#
+# Sert l'API en HTTP sur le port 80 de l'adresse IP du VPS, en attendant un nom
+# de domaine (DEPLOIEMENT_CONTABO.md, etape 9). Usage : version WEB
+# seulement — le navigateur ne parle qu'a Vercel en HTTPS, et c'est le serveur
+# Vercel qui appelle http://IP_VPS/api/... (rewrites de next.config.ts).
+#
+# « :80 » = n'importe quel nom ou adresse, port 80. Sans nom de domaine, Caddy
+# ne tente aucun certificat : il n'y a rien a obtenir.
+#
+# A remplacer par deploy/contabo/Caddyfile des que le domaine pointe vers ce
+# serveur : le HTTPS s'active alors seul.
+
+:80 {
+	# Photos de mesure et de collecte : quelques Mo au plus par requete.
+	request_body {
+		max_size 30MB
+	}
+
+	reverse_proxy 127.0.0.1:8000 {
+		transport http {
+			# Envoi de photos sur reseau mobile lent + analyse : large marge.
+			read_timeout 180s
+			write_timeout 180s
+		}
+	}
+
+	log {
+		output file /var/log/caddy/surmezur-api.log {
+			roll_size 20MiB
+			roll_keep 5
+		}
+	}
+}

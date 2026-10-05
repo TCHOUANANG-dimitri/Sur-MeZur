@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str = "sqlite:///./sur_mezur.db"
+    # Pool de connexions PostgreSQL (ignore en SQLite). Par processus uvicorn :
+    # avec 2 workers, au plus 2 x (5 + 5) = 20 connexions, sous la limite du
+    # pooler Supabase en mode session sur les petites offres.
+    db_pool_size: int = 5
+    db_max_overflow: int = 5
 
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
@@ -90,6 +95,17 @@ class Settings(BaseSettings):
     # prend 5-15 s sur CPU ; 60 s laisse une marge confortable sur un
     # hébergement contraint.
     avatar_blender_timeout: int = 120
+
+    @property
+    def sqlalchemy_database_url(self) -> str:
+        """URL pour SQLAlchemy. Supabase fournit « postgresql://... » (ou
+        « postgres://... ») : sans precision, SQLAlchemy chercherait le pilote
+        psycopg2, qui n'est pas installe. On impose psycopg (v3)."""
+        url = self.database_url
+        for prefixe in ("postgres://", "postgresql://"):
+            if url.startswith(prefixe):
+                return "postgresql+psycopg://" + url[len(prefixe):]
+        return url
 
     @property
     def cors_origin_list(self) -> list[str]:

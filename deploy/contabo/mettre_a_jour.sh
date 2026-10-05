@@ -39,6 +39,9 @@ run_py() {
 }
 run_py -c "import app.models; from app.db.base import Base, engine; Base.metadata.create_all(bind=engine)"
 run_py scripts/sync_sqlite_columns.py --apply
+# Supabase : ferme l'API REST publique sur les tables, nouvelles comprises
+# (sans effet en SQLite). Voir backend/scripts/securiser_supabase.py.
+run_py scripts/securiser_supabase.py
 
 systemctl restart surmezur-api
 

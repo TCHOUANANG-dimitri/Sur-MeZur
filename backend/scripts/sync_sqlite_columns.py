@@ -70,6 +70,9 @@ def _default_clause(column) -> str:
         return ""
     value = default.arg
     if isinstance(value, bool):
+        # SQLite stocke les booleens en 0/1 ; PostgreSQL exige TRUE/FALSE.
+        if engine.dialect.name == "postgresql":
+            return f" DEFAULT {'TRUE' if value else 'FALSE'}"
         return f" DEFAULT {1 if value else 0}"
     if isinstance(value, (int, float)):
         return f" DEFAULT {value}"
@@ -80,8 +83,11 @@ def _default_clause(column) -> str:
 
 
 def _describe_target() -> str:
-    """Chemin ABSOLU du fichier reellement ouvert."""
+    """Chemin ABSOLU du fichier reellement ouvert (SQLite), ou serveur et base
+    (PostgreSQL, mot de passe masque)."""
     url = engine.url
+    if engine.dialect.name != "sqlite":
+        return url.render_as_string(hide_password=True)
     if url.database in (None, ":memory:"):
         return str(url)
     return str(Path(url.database).resolve())

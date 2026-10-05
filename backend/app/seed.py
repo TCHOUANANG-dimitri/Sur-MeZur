@@ -12,6 +12,9 @@ accessoires n'ont pas ce besoin (pas de colonne propriétaire obligatoire) et
 restent seedés pour peupler le catalogue dès l'installation.
 """
 
+import os
+import secrets
+
 from app.core.security import hash_password
 from app.db.base import Base, SessionLocal, engine
 from app.models.catalog import Accessory, Fabric
@@ -21,7 +24,13 @@ from app.services.commission import seed_commission_tiers
 
 # Numéro du compte administrateur de la plateforme.
 ADMIN_PHONE = "+237696982953"
-ADMIN_PASSWORD = "dimi11"
+# Le mot de passe n'est plus ecrit dans le code : le depot est PUBLIC, et
+# l'ancien mot de passe y est lisible par tous. A fournir par l'environnement :
+#     ADMIN_PASSWORD=xxxxxx python -m app.seed
+# (6 caracteres, au moins une lettre et un chiffre). Sans lui, un mot de passe
+# aleatoire est genere et affiche UNE fois. N'agit qu'a la CREATION du compte :
+# un admin existant garde son mot de passe.
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or ""
 
 
 def get_or_create_user(db, phone, role, full_name, password="password123"):
@@ -56,7 +65,19 @@ def run() -> None:
         # 26/08/2026 en production : connexion "reussie" mais role=client).
         # On corrige donc explicitement l'ecart de role ici, au lieu de le
         # laisser passer silencieusement.
-        admin = get_or_create_user(db, ADMIN_PHONE, UserRole.admin, "Admin Sur-MeZur", password=ADMIN_PASSWORD)
+        password = ADMIN_PASSWORD
+        existe = db.query(User).filter(User.phone == ADMIN_PHONE).first() is not None
+        if not existe and not password:
+            # 6 caracteres exactement (regle de validate_password) : 3 lettres
+            # + 3 chiffres, melanges.
+            lettres = [secrets.choice("abcdefghjkmnpqrstuvwxyz") for _ in range(3)]
+            chiffres = [secrets.choice("23456789") for _ in range(3)]
+            melange = lettres + chiffres
+            secrets.SystemRandom().shuffle(melange)
+            password = "".join(melange)
+            print(f"Compte admin {ADMIN_PHONE} cree avec le mot de passe genere : {password}")
+            print("Notez-le maintenant : il ne sera plus affiche.")
+        admin = get_or_create_user(db, ADMIN_PHONE, UserRole.admin, "Admin Sur-MeZur", password=password or "x")
         if admin.role != UserRole.admin:
             print(
                 f"ATTENTION : {ADMIN_PHONE} existait deja avec le role "
@@ -89,7 +110,9 @@ def run() -> None:
         db.commit()
 
         print("Seed complete.")
-        print(f"Admin : {ADMIN_PHONE} / {ADMIN_PASSWORD}")
+        # Jamais le mot de passe : il finirait dans l'historique du terminal
+        # et les journaux du serveur.
+        print(f"Admin : {ADMIN_PHONE}")
     finally:
         db.close()
 

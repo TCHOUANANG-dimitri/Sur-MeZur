@@ -5,6 +5,9 @@ uvicorn[standard]==0.30.6
 # qui parlent nativement ASGI a l'application FastAPI.
 a2wsgi==1.10.7
 SQLAlchemy==2.0.35
+# Pilote PostgreSQL (Supabase). Version « binary » : embarque libpq, rien a
+# compiler sur le serveur. Inutile en SQLite, mais sans effet de bord.
+psycopg[binary]==3.2.10
 pydantic==2.9.2
 pydantic-settings==2.5.2
 python-jose[cryptography]==3.3.0

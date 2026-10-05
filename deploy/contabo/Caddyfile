@@ -1,7 +1,13 @@
 # /etc/caddy/Caddyfile
 #
 # Caddy obtient et renouvelle seul le certificat HTTPS (Let's Encrypt) des que
-# le DNS de api.gitingeniering.com pointe vers ce serveur.
+# le DNS du nom ci-dessous pointe vers ce serveur.
+#
+# AUTRE NOM DE DOMAINE (DNS de gitingeniering.com inaccessible, voir
+# DEPLOIEMENT_CONTABO.md, phase 2) : remplacer partout, par exemple
+#   sudo sed -i 's/api.gitingeniering.com/api.mon-domaine.com/g' /etc/caddy/Caddyfile
+# et SUPPRIMER le bloc « http:// » en bas : il ne sert qu'aux anciennes APK,
+# qui appellent l'ancien nom.
 
 api.gitingeniering.com {
 	# Photos de mesure et de collecte : quelques Mo au plus par requete.

@@ -25,7 +25,21 @@ if settings.database_url.startswith("sqlite:///") and ":memory:" not in settings
     if _raw_path.startswith("/"):
         os.makedirs(Path(_raw_path).parent, exist_ok=True)
 
-engine = create_engine(settings.database_url, connect_args=connect_args)
+if settings.database_url.startswith("sqlite"):
+    engine = create_engine(settings.database_url, connect_args=connect_args)
+else:
+    # PostgreSQL (Supabase). pool_pre_ping : verifie qu'une connexion du pool
+    # est encore vivante avant de la servir — le pooler Supabase ferme les
+    # connexions inactives, et sans ce test la premiere requete apres une
+    # periode calme echouerait en 500. pool_recycle : renouvelle les
+    # connexions avant qu'un intermediaire ne les coupe.
+    engine = create_engine(
+        settings.sqlalchemy_database_url,
+        pool_pre_ping=True,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_recycle=1800,
+    )
 
 if settings.database_url.startswith("sqlite"):
     # Par défaut SQLite verrouille tout le fichier pendant une écriture : une

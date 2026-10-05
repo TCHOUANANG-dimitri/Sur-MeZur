@@ -87,7 +87,7 @@ Open http://localhost:5173.
 
 | Role | Phone | Password |
 |---|---|---|
-| Admin | `+237696982953` | `dimi11` |
+| Admin | `+237696982953` | fixé à l'installation : `ADMIN_PASSWORD=... python -m app.seed` (sinon généré et affiché une fois) |
 
 No demo tailor or client account is created — both register their own
 accounts from the app. `app/seed.py` still seeds ownerless catalog data
