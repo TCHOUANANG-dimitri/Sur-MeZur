@@ -5,7 +5,7 @@
  *
  * Reprise de web/src/components/CameraCapture.tsx. Seule difference : la
  * silhouette, le titre et la consigne sont passes en parametres, pour servir
- * les quatre vues de la collecte (face, profil, dos, trois-quarts).
+ * les deux vues de la collecte (face et profil).
  *
  * POURQUOI PAS SEULEMENT `<input capture>`. Cet attribut n'ouvre l'appareil
  * photo que sur telephone ; sur ordinateur il est ignore et retombe sur le

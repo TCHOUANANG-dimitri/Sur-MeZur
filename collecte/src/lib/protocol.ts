@@ -129,7 +129,7 @@ export const BODY_BOUNDS = {
   age: { usual: [16, 75], hard: [10, 100] },
 } as const;
 
-export type ViewKey = "face" | "profil" | "dos" | "trois_quarts";
+export type ViewKey = "face" | "profil";
 
 export interface ViewSpec {
   label: string;
@@ -141,11 +141,12 @@ export interface ViewSpec {
 }
 
 /**
- * Face et profil : les deux vues de la chaine de production, OBLIGATOIRES.
- * Les postures sont celles pour lesquelles la vision est calibree (commit
- * c7d4699) : bras ecartes de face, bras colles le long du corps de profil.
- * Dos et trois-quarts : facultatives, pour la recherche (piste « 3e photo a
- * 45° », RAPPORT_PROJET.md §6bis).
+ * Face et profil : les deux vues de la chaine de production, OBLIGATOIRES, et
+ * les seules collectees. Les postures sont celles pour lesquelles la vision
+ * est calibree (commit c7d4699) : bras ecartes de face, bras colles le long du
+ * corps de profil. (Les vues dos et trois-quarts, prevues un temps pour la
+ * recherche, ont ete retirees : elles allongeaient chaque seance sans servir a
+ * la chaine.)
  */
 export const VIEWS: Record<ViewKey, ViewSpec> = {
   face: {
@@ -159,18 +160,6 @@ export const VIEWS: Record<ViewKey, ViewSpec> = {
     required: true,
     pose: "De profil strict (épaule vers l'objectif), bras collés le long du corps, regard droit devant.",
     silhouette: "profil",
-  },
-  dos: {
-    label: "Dos",
-    required: false,
-    pose: "De dos, même posture que la photo de face.",
-    silhouette: "face",
-  },
-  trois_quarts: {
-    label: "Trois-quarts (45°)",
-    required: false,
-    pose: "Tourné à 45° entre la face et le profil, bras légèrement écartés.",
-    silhouette: "face",
   },
 };
 

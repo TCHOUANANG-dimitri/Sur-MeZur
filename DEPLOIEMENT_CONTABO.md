@@ -514,7 +514,7 @@ chemin absolu.
 
 ```bash
 $ read -s -p "Mot de passe admin (6 caractères, lettres ET chiffres) : " ADMIN_PASSWORD; echo
-$ sudo -u surmezur ADMIN_PASSWORD="$ADMIN_PASSWORD" bash -c 'set -a; . /etc/surmezur/api.env; set +a; cd /srv/surmezur/app/backend; /srv/surmezur/venv/bin/python -m app.seed'
+$ sudo -u surmezur ADMIN_PASSWORD="dimi11" bash -c 'set -a; . /etc/surmezur/api.env; set +a; cd /srv/surmezur/app/backend; /srv/surmezur/venv/bin/python -m app.seed'
 $ unset ADMIN_PASSWORD
 ```
 *Pourquoi :*
@@ -559,7 +559,7 @@ est servie (`200`) : la base et le disque concordent.
 ```bash
 $ read -s -p "Mot de passe admin : " PW; echo
 $ TOKEN=$(curl -s -X POST http://127.0.0.1:8000/api/auth/login -H 'Content-Type: application/json' \
-    -d "{\"phone\":\"+237696982953\",\"password\":\"$PW\"}" | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])"); unset PW
+    -d "{\"phone\":\"+237696982953\",\"password\":\"$PW\"}" | python3 -c "import sys,json; print(json.load(sys.stdin)['dimi11'])"); unset PW
 $ cd "/srv/surmezur/app/IMAGES TEST"
 $ time curl -s -X POST http://127.0.0.1:8000/api/measurements/debug/analyze -H "Authorization: Bearer $TOKEN" \
     -F "front=@WhatsApp Image 2026-08-10 at 4.52.13 PM.jpeg;type=image/jpeg" \
@@ -594,17 +594,26 @@ en HTTPS (phase 2).
 $ sudo cp /srv/surmezur/app/deploy/contabo/Caddyfile.ip /etc/caddy/Caddyfile
 $ sudo mkdir -p /var/log/caddy && sudo chown caddy:caddy /var/log/caddy
 $ sudo caddy validate --config /etc/caddy/Caddyfile
-$ sudo systemctl reload caddy
+$ sudo systemctl enable caddy
+$ sudo systemctl restart caddy
+$ systemctl status caddy --no-pager | head -5        # doit indiquer « active (running) »
+$ curl -s http://127.0.0.1/api/health                # {"status":"ok"}
 ```
 *Pourquoi :*
 - `Caddyfile.ip` sert l'API sur le **port 80 de l'adresse IP** (`:80` =
   n'importe quel nom ou adresse) et relaie vers `127.0.0.1:8000`. Sans nom de
-  domaine, Caddy ne tente aucun certificat ;
+  domaine, Caddy ne tente aucun certificat : l'avertissement « server is
+  listening only on the HTTP port » de `validate` est donc **normal** ;
 - on passe tout de même par Caddy plutôt que d'ouvrir le port 8000 : l'API
   reste invisible de l'extérieur, Caddy garde les limites de taille et de
   durée des envois de photos, et le jour où le domaine arrive, il suffit de
   changer de `Caddyfile` sans toucher au pare-feu ni à l'API ;
-- `validate` attrape une faute **avant** de recharger.
+- `validate` attrape une faute **avant** d'appliquer ;
+- `enable` démarre Caddy à chaque démarrage du serveur ; `restart` (et non
+  `reload`) applique la configuration **que Caddy soit déjà lancé ou non** —
+  `reload` échoue avec « caddy.service is not active » s'il ne tournait pas ;
+- le dernier `curl` passe par Caddy (port 80) et non directement par l'API
+  (port 8000) : il prouve que le relais fonctionne.
 
 **Sur votre PC**, vérifiez que l'API répond par l'adresse IP :
 
@@ -847,8 +856,9 @@ $ sudo journalctl -u caddy -f        # attendre « certificate obtained successf
 - le dossier de journaux doit appartenir à `caddy`, qui tourne sans droits ;
 - `validate` attrape une faute de frappe **avant** de recharger, ce qui
   évite de couper un service qui tournait ;
-- `reload` applique sans interruption, et le journal montre l'obtention du
-  certificat.
+- `reload` applique sans interruption (Caddy tourne depuis l'étape 9 ; s'il
+  est arrêté, « caddy.service is not active », utilisez `restart`), et le
+  journal montre l'obtention du certificat.
 
 ```bash
 curl -s https://api.gitingeniering.com/api/health
@@ -923,6 +933,7 @@ bon ordre :
 | `ImportError: libGL.so.1` | dépendance système d'OpenCV | `sudo apt install -y libgl1 libglib2.0-0t64` |
 | Photos du catalogue en 404 | photos non copiées (étape 7) ou mauvais propriétaire | vérifier `/srv/surmezur/data/uploads/homme`, puis `sudo chown -R surmezur:surmezur /srv/surmezur/data` |
 | Le site affiche « Le service rencontre un problème » ou « La connexion a été interrompue » | Vercel n'atteint pas l'API | depuis votre PC, `curl.exe -s http://IP_VPS/api/health` ; vérifier `API_ORIGIN` (sans `/` final) et qu'un *Redeploy* a suivi son changement |
-| `curl http://IP_VPS/...` ne répond pas | port 80 fermé ou Caddy arrêté | `sudo ufw status`, `systemctl status caddy`, `sudo journalctl -u caddy -n 50` |
-| Phase 2 : le certificat ne s'obtient pas | DNS pas encore propagé, ou ports 80/443 fermés | `dig +short NOM`, `sudo ufw status`, puis `sudo systemctl reload caddy` |
+| `curl http://IP_VPS/...` ne répond pas | port 80 fermé ou Caddy arrêté | `sudo ufw status` (le port 80 doit être autorisé), `systemctl status caddy` ; s'il est arrêté : `sudo systemctl enable caddy && sudo systemctl restart caddy`, puis `sudo journalctl -u caddy -n 50` en cas d'échec |
+| `caddy.service is not active, cannot reload` | Caddy n'a jamais été démarré | `sudo systemctl enable caddy && sudo systemctl restart caddy` |
+| Phase 2 : le certificat ne s'obtient pas | DNS pas encore propagé, ou ports 80/443 fermés | `dig +short NOM`, `sudo ufw status`, puis `sudo systemctl restart caddy` |
 | Le processus est tué sans message | mémoire insuffisante | `journalctl -k \| grep -i oom` ; `--workers 1` dans le service, ou un VPS plus grand |

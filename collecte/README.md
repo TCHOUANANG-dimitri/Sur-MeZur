@@ -29,9 +29,9 @@ que la chaîne (`neck`, `chest`, …), pour que l'export se compare directement 
 sa sortie. Taille et poids sont obligatoires (ils servent d'échelle à la
 chaîne).
 
-**Photos** : face et profil obligatoires (postures de la production : bras
-écartés de face, bras collés le long du corps de profil) ; dos et
-trois-quarts facultatifs. Caméra dans la page avec silhouette de cadrage et
+**Photos** : face et profil, toutes deux obligatoires (postures de la
+production : bras écartés de face, bras collés le long du corps de profil).
+Caméra dans la page avec silhouette de cadrage et
 retardateur (3 s / 10 s), ou import depuis la galerie. Réduites à 2048 px /
 JPEG 0,90 (~0,5 Mo) avant stockage.
 

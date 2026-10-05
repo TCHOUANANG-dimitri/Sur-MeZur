@@ -37,12 +37,11 @@ HARD_BOUNDS: dict[str, tuple[float, float]] = {
     "back_length": (25, 75),
 }
 
-# Vues photographiques. Face et profil sont celles de la chaine de production
-# (et les seules exigees pour qu'une fiche soit complete) ; dos et trois-quarts
-# sont facultatives et servent la recherche (piste « 3e photo a 45° »,
-# RAPPORT_PROJET.md §6bis).
+# Vues photographiques : face et profil, celles de la chaine de production,
+# toutes deux exigees pour qu'une fiche soit complete. Ce sont les seules
+# acceptees (les vues dos et trois-quarts ont ete retirees de la collecte).
 VUES_OBLIGATOIRES = ["face", "profil"]
-VUES = VUES_OBLIGATOIRES + ["dos", "trois_quarts"]
+VUES = list(VUES_OBLIGATOIRES)
 
 GENDERS = {"male", "female"}
 CLOTHING = {"moulant", "ajuste", "ample"}

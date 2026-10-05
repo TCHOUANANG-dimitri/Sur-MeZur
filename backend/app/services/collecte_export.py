@@ -42,8 +42,7 @@ CONTENU
                        python ml/bench/pipeline_ameliore.py sujets.json photos/
   sujets.csv         Toutes les fiches, separateur « , » et point decimal.
   sujets_excel.csv   Les memes, separateur « ; » et virgule decimale (Excel FR).
-  photos/            SMZ-0001_face.jpg, SMZ-0001_profil.jpg, SMZ-0001_dos.jpg,
-                     SMZ-0001_trois_quarts.jpg (les deux dernieres facultatives).
+  photos/            SMZ-0001_face.jpg, SMZ-0001_profil.jpg.
 
 UNITES
   Taille et mensurations en cm, poids en kg.

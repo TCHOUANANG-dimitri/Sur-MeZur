@@ -86,7 +86,7 @@ class DatasetPhoto(Base, IDMixin, TimestampMixin):
     __table_args__ = (UniqueConstraint("subject_id", "view", name="uq_dataset_photo_view"),)
 
     subject_id: Mapped[str] = mapped_column(ForeignKey("dataset_subjects.id"), index=True)
-    view: Mapped[str] = mapped_column(String(16))  # face | profil | dos | trois_quarts
+    view: Mapped[str] = mapped_column(String(16))  # face | profil
     # Chemin RELATIF a settings.dataset_dir (ex. "SMZ-0001/SMZ-0001_face.jpg") :
     # le dossier peut etre deplace sans reecrire la base.
     file_path: Mapped[str] = mapped_column(String(500))
