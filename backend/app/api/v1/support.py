@@ -21,6 +21,7 @@ from app.services.activity import utcnow
 from app.services.admin_perms import has_perm, require_perm
 from app.services.notify import notify
 from app.services.platform_settings import PUBLIC_KEYS, get_setting
+from app.services.rate_limit import check as rate_check, client_ip
 from app.services.tables import TableParams, apply_sort, page_of, table_params, table_response
 
 public_router = APIRouter(tags=["public"])
@@ -87,10 +88,14 @@ def _next_number(db: Session) -> int:
 
 
 @public_router.post("/support/tickets", status_code=status.HTTP_201_CREATED)
-def create_ticket(payload: TicketIn, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
+def create_ticket(payload: TicketIn, request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
     """12.1 — formulaire « Nous contacter ». Ouvert aux visiteurs : il faut
     alors un nom et un moyen de recontacter."""
     registered = user is not None and not user.is_guest
+    if not registered:
+        # 1.5 : un visiteur peut inonder le support de demandes ; limite de
+        # 5 par heure par IP.
+        rate_check("ticket_ip", client_ip(request))
     name = (user.full_name if registered else (payload.name or "")).strip()
     phone = user.phone if registered else (payload.phone or "").strip() or None
     if not registered and (not name or not (phone or payload.email)):

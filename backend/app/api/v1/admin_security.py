@@ -27,6 +27,7 @@ from app.services import audit, totp
 from app.services.account_tools import temporary_password
 from app.services.activity import as_utc, utcnow
 from app.services.admin_perms import ADMIN_ROLES, admin_role_of, require_perm
+from app.services.phone import normalize_phone
 from app.services.platform_settings import DEFAULTS, all_settings, set_setting
 from app.services.tables import TableParams, apply_sort, page_of, table_params, table_response
 from app.services.user_stats import local_start_utc
@@ -69,7 +70,9 @@ def create_member(payload: MemberIn, request: Request, db: Session = Depends(get
     affiche une seule fois et doit etre change a la premiere connexion."""
     if payload.admin_role not in ADMIN_ROLES:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Rôle inconnu")
-    phone = payload.phone.strip()
+    phone = normalize_phone(payload.phone)
+    if not phone:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indiquez un numéro de téléphone")
     if db.query(User).filter(User.phone == phone).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "Ce numéro a déjà un compte")
     password = temporary_password()

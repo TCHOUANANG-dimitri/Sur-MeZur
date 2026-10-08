@@ -115,7 +115,10 @@ class OtpRequestIn(BaseModel):
 
 class OtpRequestOut(BaseModel):
     sent: bool
-    dev_code: str  # mocked: no SMS gateway, code is handed back directly
+    # Mode developpement uniquement (OTP_DEV_CODE=true) : aucune passerelle SMS
+    # n'existe, le code est alors rendu directement. En production le champ est
+    # toujours null.
+    dev_code: str | None = None
 
 
 class OtpVerifyIn(BaseModel):

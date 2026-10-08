@@ -4,6 +4,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.deps import get_db
 from app.core.security import (
     create_access_token,
@@ -32,9 +33,17 @@ from app.schemas.auth import (
 from app.services import activity, totp, vision
 from app.services.acquisition import capture as capture_acquisition
 from app.services.otp import generate_otp, verify_otp
+from app.services.phone import normalize_phone
 from app.services.platform_settings import get_setting
+from app.services import rate_limit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# Message unique quand la reinitialisation en libre-service est fermee : aucun
+# code n'est envoye (pas de passerelle SMS) et le seul secours est humain.
+RESET_DISABLED_MESSAGE = (
+    "Contactez le support : un mot de passe provisoire vous sera communiqué."
+)
 
 
 def _role(user: User) -> str:
@@ -88,7 +97,7 @@ def _guest_from_token(token: str | None, db: Session) -> User | None:
 
 
 @router.post("/guest", response_model=TokenOut)
-def create_guest(db: Session = Depends(get_db)):
+def create_guest(request: Request, db: Session = Depends(get_db)):
     """Compte invite, pour prendre ses mesures avant de s'inscrire.
 
     Il reutilise tel quel le role client et donc toute la chaine de mesure
@@ -100,6 +109,7 @@ def create_guest(db: Session = Depends(get_db)):
     les routes de mesure l'acceptent, et ses mensurations lui sont renvoyees
     en partie seulement.
     """
+    rate_limit.check("guest_ip", rate_limit.client_ip(request))
     user = User(
         role=UserRole.client,
         # Identifiant interne unique, impossible a saisir comme numero de
@@ -149,14 +159,18 @@ def _transfer_guest_measurements(db: Session, guest: User, target: User) -> None
 
 @router.post("/register", response_model=TokenOut)
 def register(payload: RegisterIn, request: Request, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.phone == payload.phone).first():
+    rate_limit.check("register_ip", rate_limit.client_ip(request))
+    phone = normalize_phone(payload.phone)
+    if not phone:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indiquez un numéro de téléphone")
+    if db.query(User).filter(User.phone == phone).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "Phone already registered")
 
     guest = _guest_from_token(payload.guest_token, db) if payload.role == UserRole.client else None
     if guest:
         # Conversion sur place : le profil client, la session et les mesures
         # restent attaches au meme identifiant, rien n'est a transferer.
-        guest.phone = payload.phone
+        guest.phone = phone
         guest.email = payload.email
         guest.password_hash = hash_password(payload.password)
         guest.full_name = payload.full_name
@@ -178,7 +192,7 @@ def register(payload: RegisterIn, request: Request, db: Session = Depends(get_db
 
     user = User(
         role=payload.role,
-        phone=payload.phone,
+        phone=phone,
         email=payload.email,
         password_hash=hash_password(payload.password),
         full_name=payload.full_name,
@@ -210,7 +224,11 @@ def register(payload: RegisterIn, request: Request, db: Session = Depends(get_db
 
 @router.post("/login", response_model=TokenOut)
 def login(payload: LoginIn, request: Request, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.phone == payload.phone).first()
+    # 1.5 : 10 essais par 15 min, par numero ET par IP.
+    ip = rate_limit.client_ip(request)
+    rate_limit.check("login_phone", normalize_phone(payload.phone))
+    rate_limit.check("login_ip", ip)
+    user = db.query(User).filter(User.phone == normalize_phone(payload.phone)).first()
     if not user or not verify_password(payload.password, user.password_hash):
         if user:
             activity.record_login(db, user, request, "password", success=False)
@@ -241,6 +259,7 @@ def login(payload: LoginIn, request: Request, db: Session = Depends(get_db)):
 def login_mfa(payload: MfaIn, request: Request, db: Session = Depends(get_db)):
     """Seconde etape de connexion d'un administrateur protege par la double
     authentification (13.4)."""
+    rate_limit.check("mfa_token", payload.mfa_token)
     data = decode_token(payload.mfa_token)
     if not data or data.get("type") != "mfa":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Étape de connexion expirée, recommencez")
@@ -293,13 +312,16 @@ def logout(payload: RefreshIn, db: Session = Depends(get_db)):
 
 @router.post("/otp/request", response_model=OtpRequestOut)
 def otp_request(payload: OtpRequestIn):
-    code = generate_otp(payload.phone)
-    return OtpRequestOut(sent=True, dev_code=code)
+    phone = normalize_phone(payload.phone)
+    if not phone:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indiquez un numéro de téléphone")
+    code = generate_otp(phone)
+    return OtpRequestOut(sent=True, dev_code=code if settings.otp_dev_code else None)
 
 
 @router.post("/otp/verify")
 def otp_verify(payload: OtpVerifyIn):
-    ok = verify_otp(payload.phone, payload.code)
+    ok = verify_otp(normalize_phone(payload.phone), payload.code)
     if not ok:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or expired code")
     return {"verified": True}
@@ -307,7 +329,10 @@ def otp_verify(payload: OtpVerifyIn):
 
 @router.post("/password/reset/request", response_model=OtpRequestOut)
 def password_reset_request(payload: PasswordResetRequestIn, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.phone == payload.phone).first()
+    phone = normalize_phone(payload.phone)
+    if not phone:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indiquez un numéro de téléphone")
+    user = db.query(User).filter(User.phone == phone).first()
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No account with this phone number")
     if _role(user) == "admin":
@@ -319,15 +344,25 @@ def password_reset_request(payload: PasswordResetRequestIn, db: Session = Depend
             status.HTTP_403_FORBIDDEN,
             "Un compte administrateur se réinitialise depuis l'administration, par un super-administrateur",
         )
-    code = generate_otp(payload.phone)
+    if not settings.otp_dev_code:
+        # 1.3 : plus de reinitialisation en libre-service en production. Le
+        # code ne peut pas etre remis a l'ecran (prise de controle de compte)
+        # et aucun SMS n'est envoye : on ferme la route et on renvoie vers le
+        # support, qui cree un mot de passe provisoire (fonction 2.6).
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, RESET_DISABLED_MESSAGE)
+    code = generate_otp(phone)
     return OtpRequestOut(sent=True, dev_code=code)
 
 
 @router.post("/password/reset/confirm", response_model=TokenOut)
 def password_reset_confirm(payload: PasswordResetConfirmIn, db: Session = Depends(get_db)):
-    if not verify_otp(payload.phone, payload.code):
+    if not settings.otp_dev_code:
+        # Sans code remis ni SMS, cette route ne doit pas non plus rester
+        # ouverte : la reinitialisation en libre-service est fermee (1.3).
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, RESET_DISABLED_MESSAGE)
+    if not verify_otp(normalize_phone(payload.phone), payload.code):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or expired code")
-    user = db.query(User).filter(User.phone == payload.phone).first()
+    user = db.query(User).filter(User.phone == normalize_phone(payload.phone)).first()
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No account with this phone number")
     if _role(user) == "admin":

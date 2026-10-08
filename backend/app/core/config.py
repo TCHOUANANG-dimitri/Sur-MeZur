@@ -27,6 +27,15 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173"
 
+    # --- Reinitialisation par code (OTP) -----------------------------------
+    # Aucune passerelle SMS n'est branchee. En developpement, OTP_DEV_CODE=true
+    # renvoie le code dans la reponse pour pouvoir tester le parcours. En
+    # production, false : aucun code n'est jamais renvoye et la reinitialisation
+    # de mot de passe en libre-service est fermee (503, « contactez le
+    # support ») ; le secours est le mot de passe provisoire cree par un
+    # administrateur (fonction 2.6).
+    otp_dev_code: bool = False
+
     upload_dir: str = "./uploads"
 
     # --- Chaîne de mesure par vision ---------------------------------------

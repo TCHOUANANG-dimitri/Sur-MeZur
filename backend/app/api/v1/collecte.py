@@ -28,6 +28,7 @@ from starlette.background import BackgroundTask
 from app.core.config import settings
 from app.core.deps import get_db, require_roles
 from app.services.admin_perms import require_perm
+from app.services.phone import normalize_phone
 from app.core.security import hash_password
 from app.models.collecte import DatasetPhoto, DatasetSubject
 from app.models.enums import UserRole
@@ -527,7 +528,9 @@ def list_collectors(db: Session = Depends(get_db), user: User = Depends(require_
 
 @router.post("/collectors", response_model=CollectorOut, status_code=status.HTTP_201_CREATED)
 def create_collector(payload: CollectorCreateIn, db: Session = Depends(get_db), user: User = Depends(require_admin)):
-    phone = payload.phone.strip()
+    phone = normalize_phone(payload.phone)
+    if not phone:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indiquez un numéro de téléphone")
     if db.query(User).filter(User.phone == phone).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "Un compte existe déjà avec ce numéro")
     collector = User(
