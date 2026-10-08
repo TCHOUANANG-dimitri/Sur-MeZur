@@ -33,7 +33,8 @@ class MeasurementSessionOut(ORMModel):
 
 class MeasurementOut(ORMModel):
     id: str
-    client_id: str
+    client_id: str | None = None
+    tailor_client_id: str | None = None
     source: MeasurementSource
     version: int
     height_cm: float

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.enums import (
     ChatMessageType,
@@ -26,8 +26,9 @@ class OrderCreateIn(BaseModel):
     client_notes: str | None = None
     reception_mode: ReceptionMode
     desired_date: date | None = None
-    first_offer_amount: float
-    delay_days: int | None = None
+    # A2.2 : budget indicatif (facultatif). Plus aucune offre ni acompte :
+    # le prix convenu est fixe par le tailleur lors de l'acceptation.
+    budget_amount: float | None = None
     priority: OrderPriority = OrderPriority.normal
 
 
@@ -48,6 +49,10 @@ class OrderOut(ORMModel):
     desired_date: date | None
     agreed_price: float | None
     delivery_fee: float | None
+    budget_amount: float | None = None
+    decline_reason: str | None = None
+    cancelled_by: str | None = None
+    cancelled_at: datetime | None = None
     current_offer_round: int
     dispute_status: str | None
     dispute_note: str | None
@@ -59,6 +64,22 @@ class OrderOut(ORMModel):
 
 class OrderStatusIn(BaseModel):
     status: OrderStatus
+
+
+class OrderAcceptIn(BaseModel):
+    """A2.2 — le tailleur accepte la commande et fixe le prix convenu (pur
+    element d'information, aucun paiement n'est declenche)."""
+
+    agreed_price: float | None = None
+    delivery_fee: float | None = None
+
+
+class OrderDeclineIn(BaseModel):
+    reason: str = Field(min_length=2, max_length=1000)
+
+
+class OrderCancelIn(BaseModel):
+    reason: str = Field(min_length=2, max_length=1000)
 
 
 class OfferCreateIn(BaseModel):

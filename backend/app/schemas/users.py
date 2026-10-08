@@ -63,6 +63,10 @@ class TailorProfileOut(ORMModel):
     city: str | None
     quartier: str | None
     verification_status: VerificationStatus
+    # A2.1 : la verification est desactivable. Le front cache alors les
+    # badges « verifie » (le statut technique reste expose, mais n'est plus
+    # une garantie). Peuple par les routes publiques.
+    verification_enabled: bool = True
     rating_avg: float
     completed_orders_count: int
     avg_response_minutes: int

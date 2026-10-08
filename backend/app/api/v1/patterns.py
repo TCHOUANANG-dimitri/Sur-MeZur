@@ -12,6 +12,7 @@ from app.models.misc import Pattern
 from app.models.payments import Payment
 from app.schemas.misc import PatternOut
 from app.services.mock_ai import generate_pattern_svg
+from app.services.platform_settings import get_setting as get_platform_setting
 
 router = APIRouter(prefix="/orders/{order_id}/pattern", tags=["patterns"])
 
@@ -23,17 +24,21 @@ def get_pattern(
     order, _ = order_and_user
 
     # RG-07: le patron n'est transmis qu'après validation + versement des 70 %.
-    deposit_paid = (
-        db.query(Payment)
-        .filter(
-            Payment.order_id == order.id,
-            Payment.phase == PaymentPhase.deposit_70,
-            Payment.status == PaymentStatus.paid,
+    # Depuis A2.2 (plus d'argent dans la plateforme), cette condition ne
+    # s'applique plus tant que `features.payments=false`.
+    pays_enabled = bool((get_platform_setting("features") or {}).get("payments", False))
+    if pays_enabled:
+        deposit_paid = (
+            db.query(Payment)
+            .filter(
+                Payment.order_id == order.id,
+                Payment.phase == PaymentPhase.deposit_70,
+                Payment.status == PaymentStatus.paid,
+            )
+            .first()
         )
-        .first()
-    )
-    if not deposit_paid:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Pattern released only after the deposit is paid")
+        if not deposit_paid:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Pattern released only after the deposit is paid")
 
     existing = db.query(Pattern).filter(Pattern.order_id == order.id).first()
     if existing:

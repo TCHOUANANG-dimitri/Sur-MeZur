@@ -12,8 +12,17 @@ from app.services.storage import save_upload
 from app.models.users import ClientProfile, TailorProfile, User
 from pydantic import BaseModel
 
-from app.schemas.orders import OrderCreateIn, OrderOut, OrderStatusIn
+from app.schemas.orders import (
+    OrderAcceptIn,
+    OrderCancelIn,
+    OrderCreateIn,
+    OrderDeclineIn,
+    OrderOut,
+    OrderStatusIn,
+)
+from app.services.activity import utcnow
 from app.services.notify import notify
+from app.services.platform_settings import get_setting as get_platform_setting
 
 
 class DisputeOpenIn(BaseModel):
@@ -35,6 +44,19 @@ class FitFeedbackIn(BaseModel):
 
 DISPUTE_CATEGORIES = {"retard", "mesures", "qualite", "non_livraison", "paiement", "communication", "autre"}
 FIT_RESULTS = {"good", "alteration", "too_tight", "too_loose"}
+
+# A2.2 — parcours simple sans negociation : le tailleur avance la commande
+# d'un statut a l'autre. L'acceptation et le refus passent par des routes
+# dediees (/accept, /decline) ; l'admin garde toute liberte sur /status.
+_ALLOWED_TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
+    OrderStatus.new: {OrderStatus.in_progress},
+    OrderStatus.in_progress: {OrderStatus.ready_for_pickup},
+    OrderStatus.ready_for_pickup: {OrderStatus.finished_delivered, OrderStatus.finished_not_delivered},
+    OrderStatus.finished_not_delivered: {OrderStatus.finished_delivered},
+    OrderStatus.finished_delivered: set(),
+    OrderStatus.cancelled: set(),
+    OrderStatus.declined: set(),
+}
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -66,29 +88,101 @@ def create_order(
         priority=payload.priority,
         reception_mode=payload.reception_mode,
         desired_date=payload.desired_date,
+        budget_amount=payload.budget_amount,
         current_offer_round=1,
     )
     db.add(order)
     db.flush()
 
-    # RG-05: c'est le client qui fait la première offre.
-    db.add(
-        Offer(
-            order_id=order.id,
-            actor=OfferActor.client,
-            round=1,
-            amount=payload.first_offer_amount,
-            delay_days=payload.delay_days,
-            status=OfferStatus.pending,
-            expires_at=offer_expiry(),
+    features = get_platform_setting("features") or {}
+    if features.get("negotiation", False):
+        # Ancien parcours (negociation) : le client fait la premiere offre.
+        db.add(
+            Offer(
+                order_id=order.id,
+                actor=OfferActor.client,
+                round=1,
+                amount=payload.budget_amount or 0,
+                status=OfferStatus.pending,
+                expires_at=offer_expiry(),
+            )
         )
-    )
     notify(
         db,
         tailor.user_id,
         "order_received",
-        {"order_id": order.id, "amount": payload.first_offer_amount},
+        {"order_id": order.id, "budget_amount": payload.budget_amount},
     )
+    db.commit()
+    db.refresh(order)
+    return order
+
+
+@router.post("/{order_id}/accept", response_model=OrderOut)
+def accept_order(
+    payload: OrderAcceptIn = OrderAcceptIn(),
+    order_and_user: tuple = Depends(require_order_participant),
+    db: Session = Depends(get_db),
+):
+    """A2.2 — le tailleur accepte une commande en attente et fixe le prix
+    convenu (element d'information, sans aucun paiement)."""
+    order, user = order_and_user
+    if user.role != "tailor":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Seul le tailleur peut accepter la commande")
+    if order.status != OrderStatus.new:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cette commande n'est plus en attente")
+    order.status = OrderStatus.in_progress
+    order.agreed_price = payload.agreed_price
+    order.delivery_fee = payload.delivery_fee
+    client = db.get(ClientProfile, order.client_id)
+    if client:
+        notify(db, client.user_id, "order_accepted", {"order_id": order.id, "agreed_price": payload.agreed_price})
+    db.commit()
+    db.refresh(order)
+    return order
+
+
+@router.post("/{order_id}/decline", response_model=OrderOut)
+def decline_order(
+    payload: OrderDeclineIn,
+    order_and_user: tuple = Depends(require_order_participant),
+    db: Session = Depends(get_db),
+):
+    """A2.2 — le tailleur refuse une commande en attente, avec une raison."""
+    order, user = order_and_user
+    if user.role != "tailor":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Seul le tailleur peut refuser la commande")
+    if order.status != OrderStatus.new:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cette commande n'est plus en attente")
+    order.status = OrderStatus.declined
+    order.decline_reason = payload.reason
+    client = db.get(ClientProfile, order.client_id)
+    if client:
+        notify(db, client.user_id, "order_declined", {"order_id": order.id, "reason": payload.reason})
+    db.commit()
+    db.refresh(order)
+    return order
+
+
+@router.post("/{order_id}/cancel", response_model=OrderOut)
+def cancel_order(
+    payload: OrderCancelIn,
+    order_and_user: tuple = Depends(require_order_participant),
+    db: Session = Depends(get_db),
+):
+    """A2.2 — le client annule sa commande tant qu'elle est en attente."""
+    order, user = order_and_user
+    if user.role not in ("client", "admin"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Seul le client (ou un administrateur) peut annuler")
+    if order.status != OrderStatus.new:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cette commande n'est plus en attente")
+    order.status = OrderStatus.cancelled
+    order.cancel_reason = payload.reason
+    order.cancelled_by = user.role.value if hasattr(user.role, "value") else user.role
+    order.cancelled_at = utcnow()
+    tailor = db.get(TailorProfile, order.tailor_id)
+    if user.role == "client" and tailor:
+        notify(db, tailor.user_id, "order_cancelled", {"order_id": order.id})
     db.commit()
     db.refresh(order)
     return order
@@ -128,7 +222,16 @@ def set_order_status(
     if user.role not in ("tailor", "admin"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the tailor can update order status")
 
-    previous = order.status
+    previous = order.status if isinstance(order.status, OrderStatus) else OrderStatus(order.status)
+    # A2.2 : parcours en escalier sans negociation. L'acceptation et le refus
+    # passent par les routes dediees ; l'admin, lui, reste libre de tout
+    # rattrapage de statut (annulation, remboursement, correction).
+    if payload.status != previous and user.role != "admin":
+        if payload.status not in _ALLOWED_TRANSITIONS.get(previous, set()):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"Transition {previous.value} -> {payload.status.value} impossible",
+            )
     order.status = payload.status
 
     # Keep the client informed of every step the tailor takes, not just pickup:

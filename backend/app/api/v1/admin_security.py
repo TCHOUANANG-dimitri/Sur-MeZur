@@ -302,6 +302,7 @@ SETTING_LABELS = {
     "tailor_quality": "Seuils d'alerte qualité des tailleurs",
     "collecte_target": "Objectifs de la campagne de collecte",
     "signup_source_question": "Question « Comment nous avez-vous connu ? »",
+    "features": "Fonctionnalités (vérification tailleurs, paiements, négociation, patrons)",
 }
 
 

@@ -9,9 +9,16 @@ from app.models.users import TailorProfile, User, VerificationDocument
 from app.schemas.users import TailorProfileOut, TailorProfilePublicOut, VerificationDocumentOut
 from app.services.geo import haversine_km
 from app.services.notify import notify
+from app.services.platform_settings import get_setting as get_platform_setting
 from app.services.storage import save_upload
 
 router = APIRouter(prefix="/tailors", tags=["tailors"])
+
+
+def _verification_enabled() -> bool:
+    """A2.1 : la verification des tailleurs est desactivable. Quand elle est
+    desactivee, ni le badge ni le statut ne sont exposes comme une garantie."""
+    return bool((get_platform_setting("features") or {}).get("tailor_verification", False))
 
 
 @router.post("/verification", response_model=TailorProfileOut)
@@ -108,6 +115,7 @@ def search_tailors(
     results = []
     for t in tailors:
         item = TailorProfilePublicOut.model_validate(t)
+        item.verification_enabled = _verification_enabled()
         if lat is not None and lng is not None and t.lat is not None and t.lng is not None:
             item.distance_km = haversine_km(lat, lng, t.lat, t.lng)
         results.append(item)
@@ -127,7 +135,12 @@ def search_tailors(
 def get_my_tailor_profile(
     user: User = Depends(require_roles("tailor")), db: Session = Depends(get_db)
 ):
-    return db.query(TailorProfile).filter(TailorProfile.user_id == user.id).first()
+    tp = db.query(TailorProfile).filter(TailorProfile.user_id == user.id).first()
+    if not tp:
+        return None
+    out = TailorProfileOut.model_validate(tp)
+    out.verification_enabled = _verification_enabled()
+    return out
 
 
 @router.get("/{tailor_id}", response_model=TailorProfileOut)
@@ -140,4 +153,6 @@ def get_tailor(tailor_id: str, db: Session = Depends(get_db)):
     tailor = db.get(TailorProfile, tailor_id)
     if not tailor:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor not found")
-    return tailor
+    out = TailorProfileOut.model_validate(tailor)
+    out.verification_enabled = _verification_enabled()
+    return out

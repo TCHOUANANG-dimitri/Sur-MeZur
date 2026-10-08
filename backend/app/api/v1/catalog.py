@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.core.deps import get_current_user_optional, get_db, require_roles
 from app.services.storage import save_upload
+from app.services.platform_settings import get_setting as get_platform_setting
 from app.models.catalog import Accessory, Category, Fabric, GarmentModel, GarmentModelLike, ReadyToWear
 from app.models.enums import VerificationStatus
 from app.models.measurements import Measurement
@@ -308,7 +309,10 @@ def create_ready_to_wear(
     tailor = db.query(TailorProfile).filter(TailorProfile.user_id == user.id).first()
     if not tailor:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor profile not found")
-    if tailor.verification_status != VerificationStatus.approved:
+    # A2.1 : quand la verification est desactivee, le statut du profil (resté
+    # "pending" par defaut pour les nouveaux comptes) ne bloque plus rien.
+    verification_requise = bool((get_platform_setting("features") or {}).get("tailor_verification", False))
+    if verification_requise and tailor.verification_status != VerificationStatus.approved:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             "Seuls les tailleurs vérifiés peuvent publier du prêt-à-porter.",

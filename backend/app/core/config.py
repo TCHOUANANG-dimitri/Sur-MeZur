@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # administrateur (fonction 2.6).
     otp_dev_code: bool = False
 
+    # --- Webhook de paiement -------------------------------------------------
+    # Secret HMAC-SHA256 du webhook (A2.2). Tant qu'il est vide, le webhook
+    # reste introuvable meme quand `features.payments` sera rallume.
+    payment_webhook_secret: str = ""
+
     upload_dir: str = "./uploads"
 
     # --- Chaîne de mesure par vision ---------------------------------------

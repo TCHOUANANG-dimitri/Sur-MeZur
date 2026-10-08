@@ -15,8 +15,9 @@ from app.core.security import (
     verify_password,
 )
 from app.models.admin import AdminSession
-from app.models.enums import UserRole
+from app.models.enums import MeasurementSource, UserRole
 from app.models.measurements import Measurement, MeasurementSession
+from app.models.tailor_tools import TailorClient, TailorClientMeasurement
 from app.models.users import ClientProfile, TailorProfile, User
 from app.schemas.auth import (
     LoginIn,
@@ -166,7 +167,59 @@ def register(payload: RegisterIn, request: Request, db: Session = Depends(get_db
     if db.query(User).filter(User.phone == phone).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "Phone already registered")
 
-    guest = _guest_from_token(payload.guest_token, db) if payload.role == UserRole.client else None
+    guest = _guest_from_token(payload.guest_token, db) if payload.role in (UserRole.client, UserRole.tailor) else None
+    if guest and payload.role == UserRole.tailor:
+        # A2.3 : un tailleur qui a pris ses mesures en invite devient tailleur
+        # depuis le web. Le profil client est conserve, un profil tailleur est
+        # cree, et la mesure d'essai rejoint son carnet (« Moi (mesure
+        # d'essai) »).
+        guest.phone = phone
+        guest.role = UserRole.tailor
+        guest.email = payload.email
+        guest.password_hash = hash_password(payload.password)
+        guest.full_name = payload.full_name
+        guest.language = payload.language
+        guest.photo_consent = payload.photo_consent
+        guest.is_guest = False
+        guest.city = payload.city
+        guest.signup_platform = activity.platform_of(request)
+        guest.guest_converted_at = activity.utcnow()
+        guest.created_at = activity.utcnow()
+        tp = TailorProfile(
+            user_id=guest.id,
+            tailor_type="individual",
+            shop_name=(payload.shop_name or payload.full_name or "").strip() or payload.full_name,
+            city=payload.city,
+            quartier=payload.quartier,
+        )
+        db.add(tp)
+        db.flush()
+        moi = TailorClient(
+            tailor_id=tp.id,
+            full_name="Moi (mesure d'essai)",
+            phone=phone,
+            notes="Mesure d'essai prise en invité avant l'inscription.",
+        )
+        db.add(moi)
+        db.flush()
+        guest_profile = db.query(ClientProfile).filter(ClientProfile.user_id == guest.id).first()
+        trial = db.get(Measurement, guest_profile.default_measurement_id) if guest_profile and guest_profile.default_measurement_id else None
+        if trial:
+            moi.gender = trial.gender
+            db.add(TailorClientMeasurement(
+                tailor_client_id=moi.id,
+                measurement_id=trial.id,
+                data=dict(trial.data or {}),
+                source="photo" if trial.source == MeasurementSource.ai else "manual",
+                height_cm=trial.height_cm,
+                weight_kg=trial.weight_kg,
+                note="Mesure d'essai reprise du compte invité.",
+            ))
+        capture_acquisition(db, guest, payload.acquisition, guest.signup_platform)
+        activity.record_login(db, guest, request, "register")
+        db.commit()
+        db.refresh(guest)
+        return _issue_token(guest, db, request)
     if guest:
         # Conversion sur place : le profil client, la session et les mesures
         # restent attaches au meme identifiant, rien n'est a transferer.
@@ -212,7 +265,7 @@ def register(payload: RegisterIn, request: Request, db: Session = Depends(get_db
         db.add(TailorProfile(
             user_id=user.id,
             tailor_type="individual",
-            shop_name=payload.full_name,
+            shop_name=(payload.shop_name or payload.full_name or "").strip() or payload.full_name,
             city=payload.city,
             quartier=payload.quartier,
         ))

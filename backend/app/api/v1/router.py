@@ -30,6 +30,7 @@ from app.api.v1 import (
     reviews,
     support,
     tailors,
+    tailor_space,
     tryon,
     users,
 )
@@ -39,6 +40,7 @@ api_router.include_router(auth.router)
 api_router.include_router(users.router)
 api_router.include_router(tailors.router)
 api_router.include_router(measurements.router)
+api_router.include_router(tailor_space.router)
 api_router.include_router(avatars.router)
 api_router.include_router(catalog.router)
 api_router.include_router(tryon.router)

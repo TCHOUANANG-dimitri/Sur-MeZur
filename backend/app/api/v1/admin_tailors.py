@@ -205,7 +205,9 @@ def set_featured(tailor_id: str, payload: FeaturedIn, request: Request, db: Sess
                  admin: User = Depends(require_perm("tailors"))):
     """3.7 — tailleur recommande, en tete de la recherche."""
     tp = get_or_404(db, TailorProfile, tailor_id, "Tailleur")
-    if payload.is_featured and str(getattr(tp.verification_status, "value", tp.verification_status)) != "approved":
+    # A2.1 : sans verification activee, la mise en avant ne depend pas du statut.
+    verified_required = bool((get_setting("features") or {}).get("tailor_verification", False))
+    if payload.is_featured and verified_required and str(getattr(tp.verification_status, "value", tp.verification_status)) != "approved":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Seul un tailleur vérifié peut être mis en avant")
     tp.is_featured = payload.is_featured
     tp.featured_rank = payload.rank if payload.is_featured else None

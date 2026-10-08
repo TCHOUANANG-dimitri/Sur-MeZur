@@ -39,6 +39,14 @@ class Order(Base, IDMixin, TimestampMixin):
     desired_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     agreed_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     delivery_fee: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    # A2.2 — budget indicatif communique par le client a l'envoi de la
+    # commande. Ce n'est ni une offre engageante ni un paiement : le tailleur
+    # fixe le prix convenu (`agreed_price`) en acceptant la commande.
+    budget_amount: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    # A2.2 — refus du tailleur et annulation par le client.
+    decline_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    cancelled_by: Mapped[str | None] = mapped_column(String(16), nullable=True)  # client | team | admin
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     current_offer_round: Mapped[int] = mapped_column(Integer, default=1)
     dispute_status: Mapped[str | None] = mapped_column(String(24), nullable=True)
     dispute_note: Mapped[str | None] = mapped_column(String(2000), nullable=True)

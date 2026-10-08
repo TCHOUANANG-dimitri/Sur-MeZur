@@ -1,6 +1,11 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+import hashlib
+import hmac
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.api.v1.order_helpers import require_order_participant
+from app.core.config import settings
 from app.core.deps import get_db, require_roles
 from app.models.enums import PaymentPhase, PaymentStatus
 from app.models.orders import Order, Quote
@@ -15,8 +20,22 @@ from app.services.payment_provider import (
     finalize_deposit,
     get_provider,
 )
+from app.services.platform_settings import get_setting as get_platform_setting
 
-router = APIRouter(prefix="/payments", tags=["payments"])
+
+def require_payments_enabled() -> None:
+    """A2.2 : plus aucune transaction d'argent dans la plateforme pour
+    l'instant (features.payments=false). Tout /payments/* repond 404 ;
+    le code reste intact pour une reactivation laterale."""
+    if not (get_platform_setting("features") or {}).get("payments", False):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Paiements désactivés")
+
+
+router = APIRouter(
+    prefix="/payments",
+    tags=["payments"],
+    dependencies=[Depends(require_payments_enabled)],
+)
 
 
 @router.post("/deposit", response_model=PaymentOut)
@@ -100,22 +119,38 @@ def initiate_balance(
 
 
 @router.get("/order/{order_id}", response_model=list[PaymentOut])
-def list_order_payments(order_id: str, db: Session = Depends(get_db)):
-    return db.query(Payment).filter(Payment.order_id == order_id).all()
+def list_order_payments(order_and_user: tuple = Depends(require_order_participant), db: Session = Depends(get_db)):
+    order, _ = order_and_user
+    return db.query(Payment).filter(Payment.order_id == order.id).all()
 
 
 @router.get("/order/{order_id}/split", response_model=PaymentSplitOut)
-def get_payment_split(order_id: str, db: Session = Depends(get_db)):
-    split = db.query(PaymentSplit).filter(PaymentSplit.order_id == order_id).first()
+def get_payment_split(order_and_user: tuple = Depends(require_order_participant), db: Session = Depends(get_db)):
+    order, _ = order_and_user
+    split = db.query(PaymentSplit).filter(PaymentSplit.order_id == order.id).first()
     if not split:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No payment split yet")
     return split
 
 
 @router.post("/webhook", response_model=PaymentOut)
-def payment_webhook(payload: WebhookIn, db: Session = Depends(get_db)):
-    """Real-PSP-shaped callback endpoint. Also usable to finalize a sandbox
-    payment immediately instead of waiting for the background simulation."""
+async def payment_webhook(request: Request, db: Session = Depends(get_db)):
+    """Callback de fournisseur de paiement, protege par signature HMAC-SHA256
+    (en-tete X-SurMeZur-Signature, secret PAYMENT_WEBHOOK_SECRET).
+
+    La route reste hors service tant que `features.payments=false` (le router
+    la bloque) et tant qu'aucun secret n'est configure : on ne peut donc pas la
+    rejouer pour falsifier un paiement avant la reactivation reelle."""
+    secret = settings.payment_webhook_secret
+    if not secret:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Paiements désactivés")
+    raw = await request.body()
+    provided = request.headers.get("x-surmezur-signature", "")
+    expected = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(provided, expected):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Signature invalide")
+    payload = WebhookIn.model_validate_json(raw)
+
     payment = db.query(Payment).filter(Payment.provider_txn_ref == payload.provider_txn_ref).first()
     if not payment:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")

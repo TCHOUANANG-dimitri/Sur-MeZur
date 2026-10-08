@@ -57,6 +57,8 @@ class OrderStatus(str, enum.Enum):
     finished_not_delivered = "finished_not_delivered"
     # 5.4 : annulee par l'equipe, motif dans `orders.cancel_reason`.
     cancelled = "cancelled"
+    # A2.2 : le tailleur refuse la commande (raison dans `orders.decline_reason`).
+    declined = "declined"
 
 
 class OrderPriority(str, enum.Enum):

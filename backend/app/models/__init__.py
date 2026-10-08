@@ -45,6 +45,13 @@ from app.models.operations import (
 )
 from app.models.orders import ChatMessage, Modification, Offer, Order, Quote
 from app.models.payments import CommissionTier, Payment, PaymentSplit
+from app.models.tailor_tools import (
+    TailorClient,
+    TailorClientMeasurement,
+    TailorJob,
+    TailorPatternRequest,
+    TailorShareToken,
+)
 from app.models.users import ClientProfile, TailorProfile, User, VerificationDocument
 
 __all__ = [
@@ -91,6 +98,11 @@ __all__ = [
     "ReviewReport",
     "SupportMessage",
     "SupportTicket",
+    "TailorClient",
+    "TailorClientMeasurement",
+    "TailorJob",
+    "TailorPatternRequest",
+    "TailorShareToken",
     "TailorPayout",
     "TailorProfile",
     "TryonSession",

@@ -56,9 +56,19 @@ DEFAULTS: dict[str, Any] = {
     "collecte_target": {"total": 300, "minimum": 150, "female_share": 0.5},
     # 14.9 — question « Comment nous avez-vous connu ? » a l'inscription.
     "signup_source_question": True,
+    # A2 — orientation produit : bascules de fonctionnalite, lues par
+    # /api/public/config dans la cle `features`. Elles permettent de rallumer
+    # un service plus tard sans toucher au code.
+    "features": {
+        "tailor_verification": False,
+        "payments": False,
+        "negotiation": False,
+        # "off" | "preview" | "on"  (A2.4 : moteur « preview-v0 » pour l'instant)
+        "pattern_generation": "preview",
+    },
 }
 
-PUBLIC_KEYS = {"banner", "maintenance", "cities", "signup_source_question"}
+PUBLIC_KEYS = {"banner", "maintenance", "cities", "signup_source_question", "features"}
 
 _TTL = 10.0
 _cache: dict[str, tuple[float, Any]] = {}

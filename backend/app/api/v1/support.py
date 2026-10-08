@@ -5,6 +5,8 @@ maintenance, pages d'information, canaux d'acquisition).
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_
@@ -15,7 +17,8 @@ from app.core.deps import get_current_user, get_current_user_optional, get_db, r
 from app.models.acquisition import AcquisitionChannel
 from app.models.admin import InfoPage, SupportMessage, SupportTicket
 from app.models.orders import Order
-from app.models.users import User
+from app.models.tailor_tools import TailorClient, TailorClientMeasurement, TailorShareToken
+from app.models.users import TailorProfile, User
 from app.services import audit
 from app.services.activity import utcnow
 from app.services.admin_perms import has_perm, require_perm
@@ -71,6 +74,45 @@ def public_page(slug: str, db: Session = Depends(get_db)):
 @public_router.get("/public/pages")
 def public_pages(db: Session = Depends(get_db)):
     return [{"slug": p.slug, "title": p.title} for p in db.query(InfoPage).filter(InfoPage.published.is_(True)).order_by(InfoPage.slug)]
+
+
+@public_router.get("/public/fiches/{token}")
+def public_sheet(token: str, db: Session = Depends(get_db)):
+    """A2.3 — fiche de mesures partagee par un tailleur : lecture seule,
+    sans compte, 30 jours. Un jeton expire repond 410 (plus : « lien expire »)."""
+    share = db.query(TailorShareToken).filter(TailorShareToken.token == token).first()
+    if not share:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Lien inconnu")
+    if share.expires_at and share.expires_at.replace(tzinfo=None) < datetime.now(timezone.utc).replace(tzinfo=None):
+        raise HTTPException(status.HTTP_410_GONE, "Ce lien a expiré, demandez-en un nouveau à votre tailleur")
+    client = db.get(TailorClient, share.tailor_client_id)
+    if not client or not client.is_active:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Fiche indisponible")
+    tailor = db.get(TailorProfile, share.tailor_id)
+    rows = (
+        db.query(TailorClientMeasurement)
+        .filter(TailorClientMeasurement.tailor_client_id == client.id)
+        .order_by(TailorClientMeasurement.created_at.desc())
+        .limit(10)
+        .all()
+    )
+    return {
+        "full_name": client.full_name,
+        "gender": client.gender,
+        "shop_name": tailor.shop_name if tailor else None,
+        "measurements": [
+            {
+                "data": m.data,
+                "source": m.source,
+                "height_cm": m.height_cm,
+                "weight_kg": m.weight_kg,
+                "note": m.note,
+                "created_at": iso(m.created_at),
+            }
+            for m in rows
+        ],
+        "expires_at": iso(share.expires_at),
+    }
 
 
 class TicketIn(BaseModel):

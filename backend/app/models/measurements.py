@@ -15,8 +15,17 @@ class MeasurementSession(Base, IDMixin, TimestampMixin):
 
     __tablename__ = "measurement_sessions"
 
-    client_id: Mapped[str] = mapped_column(ForeignKey("client_profiles.id"))
+    # Nullable depuis A2.3 : une session de mesure du carnet du tailleur n'a
+    # pas de fiche client plateforme.
+    client_id: Mapped[str | None] = mapped_column(
+        ForeignKey("client_profiles.id"), nullable=True
+    )
     status: Mapped[JobStatus] = mapped_column(String(16), default=JobStatus.processing)
+    # A2.3 — mesure par photo pour un client du carnet du tailleur : la
+    # session n'est alors rattachee a aucune fiche client plateforme.
+    tailor_client_id: Mapped[str | None] = mapped_column(
+        ForeignKey("tailor_clients.id"), nullable=True
+    )
     height_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     gender: Mapped[str | None] = mapped_column(String(16), nullable=True)
@@ -35,7 +44,14 @@ class MeasurementSession(Base, IDMixin, TimestampMixin):
 class Measurement(Base, IDMixin, TimestampMixin):
     __tablename__ = "measurements"
 
-    client_id: Mapped[str] = mapped_column(ForeignKey("client_profiles.id"))
+    # Nullable depuis A2.3 : une mesure liee a un client du carnet du tailleur
+    # n'a pas de fiche client plateforme.
+    client_id: Mapped[str | None] = mapped_column(
+        ForeignKey("client_profiles.id"), nullable=True
+    )
+    tailor_client_id: Mapped[str | None] = mapped_column(
+        ForeignKey("tailor_clients.id"), nullable=True
+    )
     source: Mapped[MeasurementSource] = mapped_column(String(20))
     version: Mapped[int] = mapped_column(Integer, default=1)
     height_cm: Mapped[float] = mapped_column(Float)

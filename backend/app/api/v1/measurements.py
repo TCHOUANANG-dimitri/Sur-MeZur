@@ -20,6 +20,7 @@ from app.core.deps import get_db, require_client_or_guest, require_roles
 from app.db.base import SessionLocal
 from app.models.enums import JobStatus, MeasurementSource
 from app.models.measurements import Measurement, MeasurementSession
+from app.models.tailor_tools import TailorClientMeasurement
 from app.models.users import ClientProfile, User
 from app.schemas.measurements import (
     MeasurementOut,
@@ -28,7 +29,6 @@ from app.schemas.measurements import (
     MeasurementSessionOut,
 )
 from app.services import vision
-from app.services.activity import platform_of
 from app.services.activity import platform_of
 from app.services.measurement_corrections import corriger_mesures, inseam_corrige
 from app.services.notify import notify
@@ -211,7 +211,10 @@ def _run_measurement_job(session_id: str) -> None:
         try:
             data, confidence, features, source = _measure(session_row)
             measurement = Measurement(
-                client_id=session_row.client_id,
+                # A2.3 : une session de carnet porte tailor_client_id et n'a
+                # pas de fiche client plateforme.
+                client_id=(session_row.client_id if not session_row.tailor_client_id else None),
+                tailor_client_id=session_row.tailor_client_id,
                 source=source,
                 version=1,
                 height_cm=session_row.height_cm,
@@ -227,7 +230,21 @@ def _run_measurement_job(session_id: str) -> None:
             session_row.status = JobStatus.ready
             session_row.finished_at = datetime.now(timezone.utc)
 
-            client = db.get(ClientProfile, session_row.client_id)
+            client = None
+            if session_row.tailor_client_id:
+                # Carnet du tailleur : la mesure alimente la fiche du client.
+                db.add(
+                    TailorClientMeasurement(
+                        tailor_client_id=session_row.tailor_client_id,
+                        measurement_id=measurement.id,
+                        data=data,
+                        source="photo",
+                        height_cm=session_row.height_cm,
+                        weight_kg=session_row.weight_kg,
+                    )
+                )
+            else:
+                client = db.get(ClientProfile, session_row.client_id)
             if client and not client.default_measurement_id:
                 client.default_measurement_id = measurement.id
             # L'analyse par vision peut prendre bien plus longtemps que ce que

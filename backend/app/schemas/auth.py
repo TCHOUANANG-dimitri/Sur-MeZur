@@ -43,6 +43,8 @@ class RegisterIn(BaseModel):
     photo_consent: bool = False
     city: str | None = None
     quartier: str | None = None
+    # A2.3 : nom de l'atelier, pour role=tailor (par defaut le nom complet).
+    shop_name: str | None = None
     # Jeton (acces ou renouvellement) du compte invite avec lequel la personne
     # a pris ses mesures : s'il est valide, ce compte est converti sur place
     # et les mesures suivent sans aucun transfert.
