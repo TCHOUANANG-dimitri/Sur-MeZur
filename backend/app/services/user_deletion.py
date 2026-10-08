@@ -20,7 +20,17 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.api.v1.avatars import _avatar_file_path
+from app.models.acquisition import AcquisitionComment, UserAcquisition
+from app.models.admin import AdminNote, AdminSession, LoginEvent, SupportMessage, SupportTicket, UserActivityDay
 from app.models.catalog import Fabric, GarmentModelLike, ReadyToWear
+from app.models.operations import (
+    DisputeMessage,
+    FitFeedback,
+    Refund,
+    ReviewReport,
+    TailorPayout,
+    VerificationEvent,
+)
 from app.models.measurements import Avatar, Measurement, MeasurementDataset, MeasurementSession, TryonSession
 from app.models.misc import Delivery, Notification, Pattern, Review
 from app.models.orders import ChatMessage, Modification, Offer, Order, Quote
@@ -35,7 +45,14 @@ def _delete_order_cascade(db: Session, order: Order) -> None:
     db.query(PaymentSplit).filter(PaymentSplit.order_id == order.id).delete(synchronize_session=False)
     db.query(Pattern).filter(Pattern.order_id == order.id).delete(synchronize_session=False)
     db.query(Delivery).filter(Delivery.order_id == order.id).delete(synchronize_session=False)
+    review_ids = [r[0] for r in db.query(Review.id).filter(Review.order_id == order.id).all()]
+    if review_ids:
+        db.query(ReviewReport).filter(ReviewReport.review_id.in_(review_ids)).delete(synchronize_session=False)
     db.query(Review).filter(Review.order_id == order.id).delete(synchronize_session=False)
+    db.query(FitFeedback).filter(FitFeedback.order_id == order.id).delete(synchronize_session=False)
+    db.query(DisputeMessage).filter(DisputeMessage.order_id == order.id).delete(synchronize_session=False)
+    db.query(Refund).filter(Refund.order_id == order.id).delete(synchronize_session=False)
+    db.query(AdminNote).filter(AdminNote.entity_id == order.id).delete(synchronize_session=False)
     db.query(Offer).filter(Offer.order_id == order.id).delete(synchronize_session=False)
     db.query(Quote).filter(Quote.order_id == order.id).delete(synchronize_session=False)
     db.query(ChatMessage).filter(ChatMessage.order_id == order.id).delete(synchronize_session=False)
@@ -57,6 +74,19 @@ def delete_user_cascade(db: Session, user: User) -> None:
     # ce même appel — l'autre partie peut avoir un compte toujours actif).
     db.query(Notification).filter(Notification.user_id == user.id).delete(synchronize_session=False)
     db.query(ChatMessage).filter(ChatMessage.sender_id == user.id).delete(synchronize_session=False)
+    # Donnees de l'administration attachees au compte (acquisition, activite,
+    # connexions, notes, demandes de support).
+    db.query(AcquisitionComment).filter(AcquisitionComment.user_id == user.id).delete(synchronize_session=False)
+    db.query(UserAcquisition).filter(UserAcquisition.user_id == user.id).delete(synchronize_session=False)
+    db.query(UserActivityDay).filter(UserActivityDay.user_id == user.id).delete(synchronize_session=False)
+    db.query(LoginEvent).filter(LoginEvent.user_id == user.id).delete(synchronize_session=False)
+    db.query(AdminSession).filter(AdminSession.user_id == user.id).delete(synchronize_session=False)
+    db.query(AdminNote).filter(AdminNote.entity_id == user.id).delete(synchronize_session=False)
+    db.query(ReviewReport).filter(ReviewReport.reporter_id == user.id).delete(synchronize_session=False)
+    ticket_ids = [t[0] for t in db.query(SupportTicket.id).filter(SupportTicket.user_id == user.id).all()]
+    if ticket_ids:
+        db.query(SupportMessage).filter(SupportMessage.ticket_id.in_(ticket_ids)).delete(synchronize_session=False)
+        db.query(SupportTicket).filter(SupportTicket.id.in_(ticket_ids)).delete(synchronize_session=False)
 
     client = db.query(ClientProfile).filter(ClientProfile.user_id == user.id).first()
     if client is not None:
@@ -103,6 +133,9 @@ def delete_user_cascade(db: Session, user: User) -> None:
             db.delete(item)
 
         db.query(Fabric).filter(Fabric.owner_tailor_id == tailor.id).delete(synchronize_session=False)
+        db.query(VerificationEvent).filter(VerificationEvent.tailor_id == tailor.id).delete(synchronize_session=False)
+        db.query(TailorPayout).filter(TailorPayout.tailor_id == tailor.id).delete(synchronize_session=False)
+        db.query(AdminNote).filter(AdminNote.entity_id == tailor.id).delete(synchronize_session=False)
 
         if tailor.atelier_photo_url:
             delete_upload(tailor.atelier_photo_url)

@@ -68,7 +68,10 @@ npm run typecheck       # tsc --noEmit
 
 Same as the backend seed data — see the root `README.md`. Quickest path:
 language screen → onboarding → "Connexion" → admin phone `+237696982953` /
-password `dimi11`. Clients and tailors register their own account from the
+password set at install time (`ADMIN_PASSWORD=... python -m app.seed`); the
+value that used to be written here was leaked in the public git history and
+must be considered dead — see `deploy/contabo/URGENCE_SECURITE.md`. Clients and
+tailors register their own account from the
 app (the password must be exactly 6 characters, including a digit and a
 letter).
 

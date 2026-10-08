@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.v1.order_helpers import (
-    NEGOTIATION_MAX_ROUNDS,
+    negotiation_max_rounds,
     offer_expiry,
     require_order_participant,
 )
@@ -21,10 +21,11 @@ def create_offer(
     db: Session = Depends(get_db),
 ):
     order, _ = order_and_user
-    if order.current_offer_round >= NEGOTIATION_MAX_ROUNDS:
+    max_rounds = negotiation_max_rounds()
+    if order.current_offer_round >= max_rounds:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "Negotiation cap reached (RG-05: max 3 propositions)",
+            f"Negotiation cap reached (RG-05: max {max_rounds} propositions)",
         )
 
     # A new counter-offer supersedes the previous pending one.

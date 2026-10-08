@@ -29,10 +29,12 @@ export function RequireRole({
     if (loading) return;
     if (!user) router.replace("/connexion");
     else if (user.is_guest) router.replace("/mesurer");
+    // 2.6 : mot de passe provisoire fixe par l'equipe, a changer d'abord.
+    else if (user.must_change_password) router.replace("/changer-mot-de-passe");
     else if (user.role !== role) router.replace("/");
   }, [loading, user, role, router]);
 
   if (loading) return <Spinner label="Chargement…" />;
-  if (!user || user.is_guest || user.role !== role) return null;
+  if (!user || user.is_guest || user.must_change_password || user.role !== role) return null;
   return <>{children}</>;
 }

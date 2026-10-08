@@ -40,6 +40,10 @@ class Review(Base, IDMixin, TimestampMixin):
     moderation_status: Mapped[ModerationStatus] = mapped_column(
         String(10), default=ModerationStatus.visible
     )
+    # 8.4 : reponse publique du tailleur, moderable (visible | hidden).
+    tailor_reply: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    tailor_reply_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reply_status: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
 
 class Notification(Base, IDMixin, TimestampMixin):

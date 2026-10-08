@@ -2,6 +2,17 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     admin,
+    admin_catalog,
+    admin_comms,
+    admin_core,
+    admin_growth,
+    admin_measure,
+    admin_orders,
+    admin_payments,
+    admin_reviews,
+    admin_security,
+    admin_tailors,
+    admin_users,
     auth,
     avatars,
     catalog,
@@ -17,6 +28,7 @@ from app.api.v1 import (
     payments,
     quotes,
     reviews,
+    support,
     tailors,
     tryon,
     users,
@@ -41,4 +53,18 @@ api_router.include_router(deliveries.router)
 api_router.include_router(reviews.router)
 api_router.include_router(notifications.router)
 api_router.include_router(admin.router)
+# Administration web (cahier des charges, modules M0 a M14).
+api_router.include_router(admin_core.router)
+api_router.include_router(admin_users.router)
+api_router.include_router(admin_tailors.router)
+api_router.include_router(admin_catalog.router)
+api_router.include_router(admin_orders.router)
+api_router.include_router(admin_payments.router)
+api_router.include_router(admin_reviews.router)
+api_router.include_router(admin_measure.router)
+api_router.include_router(admin_comms.router)
+api_router.include_router(admin_security.router)
+api_router.include_router(admin_growth.router)
+api_router.include_router(support.public_router)
+api_router.include_router(support.admin_router)
 api_router.include_router(collecte.router)

@@ -21,6 +21,8 @@ class VerificationStatus(str, enum.Enum):
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
+    # 3.4 : l'equipe attend des pieces complementaires du tailleur.
+    info_requested = "info_requested"
 
 
 class MeasurementSource(str, enum.Enum):
@@ -53,6 +55,8 @@ class OrderStatus(str, enum.Enum):
     ready_for_pickup = "ready_for_pickup"
     finished_delivered = "finished_delivered"
     finished_not_delivered = "finished_not_delivered"
+    # 5.4 : annulee par l'equipe, motif dans `orders.cancel_reason`.
+    cancelled = "cancelled"
 
 
 class OrderPriority(str, enum.Enum):

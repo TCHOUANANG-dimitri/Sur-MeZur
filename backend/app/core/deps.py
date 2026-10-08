@@ -1,6 +1,6 @@
 from collections.abc import Generator
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -19,7 +19,27 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
+def _after_auth(db: Session, user: User, payload: dict, request: Request | None) -> None:
+    """Controles et traces communs a toute requete authentifiee :
+    session administrateur (13.5) puis activite (14.3)."""
+    # Import local : ces services importent eux-memes des modeles, et ce
+    # module est importe tres tot (par tous les routeurs).
+    from app.services import activity
+    from app.services.platform_settings import get_setting
+
+    sid = payload.get("sid")
+    if sid and user.role == "admin":
+        error = activity.check_admin_session(
+            db, sid, user, request, int(get_setting("admin_idle_minutes", db) or 0)
+        )
+        if error:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, error)
+    if not activity.is_background(request):
+        activity.touch(db, user, request)
+
+
 def get_current_user(
+    request: Request,
     creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
@@ -31,10 +51,12 @@ def get_current_user(
     user = db.get(User, payload["sub"])
     if not user or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found or inactive")
+    _after_auth(db, user, payload, request)
     return user
 
 
 def get_current_user_optional(
+    request: Request,
     creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User | None:
@@ -48,6 +70,10 @@ def get_current_user_optional(
         return None
     user = db.get(User, payload["sub"])
     if not user or not user.is_active:
+        return None
+    try:
+        _after_auth(db, user, payload, request)
+    except HTTPException:
         return None
     return user
 

@@ -1,4 +1,6 @@
-from sqlalchemy import Boolean, Float, ForeignKey, Integer, Numeric, String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -26,6 +28,29 @@ class User(Base, IDMixin, TimestampMixin):
     # `server_default` est indispensable : sans lui, sync_sqlite_columns.py
     # refuse d'ajouter une colonne NOT NULL a une table deja peuplee.
     is_guest: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+
+    # --- Administration web (cahier des charges) ----------------------------
+    # 14.3 a 14.7 : derniere utilisation de la plateforme et derniere
+    # connexion. Mis a jour au plus une fois toutes les quelques minutes par
+    # `app.services.activity`, pas a chaque requete.
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # 13.1 : niveau d'un compte `admin` (super_admin | moderator | support |
+    # finance). Vide = super_admin, pour que les comptes admin existants
+    # gardent tous leurs droits.
+    admin_role: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # 2.6 : mot de passe provisoire fixe par l'equipe, a changer a la
+    # prochaine connexion.
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 13.4 : double authentification (TOTP) des administrateurs.
+    totp_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 1.7 / 14.8 : ville declaree (les tailleurs l'ont aussi sur leur profil).
+    city: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # 14.8 : support d'inscription (web | app).
+    signup_platform: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    # 1.6 : date de conversion d'un compte invite en compte inscrit.
+    guest_converted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     client_profile: Mapped["ClientProfile"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
@@ -65,6 +90,9 @@ class TailorProfile(Base, IDMixin, TimestampMixin):
     completed_orders_count: Mapped[int] = mapped_column(Integer, default=0)
     avg_response_minutes: Mapped[int] = mapped_column(Integer, default=0)
     atelier_photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # 3.7 : tailleur recommande, remonte en tete de la recherche.
+    is_featured: Mapped[bool] = mapped_column(Boolean, default=False)
+    featured_rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     user: Mapped[User] = relationship(back_populates="tailor_profile")
 

@@ -1,8 +1,14 @@
 export type UserRole = "client" | "tailor" | "admin";
 export type Language = "fr" | "en";
 export type JobStatus = "processing" | "ready" | "failed";
-export type VerificationStatus = "pending" | "approved" | "rejected";
-export type OrderStatus = "new" | "in_progress" | "finished_delivered" | "finished_not_delivered";
+export type VerificationStatus = "pending" | "approved" | "rejected" | "info_requested";
+export type OrderStatus =
+  | "new"
+  | "in_progress"
+  | "ready_for_pickup"
+  | "finished_delivered"
+  | "finished_not_delivered"
+  | "cancelled";
 export type OfferActor = "client" | "tailor";
 export type OfferStatus = "pending" | "accepted" | "refused" | "expired";
 export type ModificationStatus = "proposed" | "accepted" | "refused";
@@ -33,6 +39,9 @@ export interface User {
    *  Le serveur ne lui renvoie qu'une partie de ses mensurations. */
   is_guest?: boolean;
   created_at: string;
+  /** Mot de passe provisoire fixe par l'equipe : a changer avant de continuer. */
+  must_change_password?: boolean;
+  city?: string | null;
 }
 
 export interface TokenResponse {
@@ -41,6 +50,11 @@ export interface TokenResponse {
   token_type: string;
   user_id: string;
   role: UserRole;
+  must_change_password?: boolean;
+  /** Administrateur protege par la double authentification : le code est
+   *  demande, puis `mfa_token` s'echange contre de vrais jetons. */
+  mfa_required?: boolean;
+  mfa_token?: string | null;
 }
 
 export interface ClientProfile {

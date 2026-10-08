@@ -81,11 +81,24 @@ def list_models(
     sort: str = "recent",
     liked_only: bool = False,
     limit: int | None = None,
+    highlight: str | None = None,
+    mine: bool = False,
     user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     client = _client_profile_or_none(user, db)
     query = db.query(GarmentModel).options(joinedload(GarmentModel.category))
+    if mine:
+        # Propositions de l'auteur, quel que soit leur etat de moderation :
+        # il doit voir celles qui attendent ou ont ete refusees.
+        if not user:
+            return []
+        query = query.filter(GarmentModel.created_by == user.id)
+    else:
+        # 4.3 : le catalogue public ne montre que les modeles publies.
+        query = query.filter(GarmentModel.status == "published")
+    if highlight:
+        query = query.filter(GarmentModel.highlight == highlight)
     if category_id:
         query = query.filter(GarmentModel.category_id == category_id)
     if gender:
@@ -112,6 +125,9 @@ def list_models(
             .group_by(GarmentModel.id)
             .order_by(func.count(GarmentModelLike.id).desc())
         )
+    elif sort == "curated":
+        # 4.7 : ordre choisi par l'equipe, puis les plus recents.
+        query = query.order_by(GarmentModel.sort_order.asc(), GarmentModel.created_at.desc())
     else:
         query = query.order_by(GarmentModel.created_at.desc())
 
@@ -135,8 +151,27 @@ def get_model(
     )
     if not model:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Model not found")
+    is_author = user is not None and model.created_by == user.id
+    is_admin = user is not None and user.role == "admin"
+    if model.status != "published" and not (is_author or is_admin):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Model not found")
+    if not (is_author or is_admin):
+        # 4.8 : nombre de consultations de la fiche.
+        model.view_count = (model.view_count or 0) + 1
+        db.commit()
+        db.refresh(model)
     client = _client_profile_or_none(user, db)
     return _serialize_models([model], db, client)[0]
+
+
+@router.post("/models/{model_id}/select", status_code=status.HTTP_204_NO_CONTENT)
+def select_model(model_id: str, db: Session = Depends(get_db)):
+    """4.8 : le modele a ete retenu dans une fiche de mesures. Anonyme
+    possible : la fiche se prepare aussi sans compte."""
+    model = db.get(GarmentModel, model_id)
+    if model and model.status == "published":
+        model.select_count = (model.select_count or 0) + 1
+        db.commit()
 
 
 @router.post("/models", response_model=GarmentModelOut, status_code=status.HTTP_201_CREATED)
@@ -158,7 +193,9 @@ def create_community_model(
     """
     if not db.get(Category, payload.category_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Categorie introuvable")
-    model = GarmentModel(**payload.model_dump(), created_by=user.id)
+    # 4.3 : une proposition attend la decision de l'equipe avant d'apparaitre
+    # dans le catalogue public.
+    model = GarmentModel(**payload.model_dump(), created_by=user.id, status="pending")
     db.add(model)
     db.commit()
     db.refresh(model)
@@ -341,7 +378,9 @@ def delete_ready_to_wear(
 
 @router.get("/ready-to-wear", response_model=list[ReadyToWearOut])
 def list_ready_to_wear(tailor_id: str | None = None, db: Session = Depends(get_db)):
-    query = db.query(ReadyToWear).filter(ReadyToWear.in_stock.is_(True))
+    query = db.query(ReadyToWear).filter(
+        ReadyToWear.in_stock.is_(True), ReadyToWear.moderation_status == "published"
+    )
     if tailor_id:
         query = query.filter(ReadyToWear.tailor_id == tailor_id)
     return query.all()

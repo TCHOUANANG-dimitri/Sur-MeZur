@@ -11,8 +11,9 @@ import os
 import socket
 import sys
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
@@ -120,6 +121,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 13.8 — mode maintenance : le site renvoie 503 avec le message choisi, sauf
+# pour l'administration, la connexion et la configuration publique (que le
+# site lit pour afficher la page de maintenance).
+_MAINTENANCE_OPEN = ("/api/admin", "/api/auth", "/api/public", "/api/health", "/api/me")
+
+
+@app.middleware("http")
+async def maintenance_guard(request: Request, call_next):
+    path = request.url.path
+    if path.startswith("/api") and not path.startswith(_MAINTENANCE_OPEN) and request.method != "OPTIONS":
+        from app.services.platform_settings import get_setting
+
+        try:
+            state = get_setting("maintenance") or {}
+        except Exception:  # base indisponible : ne pas masquer la vraie erreur
+            state = {}
+        if state.get("enabled"):
+            from app.core.security import decode_token
+
+            auth = request.headers.get("authorization", "")
+            data = decode_token(auth[7:]) if auth.lower().startswith("bearer ") else None
+            if not data or data.get("role") != "admin":
+                return JSONResponse(
+                    status_code=503,
+                    content={"detail": state.get("message") or "Maintenance en cours", "maintenance": True},
+                )
+    return await call_next(request)
+
+
 app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 app.include_router(api_router, prefix="/api")
 
@@ -151,6 +181,28 @@ def _boot() -> None:
         Base.metadata.create_all(bind=engine)
     except Exception:
         logger.exception("Création du schéma impossible au démarrage")
+
+    # Donnees de depart de l'administration web : canaux d'acquisition,
+    # modeles de messages, pages d'information. Sans effet si deja presentes.
+    try:
+        from app.api.v1.admin_comms import seed_pages, seed_templates
+        from app.db.base import SessionLocal
+        from app.services.acquisition import seed_channels
+
+        with SessionLocal() as db:
+            seed_channels(db)
+            seed_templates(db)
+            seed_pages(db)
+    except Exception:
+        logger.exception("Données de départ de l'administration non créées")
+
+    # 2.7 : nettoyage quotidien des comptes invites.
+    try:
+        from app.services.account_tools import start_guest_cleanup_loop
+
+        start_guest_cleanup_loop()
+    except Exception:
+        logger.exception("Nettoyage automatique des invités non démarré")
 
     # Préchauffage MediaPipe/SAM en tâche de fond : chargé en parallèle de
     # l'ouverture du port, sans bloquer le premier client.

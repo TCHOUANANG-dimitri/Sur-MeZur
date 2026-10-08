@@ -514,7 +514,7 @@ chemin absolu.
 
 ```bash
 $ read -s -p "Mot de passe admin (6 caractères, lettres ET chiffres) : " ADMIN_PASSWORD; echo
-$ sudo -u surmezur ADMIN_PASSWORD="dimi11" bash -c 'set -a; . /etc/surmezur/api.env; set +a; cd /srv/surmezur/app/backend; /srv/surmezur/venv/bin/python -m app.seed'
+$ sudo -u surmezur ADMIN_PASSWORD="$ADMIN_PASSWORD" bash -c 'set -a; . /etc/surmezur/api.env; set +a; cd /srv/surmezur/app/backend; /srv/surmezur/venv/bin/python -m app.seed'
 $ unset ADMIN_PASSWORD
 ```
 *Pourquoi :*
@@ -559,7 +559,7 @@ est servie (`200`) : la base et le disque concordent.
 ```bash
 $ read -s -p "Mot de passe admin : " PW; echo
 $ TOKEN=$(curl -s -X POST http://127.0.0.1:8000/api/auth/login -H 'Content-Type: application/json' \
-    -d "{\"phone\":\"+237696982953\",\"password\":\"$PW\"}" | python3 -c "import sys,json; print(json.load(sys.stdin)['dimi11'])"); unset PW
+    -d "{\"phone\":\"+237696982953\",\"password\":\"$PW\"}" | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])"); unset PW
 $ cd "/srv/surmezur/app/IMAGES TEST"
 $ time curl -s -X POST http://127.0.0.1:8000/api/measurements/debug/analyze -H "Authorization: Bearer $TOKEN" \
     -F "front=@WhatsApp Image 2026-08-10 at 4.52.13 PM.jpeg;type=image/jpeg" \
@@ -784,7 +784,7 @@ $ sudo bash /srv/surmezur/app/deploy/contabo/mettre_a_jour.sh --force
 
 ## Étape 13 — Après la mise en service
 
-1. **Le mot de passe admin** n'est plus dans le code, mais l'ancien (`dimi11`)
+1. **Le mot de passe admin** n'est plus dans le code, mais l'ancien mot de passe
    reste lisible dans l'historique du dépôt public : ne le réutilisez nulle
    part.
 2. **Surveillance** (facultatif, gratuit) : un moniteur UptimeRobot ou

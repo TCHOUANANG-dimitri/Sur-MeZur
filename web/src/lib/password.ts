@@ -1,27 +1,26 @@
 /**
- * Regle de mot de passe, alignee sur le backend.
+ * Regle de mot de passe, alignee sur le backend (Agent A, octobre 2026).
  *
- * Le serveur exige EXACTEMENT six caracteres, dont au moins une lettre et au
- * moins un chiffre (voir backend app/schemas/auth.py::validate_password).
- * C'est inhabituel — la plupart des formulaires imposent un minimum, pas une
- * longueur exacte — et le formulaire web imposait au depart huit caracteres,
- * ce qui refusait des mots de passe parfaitement valides et en laissait passer
- * d'autres que le serveur rejetait ensuite.
+ * Le serveur exige entre 6 et 64 caracteres, dont au moins une lettre et au
+ * moins un chiffre. (L'ancienne regle « exactement 6 caracteres » a ete
+ * assouplie cote serveur ; ce module suit la nouvelle regle des que l'Agent A
+ * l'a confirmee.)
  */
 
-export const PASSWORD_LENGTH = 6;
+export const PASSWORD_MIN = 6;
+export const PASSWORD_MAX = 64;
 
 export function passwordError(value: string): string | null {
-  if (value.length !== PASSWORD_LENGTH) {
-    return "Le mot de passe doit contenir exactement 6 caractères, dont au moins un chiffre et une lettre.";
+  if (value.length < PASSWORD_MIN || value.length > PASSWORD_MAX) {
+    return `Le mot de passe doit contenir entre ${PASSWORD_MIN} et ${PASSWORD_MAX} caractères, dont au moins une lettre et un chiffre.`;
   }
   if (!/[a-zA-Z]/.test(value)) {
-    return "Le mot de passe doit contenir au moins une lettre (6 caractères, dont au moins un chiffre).";
+    return "Le mot de passe doit contenir au moins une lettre.";
   }
   if (!/[0-9]/.test(value)) {
-    return "Le mot de passe doit contenir au moins un chiffre (6 caractères, dont au moins une lettre).";
+    return "Le mot de passe doit contenir au moins un chiffre.";
   }
   return null;
 }
 
-export const PASSWORD_HINT = "Exactement 6 caractères, avec au moins une lettre et un chiffre.";
+export const PASSWORD_HINT = "Entre 6 et 64 caractères, avec au moins une lettre et un chiffre.";

@@ -1,0 +1,1214 @@
+/* ============================================================================
+   Administration web — coquille, tableaux, dialogues, graphiques.
+
+   Importe par src/app/admin/layout.tsx, apres admin.css. Classes prefixees
+   `ad` pour ne jamais entrer en collision avec le parcours client.
+   Mobile d'abord : la base decrit le telephone (360 px), les paliers 720 et
+   1024 px ajoutent colonnes et navigation laterale (exigence Q2).
+   ========================================================================= */
+
+/* --- 0.12 Theme sombre ----------------------------------------------------- */
+html[data-theme="dark"] {
+  --violet-primary: #a78bfa;
+  --violet-vivid: #8b5cf6;
+  --violet-deep: #6d28d9;
+  --indigo-text: #ece9f6;
+  --bg: #17141f;
+  --bg-alt: #221e2d;
+  --surface: #1c1926;
+  --violet-tint: #2c2343;
+  --bg-page: #110f17;
+  --border: #322c40;
+  --text-secondary: #a8a2ba;
+  --success: #4ade80;
+  --error: #f87171;
+  --pending: #fbbf24;
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] .btnPrimary {
+  color: #120f1a;
+}
+
+html[data-theme="dark"] .badgeSuccess { background: #12321f; }
+html[data-theme="dark"] .badgePending { background: #3a2a0c; }
+html[data-theme="dark"] .badgeError { background: #3a1414; }
+
+/* --- Coquille ---------------------------------------------------------------- */
+.adShell {
+  min-height: 100dvh;
+  background: var(--bg-page);
+  color: var(--indigo-text);
+}
+
+.adSide {
+  display: none;
+}
+
+.adMain {
+  min-width: 0;
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+.adTop {
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  min-height: 56px;
+}
+
+.adTopTitle {
+  font-weight: 700;
+  font-size: 15px;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adIconBtn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--indigo-text);
+  cursor: pointer;
+  flex: none;
+}
+
+.adIconBtn:hover {
+  background: var(--bg-alt);
+}
+
+.adSearchBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.adSearchBtn kbd {
+  font-family: inherit;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 5px;
+  display: none;
+}
+
+.adSearchLabel {
+  display: none;
+}
+
+.adBottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.adBottomItem {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 60px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  position: relative;
+}
+
+.adBottomItemActive {
+  color: var(--violet-primary);
+  font-weight: 600;
+}
+
+/* Tiroir de navigation au telephone. */
+.adDrawerBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 20, 0.45);
+  z-index: 60;
+}
+
+.adDrawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(86vw, 320px);
+  background: var(--bg);
+  z-index: 61;
+  overflow-y: auto;
+  padding: 12px 10px 24px;
+  box-shadow: var(--shadow-lg);
+}
+
+.adBrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  padding: 10px 12px 14px;
+}
+
+.adBrand img {
+  width: 28px;
+  height: auto;
+}
+
+.adBrandSub {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.adNavGroup {
+  margin-top: 10px;
+}
+
+.adNavGroupTitle {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  padding: 6px 12px;
+}
+
+.adNavItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: var(--indigo-text);
+  font-size: 14px;
+}
+
+.adNavItem:hover {
+  background: var(--bg-alt);
+}
+
+.adNavItemActive {
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+  font-weight: 600;
+}
+
+.adNavLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.adCount {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--error);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-grid;
+  place-items: center;
+}
+
+.adBottomItem .adCount {
+  position: absolute;
+  top: 6px;
+  left: calc(50% + 6px);
+}
+
+.adUserBox {
+  margin: 16px 6px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg-alt);
+  font-size: 13px;
+}
+
+@media (min-width: 720px) {
+  .adSearchLabel {
+    display: inline;
+  }
+  .adSearchBtn {
+    min-width: 260px;
+  }
+  .adSearchBtn kbd {
+    display: inline;
+  }
+}
+
+@media (min-width: 1024px) {
+  .adShell {
+    display: flex;
+  }
+  .adSide {
+    display: block;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    width: 252px;
+    flex: none;
+    overflow-y: auto;
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    padding: 10px 10px 24px;
+  }
+  .adMain {
+    flex: 1;
+    padding-bottom: 0;
+  }
+  .adBottom,
+  .adMenuBtn {
+    display: none !important;
+  }
+}
+
+/* --- Page --------------------------------------------------------------------- */
+.adPage {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px 12px 40px;
+}
+
+@media (min-width: 720px) {
+  .adPage {
+    padding: 20px 24px 48px;
+  }
+}
+
+.adPageHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.adPageHead h1 {
+  font-size: clamp(22px, 4vw, 28px);
+  flex: 1;
+  min-width: 200px;
+}
+
+.adPageSub {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+.adBack {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.adRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.adSpacer {
+  flex: 1;
+}
+
+.adGrid2,
+.adGrid3,
+.adGrid4 {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 720px) {
+  .adGrid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adGrid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adGrid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .adGrid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .adGrid4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .adSplit {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+}
+
+.adSplit > * + * {
+  margin-top: 16px;
+}
+
+@media (min-width: 1024px) {
+  .adSplit > * + * {
+    margin-top: 0;
+  }
+}
+
+.adPanel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  min-width: 0;
+}
+
+.adPanel + .adPanel {
+  margin-top: 16px;
+}
+
+.adGrid2 > .adPanel + .adPanel,
+.adGrid3 > .adPanel + .adPanel,
+.adGrid4 > .adPanel + .adPanel,
+.adSplit > div > .adPanel:first-child {
+  margin-top: 0;
+}
+
+.adPanelTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  font-family: var(--font-body);
+}
+
+.adPanelTitle .adSpacer {
+  flex: 1;
+}
+
+.adHint {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.adMuted {
+  color: var(--text-secondary);
+}
+
+.adMono {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+}
+
+.adDl {
+  display: grid;
+  grid-template-columns: minmax(110px, 40%) minmax(0, 1fr);
+  gap: 6px 12px;
+  font-size: 13px;
+  margin: 0;
+}
+
+.adDl dt {
+  color: var(--text-secondary);
+}
+
+.adDl dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* --- Indicateurs ------------------------------------------------------------- */
+.adKpis {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 720px) {
+  .adKpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1200px) {
+  .adKpis { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+.adKpi {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  min-width: 0;
+}
+
+a.adKpi:hover {
+  border-color: var(--violet-primary);
+}
+
+.adKpiLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.adKpiValue {
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.adKpiDelta {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.adUp { color: var(--success); }
+.adDown { color: var(--error); }
+
+.adProgress {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-alt);
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.adProgress > span {
+  display: block;
+  height: 100%;
+  background: var(--violet-primary);
+  border-radius: 4px;
+}
+
+/* --- Barre d'outils de liste --------------------------------------------------- */
+.adToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.adFilter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 150px;
+  max-width: 100%;
+}
+
+.adFilter > span {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.adFilterWide {
+  flex: 2 1 220px;
+}
+
+.adToolbar .input,
+.adInput {
+  height: 40px;
+  padding: 0 10px;
+  font-size: 14px;
+  border-radius: 10px;
+}
+
+textarea.adInput,
+.adTextarea {
+  height: auto;
+  min-height: 90px;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 10px;
+  resize: vertical;
+  width: 100%;
+}
+
+.adBtnSm {
+  min-height: 34px !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+}
+
+/* --- Tableaux ------------------------------------------------------------------- */
+.adTableWrap {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.adTableScroll {
+  overflow-x: auto;
+}
+
+.adTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.adTable th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  background: var(--bg-alt);
+}
+
+.adTable th button {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.adTable th button:focus-visible {
+  outline: 2px solid var(--violet-primary);
+  border-radius: 4px;
+}
+
+.adTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.adTable tbody tr:hover td {
+  background: var(--bg-alt);
+}
+
+.adTable tr.adRowSelected td {
+  background: var(--violet-tint);
+}
+
+.adTable tr.adRowLink {
+  cursor: pointer;
+}
+
+.adCellNum {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.adCheck {
+  width: 36px;
+}
+
+.adCheck input {
+  width: 18px;
+  height: 18px;
+}
+
+/* Au telephone, chaque ligne devient une carte. */
+@media (max-width: 719px) {
+  .adTable thead {
+    display: none;
+  }
+  .adTable,
+  .adTable tbody,
+  .adTable tr,
+  .adTable td {
+    display: block;
+    width: 100%;
+  }
+  .adTable tr {
+    border-bottom: 1px solid var(--border);
+    padding: 8px 4px;
+  }
+  .adTable td {
+    border: 0;
+    padding: 4px 10px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: right;
+  }
+  .adTable td::before {
+    content: attr(data-label);
+    color: var(--text-secondary);
+    font-size: 11px;
+    text-align: left;
+    flex: none;
+    max-width: 45%;
+  }
+  .adTable td.adCheck::before {
+    content: "Sélection";
+  }
+  .adCellNum {
+    text-align: right;
+  }
+}
+
+.adPager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.adPager select {
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--indigo-text);
+  padding: 0 6px;
+}
+
+.adBulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--violet-tint);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.adColumns {
+  position: relative;
+}
+
+.adMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 50;
+  min-width: 220px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+}
+
+.adMenu label,
+.adMenu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  background: none;
+  border: 0;
+  color: var(--indigo-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.adMenu label:hover,
+.adMenu button:hover {
+  background: var(--bg-alt);
+}
+
+/* --- Etats (0.9) ------------------------------------------------------------------ */
+.adState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 36px 16px;
+  color: var(--text-secondary);
+}
+
+.adState h3 {
+  color: var(--indigo-text);
+  font-family: var(--font-body);
+  font-size: 16px;
+}
+
+.adSkeleton {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--bg-alt), var(--border), var(--bg-alt));
+  background-size: 200% 100%;
+  animation: adShimmer 1.2s infinite;
+}
+
+@keyframes adShimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* --- Dialogues, toasts (0.8) --------------------------------------------------------- */
+.adModalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 20, 0.5);
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+}
+
+.adModal {
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  background: var(--bg);
+  color: var(--indigo-text);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 18px;
+}
+
+.adModalWide {
+  width: min(980px, 100%);
+}
+
+.adModal h2 {
+  font-size: 19px;
+  margin-bottom: 10px;
+}
+
+.adModalActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.adToasts {
+  position: fixed;
+  z-index: 90;
+  left: 12px;
+  right: 12px;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+
+@media (min-width: 1024px) {
+  .adToasts {
+    left: auto;
+    right: 20px;
+    bottom: 20px;
+    align-items: flex-end;
+  }
+}
+
+.adToast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #1f1b2e;
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow-lg);
+  font-size: 14px;
+  max-width: 480px;
+}
+
+.adToastError {
+  background: #7f1d1d;
+}
+
+.adToast button {
+  background: none;
+  border: 0;
+  color: #c4b5fd;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+/* --- Onglets ------------------------------------------------------------------------- */
+.adTabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+  scrollbar-width: none;
+}
+
+.adTab {
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.adTabActive {
+  color: var(--violet-primary);
+  border-bottom-color: var(--violet-primary);
+}
+
+/* --- Recherche globale (0.3) -------------------------------------------------------------- */
+.adSearchModal {
+  width: min(640px, 100%);
+  align-self: start;
+  margin-top: 8vh;
+  padding: 0;
+  overflow: hidden;
+}
+
+.adSearchInput {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 16px;
+  font-size: 16px;
+  background: var(--bg);
+  color: var(--indigo-text);
+  outline: none;
+}
+
+.adSearchResults {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.adSearchItem {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--indigo-text);
+}
+
+.adSearchItemActive,
+.adSearchItem:hover {
+  background: var(--violet-tint);
+}
+
+/* --- Chronologie, notes, messages ---------------------------------------------------------- */
+.adTimeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 2px solid var(--border);
+}
+
+.adTimeline li {
+  position: relative;
+  padding: 0 0 14px 16px;
+  font-size: 13px;
+}
+
+.adTimeline li::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--violet-primary);
+}
+
+.adTimelineDate {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.adNote,
+.adMessage {
+  background: var(--bg-alt);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.adNote + .adNote,
+.adMessage + .adMessage {
+  margin-top: 8px;
+}
+
+.adMessageStaff {
+  background: var(--violet-tint);
+}
+
+.adMeta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+/* --- Graphiques ------------------------------------------------------------------------------- */
+.adChart {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.adChart text {
+  fill: var(--text-secondary);
+  font-size: 10px;
+}
+
+.adChartGrid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.adLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+.adLegend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+
+.adHBar {
+  display: grid;
+  grid-template-columns: minmax(90px, 38%) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.adHBarTrack {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--bg-alt);
+  overflow: hidden;
+}
+
+.adHBarTrack > span {
+  display: block;
+  height: 100%;
+  background: var(--violet-primary);
+}
+
+.adHeat td.adHeatCell {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Visionneuse de documents (3.3) ------------------------------------------------------------- */
+.adViewer {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 900px) {
+  .adViewerSplit {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.adViewerPane {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-alt);
+}
+
+.adViewerStage {
+  height: min(60vh, 520px);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  background: #0d0b12;
+}
+
+.adViewerStage img {
+  max-width: 100%;
+  max-height: 100%;
+  transition: transform 0.15s ease;
+  user-select: none;
+}
+
+.adViewerBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  font-size: 12px;
+}
+
+/* --- Photos ordonnables (4.5) ---------------------------------------------------------------------- */
+.adPhotos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.adPhoto {
+  position: relative;
+  width: 104px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  background: var(--bg-alt);
+  cursor: grab;
+}
+
+.adPhoto img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+
+.adPhotoCover {
+  border-color: var(--violet-primary);
+}
+
+.adPhotoBar {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px;
+}
+
+.adPhotoBar button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--indigo-text);
+  padding: 4px;
+}
+
+.adThumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--bg-alt);
+  flex: none;
+}
+
+/* --- Carte des tailleurs (3.8) ---------------------------------------------------------------------- */
+.adMap {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--bg-alt);
+  border-radius: 12px;
+}
+
+.adMap circle {
+  stroke: var(--bg);
+  stroke-width: 1;
+}
+
+/* --- Texte formate (pages d'information) --------------------------------------------------------------- */
+.adProse h2,
+.adProse h3 {
+  margin: 16px 0 6px;
+  font-family: var(--font-body);
+}
+
+.adProse p {
+  margin: 0 0 10px;
+}
+
+/* --- Impression (0.11) -------------------------------------------------------------------------------- */
+@media print {
+  html[data-theme="dark"] {
+    --bg: #fff;
+    --bg-alt: #f4f2f8;
+    --bg-page: #fff;
+    --indigo-text: #1f2a44;
+    --border: #ddd;
+    --text-secondary: #555;
+  }
+  .adSide,
+  .adTop,
+  .adBottom,
+  .adToasts,
+  .adToolbar,
+  .adPager,
+  .adBulk,
+  .adNoPrint {
+    display: none !important;
+  }
+  .adMain {
+    padding: 0 !important;
+  }
+  .adPanel {
+    break-inside: avoid;
+    border-color: #ccc;
+  }
+  .adPage {
+    padding: 0;
+    max-width: none;
+  }
+}

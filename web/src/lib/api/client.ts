@@ -89,7 +89,7 @@ async function refreshAccessToken(): Promise<string | null> {
     try {
       const res = await fetch("/api/auth/refresh", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-SMZ-Platform": "web" },
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
       if (!res.ok) return null;
@@ -121,15 +121,67 @@ export class ApiError extends Error {
   }
 }
 
+/** Options propres au client d'API. `background` marque une requete de
+ *  rafraichissement automatique (compteurs du menu admin) : le serveur ne la
+ *  compte ni comme activite de l'utilisateur, ni pour garder une session
+ *  administrateur ouverte. */
+type RequestOptions = RequestInit & { auth?: boolean; background?: boolean };
+
 async function request<T>(
   path: string,
-  options: RequestInit & { auth?: boolean } = {},
+  options: RequestOptions = {},
   isRetry = false
 ): Promise<T> {
-  const { auth = true, headers, ...rest } = options;
+  const res = await rawRequest(path, options, isRetry);
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+/** Message d'erreur lisible a partir d'une reponse FastAPI. */
+async function errorMessage(res: Response): Promise<string> {
+  let message = res.statusText;
+  try {
+    const data = await res.json();
+    const detail = data.detail;
+    // FastAPI renvoie `detail` sous trois formes selon le type d'erreur :
+    //  - une chaine (ex. HTTPException) : on l'affiche telle quelle ;
+    //  - un tableau de { loc, msg, type } (validation 422) : on extrait les
+    //    `msg` en les joignant, sinon le tableau brut est rendu en
+    //    `[object Object]` par React ;
+    //  - tout autre objet : on ne l'affiche pas tel quel.
+    if (typeof detail === "string") {
+      message = detail;
+    } else if (Array.isArray(detail)) {
+      const msgs = detail
+        .map((e) => (e && typeof e.msg === "string" ? e.msg : null))
+        .filter((m): m is string => Boolean(m));
+      if (msgs.length) message = msgs.join(". ");
+    } else if (detail && typeof detail === "object" && typeof detail.msg === "string") {
+      message = detail.msg;
+    }
+    if (res.status === 503 && data.maintenance && typeof window !== "undefined") {
+      // 13.8 : le site est en maintenance ; la coquille affiche le message.
+      window.dispatchEvent(new CustomEvent("smz:maintenance", { detail: message }));
+    }
+  } catch {
+    /* ignore */
+  }
+  return message;
+}
+
+async function rawRequest(
+  path: string,
+  options: RequestOptions = {},
+  isRetry = false
+): Promise<Response> {
+  const { auth = true, background = false, headers, ...rest } = options;
   const finalHeaders: Record<string, string> = {
+    // Le serveur distingue le site de l'application mobile (statistiques
+    // par support, journal des analyses).
+    "X-SMZ-Platform": "web",
     ...(headers as Record<string, string>),
   };
+  if (background) finalHeaders["X-SMZ-Background"] = "1";
 
   const isFormData = rest.body instanceof FormData;
   if (!isFormData && rest.body) {
@@ -145,7 +197,7 @@ async function request<T>(
   if (res.status === 401 && auth && !isRetry && !path.startsWith("/auth/")) {
     const renewed = await refreshAccessToken();
     if (renewed) {
-      return request<T>(path, options, true);
+      return rawRequest(path, options, true);
     }
     setTokens(null, null);
     clearRefreshTimer();
@@ -154,33 +206,27 @@ async function request<T>(
   }
 
   if (!res.ok) {
-    let message = res.statusText;
-    try {
-      const data = await res.json();
-      const detail = data.detail;
-      // FastAPI renvoie `detail` sous trois formes selon le type d'erreur :
-      //  - une chaine (ex. HTTPException) : on l'affiche telle quelle ;
-      //  - un tableau de { loc, msg, type } (validation 422) : on extrait les
-      //    `msg` en les joignant, sinon le tableau brut est reddu en
-      //    `[object Object]` par React ;
-      //  - tout autre objet : on ne l'affiche pas tel quel.
-      if (typeof detail === "string") {
-        message = detail;
-      } else if (Array.isArray(detail)) {
-        const msgs = detail
-          .map((e) => (e && typeof e.msg === "string" ? e.msg : null))
-          .filter((m): m is string => Boolean(m));
-        if (msgs.length) message = msgs.join(". ");
-      } else if (detail && typeof detail === "object" && typeof detail.msg === "string") {
-        message = detail.msg;
-      }
-    } catch {
-      /* ignore */
-    }
-    throw new ApiError(res.status, message);
+    throw new ApiError(res.status, await errorMessage(res));
   }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  return res;
+}
+
+/** Telecharge un fichier produit par l'API (export CSV, donnees d'un
+ *  utilisateur) avec le jeton de session, sans ouvrir d'onglet. */
+export async function downloadFile(path: string, fallbackName = "export"): Promise<void> {
+  const res = await rawRequest(path, { method: "GET" });
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = /filename="?([^";]+)"?/i.exec(disposition);
+  const name = match?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 export function startAuthTimer() {
@@ -193,7 +239,10 @@ export function stopAuthTimer() {
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path, { method: "GET" }),
+  get: <T>(path: string, opts?: { background?: boolean }) =>
+    request<T>(path, { method: "GET", background: opts?.background }),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
   post: <T>(
     path: string,
     body?: unknown,

@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, ForeignKey, JSON, Numeric, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Integer, JSON, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -39,6 +39,18 @@ class GarmentModel(Base, IDMixin, TimestampMixin):
     photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     photos: Mapped[list] = mapped_column(JSON, default=list)
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    # 4.3 : published | pending | rejected | hidden. Seuls les modeles
+    # `published` apparaissent dans le catalogue public ; un modele propose
+    # par un client arrive en `pending`.
+    status: Mapped[str] = mapped_column(String(12), default="published")
+    rejection_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    # 4.7 : ordre d'affichage (plus petit = plus haut) et mise en avant
+    # (nouveaute, tendance, mariage, fete...).
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    highlight: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # 4.8 : statistiques d'usage.
+    view_count: Mapped[int] = mapped_column(Integer, default=0)
+    select_count: Mapped[int] = mapped_column(Integer, default=0)
 
     category: Mapped["Category"] = relationship("Category")
 
@@ -99,3 +111,7 @@ class ReadyToWear(Base, IDMixin, TimestampMixin):
         String(16), default=MeasurementMethod.standard
     )
     in_stock: Mapped[bool] = mapped_column(Boolean, default=True)
+    # 4.10 : published | hidden | rejected — un article masque disparait du
+    # catalogue public.
+    moderation_status: Mapped[str] = mapped_column(String(10), default="published")
+    rejection_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)

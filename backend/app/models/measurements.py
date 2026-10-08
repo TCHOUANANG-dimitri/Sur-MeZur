@@ -1,4 +1,6 @@
-from sqlalchemy import Boolean, Float, ForeignKey, Integer, JSON, String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -24,6 +26,10 @@ class MeasurementSession(Base, IDMixin, TimestampMixin):
         ForeignKey("measurements.id"), nullable=True
     )
     error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # 9.1 : support d'origine (web | app) et fin du calcul, pour la duree.
+    platform: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Measurement(Base, IDMixin, TimestampMixin):

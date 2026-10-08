@@ -17,11 +17,25 @@ class EscrowSplit:
     balance_30: float
 
 
+def shares() -> tuple[float, float]:
+    """Part de l'acompte et part versee tout de suite au tailleur, reglables
+    depuis l'administration (13.7). Les noms de colonnes gardent 70/40/30,
+    valeurs d'origine."""
+    from app.services.platform_settings import get_setting
+
+    deposit = float(get_setting("deposit_share") or 0.7)
+    immediate = float(get_setting("tailor_immediate_share") or 0.4)
+    deposit = min(max(deposit, 0.0), 1.0)
+    immediate = min(max(immediate, 0.0), deposit)
+    return deposit, immediate
+
+
 def compute_escrow_split(total: float) -> EscrowSplit:
+    deposit, immediate = shares()
     return EscrowSplit(
         total=round(total, 2),
-        deposit_70=round(total * 0.7, 2),
-        tailor_immediate_40=round(total * 0.4, 2),
-        escrow_30=round(total * 0.3, 2),
-        balance_30=round(total * 0.3, 2),
+        deposit_70=round(total * deposit, 2),
+        tailor_immediate_40=round(total * immediate, 2),
+        escrow_30=round(total * (deposit - immediate), 2),
+        balance_30=round(total * (1 - deposit), 2),
     )

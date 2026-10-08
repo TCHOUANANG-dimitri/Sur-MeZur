@@ -42,6 +42,14 @@ class Order(Base, IDMixin, TimestampMixin):
     current_offer_round: Mapped[int] = mapped_column(Integer, default=1)
     dispute_status: Mapped[str | None] = mapped_column(String(24), nullable=True)
     dispute_note: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    # 7.4 / 7.5 : instruction des litiges.
+    dispute_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dispute_opened_by: Mapped[str | None] = mapped_column(String(8), nullable=True)  # client | tailor
+    dispute_category: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    dispute_resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dispute_refund_amount: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    # 5.4 : motif d'une annulation par l'equipe.
+    cancel_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
 
 class Offer(Base, IDMixin, TimestampMixin):

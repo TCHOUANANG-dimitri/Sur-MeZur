@@ -51,6 +51,9 @@ class OrderOut(ORMModel):
     current_offer_round: int
     dispute_status: str | None
     dispute_note: str | None
+    dispute_category: str | None = None
+    dispute_opened_at: datetime | None = None
+    cancel_reason: str | None = None
     created_at: datetime
 
 

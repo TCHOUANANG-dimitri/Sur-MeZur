@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db, require_roles
 from app.models.enums import TailorType, UserRole, VerificationStatus
+from app.models.operations import VerificationEvent
 from app.models.users import TailorProfile, User, VerificationDocument
 from app.schemas.users import TailorProfileOut, TailorProfilePublicOut, VerificationDocumentOut
 from app.services.geo import haversine_km
@@ -43,6 +44,8 @@ def submit_verification(
         profile.lat, profile.lng = lat, lng
     profile.verification_status = VerificationStatus.pending
     db.flush()
+    # 3.5 : historique de verification.
+    db.add(VerificationEvent(tailor_id=profile.id, action="submitted", actor_id=user.id, actor_name=user.full_name))
 
     # Chaque soumission remplace les 3 pièces : les anciennes traceraient une
     # décision qui ne porte plus sur les documents réellement examinés.
@@ -113,6 +116,10 @@ def search_tailors(
         results.sort(key=lambda r: r.distance_km if r.distance_km is not None else 1e9)
     else:
         results.sort(key=lambda r: (-r.rating_avg, -r.completed_orders_count))
+    # 3.7 : les tailleurs mis en avant par l'equipe passent en tete, dans
+    # l'ordre choisi ; le tri demande s'applique ensuite au reste.
+    featured = {t.id: (t.featured_rank if t.featured_rank is not None else 9999) for t in tailors if t.is_featured}
+    results.sort(key=lambda r: (0, featured[r.id]) if r.id in featured else (1, 0))
     return results
 
 

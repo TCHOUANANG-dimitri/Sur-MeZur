@@ -1,158 +1,220 @@
 "use client";
 
-// Utilisateurs : liste filtrée par rôle, recherche par nom, et suspension /
-// réactivation des comptes (jamais pour un administrateur).
+// Utilisateurs (2.1, 2.2, 2.7, 0.4 a 0.8) : liste paginee, filtres combinables
+// conserves dans l'adresse, export, actions groupees, nettoyage des invites.
 
-import { useCallback, useEffect, useState } from "react";
-import { AdminApi } from "@/lib/api/endpoints";
-import type { User } from "@/lib/api/types";
+import Link from "next/link";
+import { useState } from "react";
+import { Growth, Users, type UserRow } from "@/lib/api/admin";
+import { Button } from "@/components/ui";
+import { useAdmin } from "@/components/admin/AdminContext";
+import { useFeedback, Modal } from "@/components/admin/Feedback";
 import {
-  Badge,
-  Button,
-  Card,
-  Chip,
-  EmptyState,
-  ErrorBanner,
-  Input,
-  PageHeader,
-  Spinner,
-} from "@/components/ui";
-import { formatDate } from "@/components/admin/format";
-import { IconUsers } from "@/components/icons";
+  DataTable,
+  FilterDate,
+  FilterSelect,
+  FilterText,
+  TABLE_DEFAULTS,
+  filtersOf,
+  tableQuery,
+  useUrlState,
+  type Column,
+} from "@/components/admin/DataTable";
+import { PageHead, StatusBadge, useLoad } from "@/components/admin/kit";
+import { ROLE_LABEL, USER_STATUS, VERIFICATION_STATUS, ago, formatDate, formatDateTime } from "@/components/admin/format";
 
-type RoleFilter = "all" | "client" | "tailor" | "admin";
+const COLUMNS: Column<UserRow>[] = [
+  { key: "full_name", label: "Nom", sort: "full_name", render: (u) => u.full_name },
+  { key: "phone", label: "Téléphone", render: (u) => u.phone ?? "—" },
+  { key: "role", label: "Rôle", sort: "role", render: (u) => ROLE_LABEL[u.role] ?? u.role },
+  { key: "status", label: "Statut", render: (u) => <StatusBadge map={USER_STATUS} value={u.status} /> },
+  { key: "city", label: "Ville", render: (u) => u.city ?? "—" },
+  { key: "verification_status", label: "Vérification", optional: true, render: (u) => (u.verification_status ? <StatusBadge map={VERIFICATION_STATUS} value={u.verification_status} /> : "—") },
+  { key: "channel", label: "Canal", optional: true, render: (u) => u.channel ?? "—" },
+  { key: "platform", label: "Support", optional: true, render: (u) => (u.platform === "web" ? "Site" : "Application") },
+  { key: "email", label: "E-mail", optional: true, render: (u) => u.email ?? "—" },
+  { key: "created_at", label: "Inscription", sort: "created_at", render: (u) => formatDate(u.created_at) },
+  { key: "last_login_at", label: "Dernière connexion", sort: "last_login_at", render: (u) => <span title={formatDateTime(u.last_login_at)}>{u.last_login_at ? ago(u.last_login_at) : "—"}</span> },
+  { key: "last_seen_at", label: "Dernière activité", sort: "last_seen_at", optional: true, render: (u) => <span title={formatDateTime(u.last_seen_at)}>{u.last_seen_at ? ago(u.last_seen_at) : "—"}</span> },
+];
 
-const ROLE_LABEL: Record<RoleFilter, string> = {
-  all: "Tous",
-  client: "Clients",
-  tailor: "Tailleurs",
-  admin: "Admins",
-};
+export default function UsersPage() {
+  const { can } = useAdmin();
+  const { confirm, toast } = useFeedback();
+  const [s, set] = useUrlState({
+    ...TABLE_DEFAULTS,
+    q: "",
+    role: "",
+    status: "",
+    city: "",
+    platform: "",
+    channel_id: "",
+    created_from: "",
+    created_to: "",
+    inactive_days: "",
+  });
+  const [reload, setReload] = useState(0);
+  const [guests, setGuests] = useState(false);
+  const segments = useLoad(() => (can("growth") ? Growth.segments() : Promise.resolve({ cities: [], channels: [] })), [can]);
 
-const ROLE_ICON: Record<string, string> = {
-  client: "👤",
-  tailor: "✂️",
-  admin: "🛡️",
-};
-
-export default function AdminUsers() {
-  const [users, setUsers] = useState<User[] | null>(null);
-  const [role, setRole] = useState<RoleFilter>("all");
-  const [query, setQuery] = useState("");
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState("");
-
-  const load = useCallback(() => {
-    setError("");
-    AdminApi.users({ role: role === "all" ? undefined : role, q: query || undefined })
-      .then(setUsers)
-      .catch((e: Error) => {
-        setError(e.message);
-        setUsers([]);
-      });
-  }, [role, query]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const toggleActive = async (u: User) => {
-    const suspending = u.is_active;
-    if (!window.confirm(`${u.full_name} · ${suspending ? "Suspendre le compte ?" : "Réactiver le compte ?"}`)) return;
-    setBusyId(u.id);
-    setError("");
+  const bulkAction = async (ids: string[], action: "suspend" | "reactivate" | "delete", done: () => void) => {
+    const labels = { suspend: "Suspendre", reactivate: "Réactiver", delete: "Supprimer définitivement" };
+    const reason = await confirm({
+      title: `${labels[action]} ${ids.length} compte(s) ?`,
+      body:
+        action === "delete"
+          ? "Les comptes et toutes leurs données (mesures, commandes, messages…) seront effacés. Cette action est irréversible."
+          : action === "suspend"
+            ? "Les personnes ne pourront plus se connecter. Le motif leur est communiqué."
+            : undefined,
+      danger: action !== "reactivate",
+      confirmLabel: labels[action],
+      reason: action === "suspend" ? { label: "Motif communiqué aux utilisateurs", required: true } : undefined,
+    });
+    if (reason === null) return;
     try {
-      const updated = await AdminApi.setUserActive(u.id, !u.is_active);
-      setUsers((prev) => prev?.map((x) => (x.id === updated.id ? updated : x)) ?? null);
+      const r = await Users.bulk(ids, action, reason || undefined);
+      done();
+      toast(
+        `${r.done} compte(s) traité(s)${r.skipped ? `, ${r.skipped} ignoré(s) (administrateurs ou vous-même)` : ""}`,
+        action === "suspend" ? { undo: async () => { await Users.bulk(ids, "reactivate"); setReload((n) => n + 1); } } : undefined
+      );
     } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusyId(null);
+      toast((e as Error).message, { error: true });
     }
   };
 
   return (
-    <div className="container">
-      <PageHeader title="Utilisateurs" />
-      <div className="section">
-        <ErrorBanner message={error} />
+    <div className="adPage">
+      <PageHead
+        title="Utilisateurs"
+        sub="Clients, tailleurs, agents de collecte et comptes invités."
+        actions={
+          <>
+            <Link href="/admin/utilisateurs/doublons" className="btn btnSecondary adBtnSm">
+              Comptes en double
+            </Link>
+            <Button variant="secondary" className="adBtnSm" onClick={() => setGuests(true)}>
+              Comptes invités
+            </Button>
+          </>
+        }
+      />
 
-        <div className="adminSearch">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && load()}
-            placeholder="Rechercher par nom…"
+      <div className="adToolbar">
+        <FilterText label="Recherche" value={s.q} onChange={(q) => set({ q })} placeholder="Nom, téléphone, e-mail" wide />
+        <FilterSelect label="Rôle" value={s.role} onChange={(role) => set({ role })} options={{ client: "Clients", tailor: "Tailleurs", collector: "Agents de collecte", admin: "Administrateurs" }} />
+        <FilterSelect label="Statut" value={s.status} onChange={(status) => set({ status })} options={{ active: "Actifs", suspended: "Suspendus", guest: "Invités" }} allLabel="Inscrits" />
+        <FilterSelect
+          label="Ville"
+          value={s.city}
+          onChange={(city) => set({ city })}
+          options={(segments.data?.cities ?? []).map((c) => ({ value: c, label: c }))}
+          allLabel="Toutes"
+        />
+        <FilterSelect label="Support" value={s.platform} onChange={(platform) => set({ platform })} options={{ web: "Site web", app: "Application" }} />
+        {can("growth") && (
+          <FilterSelect
+            label="Canal"
+            value={s.channel_id}
+            onChange={(channel_id) => set({ channel_id })}
+            options={(segments.data?.channels ?? []).map((c) => ({ value: c.id, label: c.name }))}
           />
-          <Button variant="secondary" onClick={load}>
-            Rechercher
-          </Button>
-        </div>
-
-        <div className="chipRow" style={{ marginBottom: 14 }}>
-          {(["all", "client", "tailor", "admin"] as RoleFilter[]).map((r) => (
-            <Chip key={r} active={role === r} onClick={() => setRole(r)}>
-              {ROLE_LABEL[r]}
-            </Chip>
-          ))}
-        </div>
-
-        {!users ? (
-          <Spinner label="Chargement…" />
-        ) : users.length === 0 ? (
-          <EmptyState icon={<IconUsers size={30} strokeWidth={1.6} />} title="Aucun utilisateur" body="Modifiez le filtre ou la recherche." />
-        ) : (
-          <div className="adminStack">
-            {users.map((u) => (
-              <Card key={u.id} variant="flat">
-                <div className="rowTop">
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-                    <span
-                      className="statIcon"
-                      aria-hidden
-                      style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: 19,
-                        background: u.is_active ? "var(--bg-alt)" : "var(--border)",
-                        margin: 0,
-                        flex: "none",
-                      }}
-                    >
-                      {ROLE_ICON[u.role] ?? "👤"}
-                    </span>
-                    <div style={{ minWidth: 0 }}>
-                      <div className="rowLabel">{u.full_name}</div>
-                      <div className="rowMeta">
-                        {ROLE_LABEL[u.role] ?? u.role} · {u.phone}
-                      </div>
-                      <div className="rowMeta">Inscrit le {formatDate(u.created_at)}</div>
-                    </div>
-                  </div>
-                  <Badge tone={u.is_active ? "success" : "error"}>{u.is_active ? "Actif" : "Suspendu"}</Badge>
-                </div>
-
-                {u.role !== "admin" && (
-                  <div className="adminActions">
-                    <Button
-                      variant={u.is_active ? "danger" : "secondary"}
-                      block
-                      disabled={busyId === u.id}
-                      onClick={() => toggleActive(u)}
-                    >
-                      {busyId === u.id
-                        ? "…"
-                        : u.is_active
-                          ? "Suspendre le compte"
-                          : "Réactiver le compte"}
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            ))}
-          </div>
         )}
+        <FilterDate label="Inscrits depuis" value={s.created_from} onChange={(created_from) => set({ created_from })} />
+        <FilterDate label="Inscrits jusqu'au" value={s.created_to} onChange={(created_to) => set({ created_to })} />
+        <FilterSelect
+          label="Dernière activité"
+          value={s.inactive_days}
+          onChange={(inactive_days) => set({ inactive_days })}
+          options={{ "7": "Inactifs depuis 7 j", "30": "Inactifs depuis 30 j", "90": "Inactifs depuis 90 j" }}
+          allLabel="Indifférente"
+        />
       </div>
+
+      <DataTable<UserRow>
+        id="users"
+        columns={COLUMNS}
+        fetcher={Users.table}
+        filters={filtersOf(s)}
+        query={tableQuery(s)}
+        onQuery={set}
+        rowKey={(u) => u.id}
+        rowHref={(u) => `/admin/utilisateurs/${u.id}`}
+        exportPath="/admin/tables/users"
+        exportName="utilisateurs"
+        selectable={can("users.write")}
+        reloadToken={reload}
+        bulk={(ids, done) => (
+          <>
+            <Button variant="secondary" className="adBtnSm" onClick={() => bulkAction(ids, "suspend", done)}>
+              Suspendre
+            </Button>
+            <Button variant="secondary" className="adBtnSm" onClick={() => bulkAction(ids, "reactivate", done)}>
+              Réactiver
+            </Button>
+            {can("users.delete") && (
+              <Button variant="danger" className="adBtnSm" onClick={() => bulkAction(ids, "delete", done)}>
+                Supprimer
+              </Button>
+            )}
+          </>
+        )}
+      />
+
+      {guests && <GuestsModal onClose={() => setGuests(false)} onDone={() => setReload((n) => n + 1)} />}
     </div>
+  );
+}
+
+/** 2.7 — nettoyage des comptes invites restes sans inscription. */
+function GuestsModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { can } = useAdmin();
+  const { confirm, toast } = useFeedback();
+  const preview = useLoad(() => Users.guestsPreview(), []);
+  const run = async () => {
+    if (
+      (await confirm({
+        title: `Supprimer ${preview.data?.to_delete ?? 0} compte(s) invité(s) ?`,
+        body: "Leurs photos et mesures sont effacées. Ce nettoyage tourne aussi automatiquement chaque jour.",
+        danger: true,
+        confirmLabel: "Nettoyer maintenant",
+      })) === null
+    )
+      return;
+    try {
+      const r = await Users.guestsCleanup();
+      toast(`${r.deleted} compte(s) invité(s) supprimé(s)`);
+      preview.reload();
+      onDone();
+    } catch (e) {
+      toast((e as Error).message, { error: true });
+    }
+  };
+  return (
+    <Modal title="Comptes invités" onClose={onClose} actions={<Button variant="secondary" onClick={onClose}>Fermer</Button>}>
+      {!preview.data ? (
+        <p className="adHint">Chargement…</p>
+      ) : (
+        <>
+          <p>
+            Chaque visiteur qui prend ses mesures sans compte crée un compte invité. Ceux restés sans inscription ni activité depuis{" "}
+            <strong>{preview.data.retention_days} jours</strong> sont supprimés automatiquement chaque jour, avec leurs photos.
+          </p>
+          <dl className="adDl">
+            <dt>Comptes invités</dt>
+            <dd>{preview.data.guests_total}</dd>
+            <dt>À supprimer aujourd&apos;hui</dt>
+            <dd>{preview.data.to_delete}</dd>
+          </dl>
+          <p className="adHint">La durée se règle dans Réglages.</p>
+          {can("users.delete") && (
+            <Button variant="danger" onClick={run} disabled={!preview.data.to_delete}>
+              Nettoyer maintenant
+            </Button>
+          )}
+        </>
+      )}
+    </Modal>
   );
 }

@@ -27,6 +27,7 @@ from starlette.background import BackgroundTask
 
 from app.core.config import settings
 from app.core.deps import get_db, require_roles
+from app.services.admin_perms import require_perm
 from app.core.security import hash_password
 from app.models.collecte import DatasetPhoto, DatasetSubject
 from app.models.enums import UserRole
@@ -50,7 +51,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/collecte", tags=["collecte"])
 
 require_collecte = require_roles("collector", "admin")
-require_admin = require_roles("admin")
+# 13.1 : la relecture, l'export et les agents relevent de la permission
+# « collecte » (moderateur ou super-administrateur).
+require_admin = require_perm("collecte")
 
 _ALLOWED_PHOTO_TYPES = {
     "image/jpeg": ".jpg",

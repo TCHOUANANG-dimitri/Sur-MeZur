@@ -1,3 +1,23 @@
+from app.models.acquisition import (
+    AcquisitionChannel,
+    AcquisitionComment,
+    Campaign,
+    GrowthGoal,
+    UserAcquisition,
+)
+from app.models.admin import (
+    AdminNote,
+    AdminSession,
+    Announcement,
+    AuditLog,
+    InfoPage,
+    LoginEvent,
+    MessageTemplate,
+    PlatformSetting,
+    SupportMessage,
+    SupportTicket,
+    UserActivityDay,
+)
 from app.models.catalog import (
     Accessory,
     Fabric,
@@ -15,26 +35,47 @@ from app.models.measurements import (
     TryonSession,
 )
 from app.models.misc import Delivery, Notification, Pattern, Review
+from app.models.operations import (
+    DisputeMessage,
+    FitFeedback,
+    Refund,
+    ReviewReport,
+    TailorPayout,
+    VerificationEvent,
+)
 from app.models.orders import ChatMessage, Modification, Offer, Order, Quote
 from app.models.payments import CommissionTier, Payment, PaymentSplit
 from app.models.users import ClientProfile, TailorProfile, User, VerificationDocument
 
 __all__ = [
     "Accessory",
+    "AcquisitionChannel",
+    "AcquisitionComment",
+    "AdminNote",
+    "AdminSession",
+    "Announcement",
+    "AuditLog",
     "Avatar",
+    "Campaign",
     "ChatMessage",
     "ClientProfile",
     "CommissionTier",
     "DatasetPhoto",
     "DatasetSubject",
     "Delivery",
+    "DisputeMessage",
     "Fabric",
+    "FitFeedback",
     "GarmentAsset",
     "GarmentModel",
     "GarmentModelLike",
+    "GrowthGoal",
+    "InfoPage",
+    "LoginEvent",
     "Measurement",
     "MeasurementDataset",
     "MeasurementSession",
+    "MessageTemplate",
     "Modification",
     "Notification",
     "Offer",
@@ -42,11 +83,20 @@ __all__ = [
     "Pattern",
     "Payment",
     "PaymentSplit",
+    "PlatformSetting",
     "Quote",
     "ReadyToWear",
+    "Refund",
     "Review",
+    "ReviewReport",
+    "SupportMessage",
+    "SupportTicket",
+    "TailorPayout",
     "TailorProfile",
     "TryonSession",
     "User",
+    "UserAcquisition",
+    "UserActivityDay",
     "VerificationDocument",
+    "VerificationEvent",
 ]

@@ -1,22 +1,25 @@
 import secrets
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_db
 from app.core.security import (
     create_access_token,
+    create_mfa_token,
     create_refresh_token,
     decode_token,
     hash_password,
     verify_password,
 )
+from app.models.admin import AdminSession
 from app.models.enums import UserRole
 from app.models.measurements import Measurement, MeasurementSession
 from app.models.users import ClientProfile, TailorProfile, User
 from app.schemas.auth import (
     LoginIn,
+    MfaIn,
     OtpRequestIn,
     OtpRequestOut,
     OtpVerifyIn,
@@ -26,13 +29,24 @@ from app.schemas.auth import (
     RegisterIn,
     TokenOut,
 )
-from app.services import vision
+from app.services import activity, totp, vision
+from app.services.acquisition import capture as capture_acquisition
 from app.services.otp import generate_otp, verify_otp
+from app.services.platform_settings import get_setting
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def _issue_token(user: User) -> TokenOut:
+def _role(user: User) -> str:
+    return user.role.value if hasattr(user.role, "value") else user.role
+
+
+def _issue_token(
+    user: User,
+    db: Session | None = None,
+    request: Request | None = None,
+    sid: str | None = None,
+) -> TokenOut:
     # Un utilisateur vient de s'authentifier : c'est le moment de charger
     # MediaPipe/SAM en tâche de fond. Placé ici plutôt que dans `login` seul
     # pour couvrir aussi l'inscription et le rafraîchissement de jeton — un
@@ -40,11 +54,17 @@ def _issue_token(user: User) -> TokenOut:
     # L'appel rend la main immédiatement et ne peut pas faire échouer
     # l'authentification (thread démonisé, au plus un par processus).
     vision.warm_up_async()
+    # 13.5 : chaque connexion d'un administrateur ouvre une session, dont
+    # l'identifiant voyage dans les jetons et peut etre revoquee.
+    if _role(user) == "admin" and sid is None and db is not None:
+        sid = activity.open_admin_session(db, user, request).id
+        db.commit()
     return TokenOut(
-        access_token=create_access_token(user.id, user.role.value if hasattr(user.role, "value") else user.role),
-        refresh_token=create_refresh_token(user.id, user.role.value if hasattr(user.role, "value") else user.role),
+        access_token=create_access_token(user.id, _role(user), sid),
+        refresh_token=create_refresh_token(user.id, _role(user), sid),
         user_id=user.id,
         role=user.role,
+        must_change_password=bool(user.must_change_password),
     )
 
 
@@ -94,6 +114,7 @@ def create_guest(db: Session = Depends(get_db)):
         # consentement est donne par le geste lui-meme. Il est redemande
         # explicitement a l'inscription.
         photo_consent=True,
+        signup_platform="web",
     )
     db.add(user)
     db.flush()
@@ -127,7 +148,7 @@ def _transfer_guest_measurements(db: Session, guest: User, target: User) -> None
 
 
 @router.post("/register", response_model=TokenOut)
-def register(payload: RegisterIn, db: Session = Depends(get_db)):
+def register(payload: RegisterIn, request: Request, db: Session = Depends(get_db)):
     if db.query(User).filter(User.phone == payload.phone).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "Phone already registered")
 
@@ -142,9 +163,18 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)):
         guest.language = payload.language
         guest.photo_consent = payload.photo_consent
         guest.is_guest = False
+        guest.city = payload.city
+        guest.signup_platform = activity.platform_of(request)
+        guest.guest_converted_at = activity.utcnow()
+        # L'anciennete d'un compte part de son inscription : les statistiques
+        # d'utilisateurs (14.2) le comptent le jour ou il devient un vrai
+        # compte, pas le jour de sa mesure en invite.
+        guest.created_at = activity.utcnow()
+        capture_acquisition(db, guest, payload.acquisition, guest.signup_platform)
+        activity.record_login(db, guest, request, "register")
         db.commit()
         db.refresh(guest)
-        return _issue_token(guest)
+        return _issue_token(guest, db, request)
 
     user = User(
         role=payload.role,
@@ -154,9 +184,13 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)):
         full_name=payload.full_name,
         language=payload.language,
         photo_consent=payload.photo_consent,
+        city=payload.city,
+        signup_platform=activity.platform_of(request),
     )
     db.add(user)
     db.flush()
+    capture_acquisition(db, user, payload.acquisition, user.signup_platform)
+    activity.record_login(db, user, request, "register")
 
     if payload.role == UserRole.client:
         db.add(ClientProfile(user_id=user.id))
@@ -171,13 +205,16 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(user)
-    return _issue_token(user)
+    return _issue_token(user, db, request)
 
 
 @router.post("/login", response_model=TokenOut)
-def login(payload: LoginIn, db: Session = Depends(get_db)):
+def login(payload: LoginIn, request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.phone == payload.phone).first()
     if not user or not verify_password(payload.password, user.password_hash):
+        if user:
+            activity.record_login(db, user, request, "password", success=False)
+            db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid phone or password")
     if not user.is_active:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account disabled")
@@ -185,18 +222,73 @@ def login(payload: LoginIn, db: Session = Depends(get_db)):
     if guest and guest.id != user.id and user.role == UserRole.client:
         _transfer_guest_measurements(db, guest, user)
         db.commit()
-    return _issue_token(user)
+    if _role(user) == "admin" and user.totp_enabled and user.totp_secret:
+        # 13.4 : le mot de passe ne suffit pas, le code est demande ensuite.
+        return TokenOut(
+            access_token="",
+            refresh_token="",
+            user_id=user.id,
+            role=user.role,
+            mfa_required=True,
+            mfa_token=create_mfa_token(user.id, _role(user)),
+        )
+    activity.record_login(db, user, request, "password")
+    db.commit()
+    return _issue_token(user, db, request)
+
+
+@router.post("/mfa", response_model=TokenOut)
+def login_mfa(payload: MfaIn, request: Request, db: Session = Depends(get_db)):
+    """Seconde etape de connexion d'un administrateur protege par la double
+    authentification (13.4)."""
+    data = decode_token(payload.mfa_token)
+    if not data or data.get("type") != "mfa":
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Étape de connexion expirée, recommencez")
+    user = db.get(User, data["sub"])
+    if not user or not user.is_active:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found")
+    if not totp.verify(user.totp_secret, payload.code):
+        activity.record_login(db, user, request, "mfa", success=False)
+        db.commit()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Code incorrect")
+    activity.record_login(db, user, request, "mfa")
+    db.commit()
+    return _issue_token(user, db, request)
 
 
 @router.post("/refresh", response_model=TokenOut)
-def refresh(payload: RefreshIn, db: Session = Depends(get_db)):
+def refresh(payload: RefreshIn, request: Request, db: Session = Depends(get_db)):
     data = decode_token(payload.refresh_token)
     if not data or data.get("type") != "refresh":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token")
     user = db.get(User, data["sub"])
     if not user or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found")
-    return _issue_token(user)
+    sid = data.get("sid")
+    if _role(user) == "admin" and sid:
+        # Le renouvellement automatique du jeton ne prolonge pas la session :
+        # seule une action reelle le fait. Un administrateur parti de son
+        # poste est donc bien deconnecte au bout du delai d'inactivite.
+        error = activity.check_admin_session(
+            db, sid, user, request, int(get_setting("admin_idle_minutes", db) or 0), extend=False
+        )
+        if error:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, error)
+    return _issue_token(user, db, request, sid=sid)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(payload: RefreshIn, db: Session = Depends(get_db)):
+    """Ferme la session administrateur designee par le jeton (13.5). Sans
+    effet pour les autres comptes, dont les jetons sont sans etat."""
+    data = decode_token(payload.refresh_token)
+    sid = data.get("sid") if data else None
+    if sid:
+        session = db.get(AdminSession, sid)
+        if session and session.revoked_at is None:
+            session.revoked_at = activity.utcnow()
+            session.revoked_reason = "logout"
+            db.commit()
 
 
 @router.post("/otp/request", response_model=OtpRequestOut)
@@ -215,8 +307,18 @@ def otp_verify(payload: OtpVerifyIn):
 
 @router.post("/password/reset/request", response_model=OtpRequestOut)
 def password_reset_request(payload: PasswordResetRequestIn, db: Session = Depends(get_db)):
-    if not db.query(User).filter(User.phone == payload.phone).first():
+    user = db.query(User).filter(User.phone == payload.phone).first()
+    if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No account with this phone number")
+    if _role(user) == "admin":
+        # Tant qu'aucun SMS n'est envoye, le code est renvoye a l'ecran : le
+        # laisser fonctionner pour un administrateur permettrait a quiconque
+        # connait son numero de prendre la main sur l'administration. Un
+        # administrateur passe par un super-administrateur (2.6).
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Un compte administrateur se réinitialise depuis l'administration, par un super-administrateur",
+        )
     code = generate_otp(payload.phone)
     return OtpRequestOut(sent=True, dev_code=code)
 
@@ -228,7 +330,10 @@ def password_reset_confirm(payload: PasswordResetConfirmIn, db: Session = Depend
     user = db.query(User).filter(User.phone == payload.phone).first()
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No account with this phone number")
+    if _role(user) == "admin":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Opération non autorisée pour un administrateur")
     user.password_hash = hash_password(payload.new_password)
+    user.must_change_password = False
     db.commit()
     db.refresh(user)
     return _issue_token(user)

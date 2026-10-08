@@ -7,6 +7,7 @@ from app.models.orders import Order, Quote
 from app.models.payments import Payment, PaymentSplit
 from app.models.users import ClientProfile, User
 from app.schemas.payments import DepositIn, PaymentOut, PaymentSplitOut, WebhookIn
+from app.services.escrow import compute_escrow_split
 from app.services.payment_provider import (
     confirm_balance_background,
     confirm_deposit_background,
@@ -40,7 +41,7 @@ def initiate_deposit(
     if existing:
         return existing
 
-    amount = round(float(quote.total) * 0.7, 2)
+    amount = compute_escrow_split(float(quote.total)).deposit_70
     txn_ref = get_provider().initiate(amount, payload.phone)
     payment = Payment(
         order_id=order.id,

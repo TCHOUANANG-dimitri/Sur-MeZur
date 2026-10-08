@@ -44,6 +44,8 @@ class ReviewOut(ORMModel):
     comment: str | None
     moderation_status: ModerationStatus
     created_at: datetime
+    tailor_reply: str | None = None
+    tailor_reply_at: datetime | None = None
 
 
 class NotificationOut(ORMModel):
@@ -58,6 +60,14 @@ class NotificationOut(ORMModel):
 class VerificationDecideIn(BaseModel):
     status: VerificationStatus
     reason: str | None = None
+
+
+class ReviewReportIn(BaseModel):
+    reason: str
+
+
+class ReviewReplyIn(BaseModel):
+    reply: str
 
 
 class DisputeResolveIn(BaseModel):

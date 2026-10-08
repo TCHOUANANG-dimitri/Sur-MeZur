@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import (
@@ -8,6 +9,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Request,
     UploadFile,
     status,
 )
@@ -26,6 +28,8 @@ from app.schemas.measurements import (
     MeasurementSessionOut,
 )
 from app.services import vision
+from app.services.activity import platform_of
+from app.services.activity import platform_of
 from app.services.measurement_corrections import corriger_mesures, inseam_corrige
 from app.services.notify import notify
 from app.services.storage import delete_upload, save_upload
@@ -221,6 +225,7 @@ def _run_measurement_job(session_id: str) -> None:
             db.flush()
             session_row.measurement_id = measurement.id
             session_row.status = JobStatus.ready
+            session_row.finished_at = datetime.now(timezone.utc)
 
             client = db.get(ClientProfile, session_row.client_id)
             if client and not client.default_measurement_id:
@@ -261,6 +266,7 @@ def _fail_session(db: Session, session_id: str, message: str) -> None:
         return
     session_row.status = JobStatus.failed
     session_row.error_message = message
+    session_row.finished_at = datetime.now(timezone.utc)
     client = db.get(ClientProfile, session_row.client_id)
     if client:
         notify(
@@ -275,6 +281,7 @@ def _fail_session(db: Session, session_id: str, message: str) -> None:
 @router.post("/session", response_model=MeasurementSessionOut)
 def create_session(
     payload: MeasurementSessionCreateIn,
+    request: Request,
     user: User = Depends(require_client_or_guest),
     db: Session = Depends(get_db),
 ):
@@ -285,6 +292,8 @@ def create_session(
         weight_kg=payload.weight_kg,
         gender=payload.gender,
         status=JobStatus.processing,
+        # 9.1 : journal des analyses, par support.
+        platform=platform_of(request),
     )
     db.add(session_row)
     db.commit()
@@ -314,6 +323,11 @@ def upload_photos(
     session_row.front_photo_url = save_upload(front, "measurement_photos")
     session_row.side_photo_url = save_upload(side, "measurement_photos")
     session_row.status = JobStatus.processing
+    session_row.error_message = None
+    # 9.1 : la duree d'une analyse part de l'envoi des photos, pas de la
+    # creation de la session (le client peut mettre des minutes a les prendre).
+    session_row.started_at = datetime.now(timezone.utc)
+    session_row.finished_at = None
     db.commit()
     db.refresh(session_row)
 

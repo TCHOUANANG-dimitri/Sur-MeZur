@@ -42,6 +42,11 @@ class GarmentModelOut(ORMModel):
     # propose par un membre. Permet a l'interface de marquer l'origine et de
     # n'ouvrir l'ajout de photos qu'a l'auteur.
     created_by: str | None = None
+    # 4.3 / 4.7 : etat de moderation et mise en avant.
+    status: str = "published"
+    rejection_reason: str | None = None
+    sort_order: int = 0
+    highlight: str | None = None
 
 
 class GarmentModelCreateIn(BaseModel):
@@ -51,6 +56,9 @@ class GarmentModelCreateIn(BaseModel):
     base_price: float | None = None
     style_tags: list[str] = []
     thumbnail_color: str = "#7C3AED"
+    status: Literal["published", "pending", "hidden"] = "published"
+    sort_order: int = 0
+    highlight: str | None = None
 
 
 class CommunityModelIn(BaseModel):
@@ -76,6 +84,8 @@ class GarmentModelUpdateIn(BaseModel):
     base_price: float | None = None
     style_tags: list[str] | None = None
     thumbnail_color: str | None = None
+    sort_order: int | None = None
+    highlight: str | None = None
 
 
 # --- Fabrics / accessories (unchanged) ------------------------------------
@@ -120,6 +130,8 @@ class ReadyToWearOut(ORMModel):
     item_measurements: dict
     measurement_method: MeasurementMethod
     in_stock: bool
+    moderation_status: str = "published"
+    rejection_reason: str | None = None
 
 
 class CompareIn(BaseModel):

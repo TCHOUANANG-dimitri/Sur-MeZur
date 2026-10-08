@@ -19,6 +19,9 @@ class UserOut(ORMModel):
     # l'invitation a creer un compte, ou l'application complete.
     is_guest: bool = False
     created_at: datetime
+    # 2.6 : l'interface demande de choisir un nouveau mot de passe.
+    must_change_password: bool = False
+    city: str | None = None
     # Uniquement pertinent pour role == tailor ; None pour client/admin.
     # Peuplé manuellement par l'endpoint (pas une colonne de `User`), pour que
     # la liste admin des utilisateurs montre le statut sans écran séparé.
@@ -64,6 +67,7 @@ class TailorProfileOut(ORMModel):
     completed_orders_count: int
     avg_response_minutes: int
     atelier_photo_url: str | None
+    is_featured: bool = False
 
 
 class TailorProfilePublicOut(TailorProfileOut):

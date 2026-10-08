@@ -7,8 +7,16 @@ from app.core.deps import get_current_user, get_db
 from app.models.orders import Order
 from app.models.users import ClientProfile, TailorProfile, User
 
+from app.services.platform_settings import get_setting
+
+# Valeurs par defaut ; les valeurs en vigueur se reglent depuis
+# l'administration (13.7) et se lisent via les fonctions ci-dessous.
 NEGOTIATION_MAX_ROUNDS = 3
 OFFER_EXPIRY_DAYS = 7
+
+
+def negotiation_max_rounds() -> int:
+    return int(get_setting("negotiation_max_rounds") or NEGOTIATION_MAX_ROUNDS)
 
 
 def get_order_or_404(order_id: str, db: Session) -> Order:
@@ -36,4 +44,4 @@ def require_order_participant(
 
 
 def offer_expiry() -> datetime:
-    return datetime.now(timezone.utc) + timedelta(days=OFFER_EXPIRY_DAYS)
+    return datetime.now(timezone.utc) + timedelta(days=int(get_setting("offer_expiry_days") or OFFER_EXPIRY_DAYS))
