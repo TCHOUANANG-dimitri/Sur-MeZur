@@ -1,13 +1,12 @@
 "use client";
 
-// Tableau de bord (M1) : chiffres cles de la periode comparee a la
-// precedente, objectifs, evolution dans le temps, sante de la mesure,
-// entonnoir de conversion, activite par ville et taches en attente.
+// Tableau de bord (M1) : chiffres cles de la periode, les deux services mis
+// en avant (mesures par photo, patrons), objectifs, evolution, entonnoir,
+// villes et taches en attente.
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { AdminApi } from "@/lib/api/endpoints";
-import { Core } from "@/lib/api/admin";
+import { Core, Growth } from "@/lib/api/admin";
 import { Chip } from "@/components/ui";
 import { useAdmin } from "@/components/admin/AdminContext";
 import { useUrlState } from "@/components/admin/DataTable";
@@ -33,16 +32,17 @@ const METRICS = [
 ];
 
 export default function Dashboard() {
-  const { can } = useAdmin();
-  const [s, set] = useUrlState({ period: "month", start: "", end: "", metric: "signups", granularity: "day" });
+  const { can, features } = useAdmin();
+  const [s, set] = useUrlState({ period: "month", start: "", end: "", metric: "measurements", granularity: "day" });
   const range = s.period === "custom" && s.start && s.end ? { start: s.start, end: s.end } : { period: s.period === "custom" ? "month" : s.period };
   const rangeKey = JSON.stringify(range);
 
   const dash = useLoad(() => Core.dashboard(range), [rangeKey]);
+  const product = useLoad(() => Growth.product(30), []);
   const series = useLoad(() => Core.timeseries({ ...range, metric: s.metric, granularity: s.granularity }), [rangeKey, s.metric, s.granularity]);
   const funnel = useLoad(() => Core.funnel(range), [rangeKey]);
   const health = useLoad(() => (can("measure") || can("dashboard") ? Core.measureHealth(7) : Promise.resolve(null)), []);
-  const totals = useLoad(() => AdminApi.stats(), []);
+  const totals = useLoad(() => Growth.overview(), []);
   const cities = useLoad(() => Core.byCity(), []);
   const queue = useLoad(() => Core.queue(), []);
   const [showAllCities, setShowAllCities] = useState(false);
@@ -80,6 +80,16 @@ export default function Dashboard() {
         )}
       </div>
 
+      <Panel title="Nos deux services (30 derniers jours)">
+        {product.error ? <ErrorState error={product.error} onRetry={product.reload} /> : !product.data ? <Loading /> : (
+          <div className="adKpis">
+            <Kpi label="Mesures par photo" value={formatNumber(product.data.guest_sessions + product.data.registered_sessions + product.data.tailor_sessions)} hint={`invités ${formatNumber(product.data.guest_sessions)} · inscrits ${formatNumber(product.data.registered_sessions)} · tailleurs ${formatNumber(product.data.tailor_sessions)}`} href="/admin/mesure" />
+            <Kpi label="Patrons générés (aperçu)" value={formatNumber(product.data.patterns_ready)} hint={`${formatNumber(product.data.patterns_total)} demandes · ${formatNumber(product.data.patterns_failed)} en échec`} />
+            <Kpi label="Inscriptions tailleurs" value={formatNumber(product.data.tailor_signups)} href="/admin/tailleurs" />
+          </div>
+        )}
+      </Panel>
+
       {dash.error ? (
         <ErrorState error={dash.error} onRetry={dash.reload} />
       ) : !k ? (
@@ -94,13 +104,13 @@ export default function Dashboard() {
           <Kpi label="Analyses en échec" value={formatNumber(k.measurement_failures.value)} change={k.measurement_failures.change_pct} invert />
           <Kpi label="Commandes" value={formatNumber(k.orders.value)} change={k.orders.change_pct} href="/admin/commandes" />
           <Kpi label="Litiges ouverts" value={formatNumber(k.disputes.value)} change={k.disputes.change_pct} invert href="/admin/litiges" />
-          <Kpi label="Encaissements" value={formatFcfa(k.cash_in.value)} change={k.cash_in.change_pct} />
-          <Kpi label="Commissions" value={formatFcfa(k.commission.value)} change={k.commission.change_pct} />
+          {features.payments && <Kpi label="Encaissements" value={formatFcfa(k.cash_in.value)} change={k.cash_in.change_pct} />}
+          {features.payments && <Kpi label="Commissions" value={formatFcfa(k.commission.value)} change={k.commission.change_pct} />}
         </div>
       )}
 
       {dash.data && dash.data.goals.length > 0 && (
-        <Panel title="Objectifs de croissance" actions={<Link href="/admin/acquisition?onglet=objectifs" className="adHint">Gérer</Link>}>
+        <Panel title="Objectifs de croissance" actions={<Link href="/admin/acquisition" className="adHint">Gérer</Link>}>
           <div className="adGrid3">
             {dash.data.goals.map((g) => (
               <div key={g.id}>
@@ -168,7 +178,7 @@ export default function Dashboard() {
                       <tr>
                         <th>Ville</th>
                         <th style={{ textAlign: "right" }}>Clients</th>
-                        <th style={{ textAlign: "right" }}>Tailleurs (vérifiés)</th>
+                        <th style={{ textAlign: "right" }}>Tailleurs{features.tailor_verification ? " (vérifiés)" : ""}</th>
                         <th style={{ textAlign: "right" }}>Commandes</th>
                         <th>Quartiers des tailleurs</th>
                       </tr>
@@ -179,7 +189,7 @@ export default function Dashboard() {
                           <td data-label="Ville">{c.city}</td>
                           <td data-label="Clients" className="adCellNum">{c.clients}</td>
                           <td data-label="Tailleurs" className="adCellNum">
-                            {c.tailors} ({c.tailors_verified})
+                            {c.tailors}{features.tailor_verification ? ` (${c.tailors_verified})` : ""}
                           </td>
                           <td data-label="Commandes" className="adCellNum">{c.orders}</td>
                           <td data-label="Quartiers" className="adHint">
@@ -207,7 +217,7 @@ export default function Dashboard() {
             {!queue.data ? (
               <Loading />
             ) : queue.data.items.length === 0 ? (
-              <p className="adHint">Rien en attente. 🎉</p>
+              <p className="adHint">Rien en attente.</p>
             ) : (
               queue.data.items.slice(0, 8).map((i, idx) => (
                 <Link key={idx} href={i.href} className="adSearchItem" style={{ padding: "8px 4px" }}>
@@ -253,25 +263,18 @@ export default function Dashboard() {
             ) : (
               <>
                 <dl className="adDl">
-                  <dt>Clients</dt>
-                  <dd>{formatNumber(totals.data.clients)}</dd>
-                  <dt>Tailleurs</dt>
-                  <dd>
-                    {formatNumber(totals.data.tailors)} <span className="adHint">({totals.data.tailors_pending} à vérifier)</span>
-                  </dd>
+                  {Object.entries(totals.data.by_role).map(([role, n]) => (
+                    <div key={role} style={{ display: "contents" }}>
+                      <dt>{role}</dt>
+                      <dd>{formatNumber(n)}</dd>
+                    </div>
+                  ))}
                   <dt>Comptes suspendus</dt>
-                  <dd>{totals.data.suspended}</dd>
-                  <dt>Litiges ouverts</dt>
-                  <dd>{totals.data.open_disputes}</dd>
-                  <dt>Avis signalés</dt>
-                  <dd>{totals.data.pending_reviews}</dd>
-                  <dt>Volume livré</dt>
-                  <dd>{formatFcfa(totals.data.gmv)}</dd>
-                  <dt>Commissions perçues</dt>
-                  <dd>{formatFcfa(totals.data.commission_earned)}</dd>
+                  <dd>{formatNumber(totals.data.suspended)}</dd>
+                  <dt>Invités</dt>
+                  <dd>{formatNumber(totals.data.guests)}</dd>
                 </dl>
-                <div className="adHint" style={{ margin: "12px 0 6px" }}>Commandes par statut</div>
-                <HBars rows={Object.entries(totals.data.orders_by_status).map(([key, v]) => ({ label: ORDER_STATUS[key]?.label ?? key, value: v }))} />
+                <Link href="/admin/statistiques" className="adHint">Statistiques détaillées</Link>
               </>
             )}
           </Panel>

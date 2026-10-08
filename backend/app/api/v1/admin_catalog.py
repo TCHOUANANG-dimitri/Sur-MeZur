@@ -195,6 +195,26 @@ def model_stats(model_id: str, db: Session = Depends(get_db), _=Depends(require_
     return {"views": m.view_count or 0, "likes": likes.get(m.id, 0), "selections": m.select_count or 0, "orders": orders.get(m.id, 0)}
 
 
+class SpotlightIn(BaseModel):
+    highlight: str | None = Field(None, max_length=32)
+    sort_order: int | None = Field(None, ge=0, le=100000)
+
+
+@router.patch("/models/{model_id}/spotlight")
+def set_spotlight(model_id: str, payload: SpotlightIn, request: Request, db: Session = Depends(get_db),
+                  admin: User = Depends(require_perm("catalog"))):
+    """4.4 — mise en avant et ordre d'affichage d'un modele."""
+    m = get_or_404(db, GarmentModel, model_id, "Modèle")
+    if payload.highlight is not None:
+        m.highlight = payload.highlight.strip() or None
+    if payload.sort_order is not None:
+        m.sort_order = payload.sort_order
+    audit.record(db, admin, "model.spotlight", "model", m.id,
+                 summary=f"{m.highlight or '—'} #{m.sort_order}", request=request)
+    db.commit()
+    return {"highlight": m.highlight, "sort_order": m.sort_order}
+
+
 # --- 4.11 Import en masse ----------------------------------------------------------------
 
 
@@ -325,6 +345,63 @@ def delete_fabric(fabric_id: str, request: Request, db: Session = Depends(get_db
     delete_upload(f.texture_url)
     audit.record(db, admin, "fabric.delete", "fabric", f.id, summary=f.name, request=request)
     db.delete(f)
+    db.commit()
+
+
+class CategoryIn(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    gender: str = Field(pattern="^(male|female|unisex)$")
+
+
+def _category_out(c: Category, db: Session) -> dict:
+    return {
+        "id": c.id, "name": c.name, "gender": c.gender,
+        "models": db.query(func.count(GarmentModel.id)).filter(GarmentModel.category_id == c.id).scalar() or 0,
+    }
+
+
+@router.get("/categories")
+def list_categories(db: Session = Depends(get_db), _=Depends(require_perm("catalog"))):
+    return [_category_out(c, db) for c in db.query(Category).order_by(Category.gender, Category.name)]
+
+
+@router.post("/categories", status_code=status.HTTP_201_CREATED)
+def create_category(payload: CategoryIn, request: Request, db: Session = Depends(get_db),
+                   admin: User = Depends(require_perm("catalog"))):
+    name = payload.name.strip()
+    if db.query(Category).filter(Category.name.ilike(name), Category.gender == payload.gender).first():
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cette catégorie existe déjà")
+    c = Category(name=name, gender=payload.gender)
+    db.add(c)
+    db.flush()
+    audit.record(db, admin, "category.create", "category", c.id, summary=name, request=request)
+    db.commit()
+    return _category_out(c, db)
+
+
+@router.patch("/categories/{category_id}")
+def update_category(category_id: str, payload: CategoryIn, request: Request, db: Session = Depends(get_db),
+                    admin: User = Depends(require_perm("catalog"))):
+    c = get_or_404(db, Category, category_id, "Catégorie")
+    name = payload.name.strip()
+    clash = db.query(Category).filter(Category.id != c.id, Category.name.ilike(name), Category.gender == payload.gender).first()
+    if clash:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cette catégorie existe déjà")
+    c.name = name
+    c.gender = payload.gender
+    audit.record(db, admin, "category.update", "category", c.id, summary=name, request=request)
+    db.commit()
+    return _category_out(c, db)
+
+
+@router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_category(category_id: str, request: Request, db: Session = Depends(get_db),
+                    admin: User = Depends(require_perm("catalog"))):
+    c = get_or_404(db, Category, category_id, "Catégorie")
+    if db.query(GarmentModel.id).filter(GarmentModel.category_id == category_id).first():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Des modèles utilisent encore cette catégorie")
+    audit.record(db, admin, "category.delete", "category", c.id, summary=c.name, request=request)
+    db.delete(c)
     db.commit()
 
 

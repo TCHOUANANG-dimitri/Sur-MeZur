@@ -54,6 +54,8 @@ interface Item {
   perm: string[];
   /** Cle du compteur renvoye par /admin/counters. */
   counter?: string;
+  /** Fonctionnalite requise : masquee quand elle est coupee (A2). */
+  feature?: "tailor_verification" | "payments";
 }
 
 const GROUPS: { title: string; items: Item[] }[] = [
@@ -70,7 +72,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     title: "Comptes",
     items: [
       { href: "/admin/utilisateurs", label: "Utilisateurs", Icon: IconUsers, perm: ["users.read"] },
-      { href: "/admin/verifications", label: "Vérifications", Icon: IconVerify, perm: ["tailors"], counter: "verifications" },
+      { href: "/admin/verifications", label: "Vérifications", Icon: IconVerify, perm: ["tailors"], counter: "verifications", feature: "tailor_verification" },
       { href: "/admin/tailleurs", label: "Tailleurs", Icon: IconTailor, perm: ["tailors"] },
     ],
   },
@@ -79,7 +81,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { href: "/admin/commandes", label: "Commandes", Icon: IconOrders, perm: ["orders.read"], counter: "orders" },
       { href: "/admin/litiges", label: "Litiges", Icon: IconDisputes, perm: ["disputes"], counter: "disputes" },
-      { href: "/admin/paiements", label: "Paiements", Icon: IconPayments, perm: ["payments"], counter: "payments" },
+      { href: "/admin/paiements", label: "Paiements", Icon: IconPayments, perm: ["payments"], counter: "payments", feature: "payments" },
       { href: "/admin/avis", label: "Avis", Icon: IconReviews, perm: ["reviews"], counter: "reviews" },
     ],
   },
@@ -173,7 +175,7 @@ function NavItems({ items, counters, onNavigate }: { items: Item[]; counters: Re
 }
 
 function Navigation({ onNavigate }: { onNavigate?: () => void }) {
-  const { me, counters, can, logout } = useAdmin();
+  const { me, counters, can, features, logout } = useAdmin();
   return (
     <>
       <div className="adBrand">
@@ -184,7 +186,11 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       </div>
       {GROUPS.map((g) => {
-        const items = g.items.filter((i) => i.perm.length === 0 || i.perm.some((p) => can(p)));
+        const items = g.items.filter(
+          (i) =>
+            (i.perm.length === 0 || i.perm.some((p) => can(p))) &&
+            (!i.feature || features[i.feature])
+        );
         if (!items.length) return null;
         return (
           <nav key={g.title} className="adNavGroup" aria-label={g.title}>

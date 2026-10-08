@@ -308,6 +308,22 @@ def main() -> None:
     cxl = ok(client.post(f"/api/orders/{o3['id']}/cancel", json={"reason": "Change d'avis"}, headers=CH),
              "commande annulee").json()
     check(cxl["status"] == "cancelled" and cxl["cancelled_by"] == "client", "annulation cliente")
+    with SessionLocal() as db:
+        db.add(User(role="admin", phone="+237600000099", full_name="Admin Litige",
+                    password_hash=hash_password("abcd12")))
+        db.commit()
+    adm = ok(client.post("/api/auth/login", json={"phone": "+237600000099", "password": "abcd12"}),
+             "connexion admin").json()
+    AH = {"Authorization": f"Bearer {adm['access_token']}"}
+    ok(client.post(f"/api/orders/{o1['id']}/dispute", headers=CH,
+                   json={"note": "Trop court", "category": "mesures"}), "litige ouvert")
+    dec2 = ok(client.post(f"/api/admin/disputes/{o1['id']}/decide", headers=AH,
+                          json={"decision": "refund_partial", "amount": 5000, "reason": "En votre faveur"}),
+              "decision sans argent").json()
+    check(dec2["dispute_status"] == "resolved_client" and dec2["refund_amount"] is None,
+          "remboursement devient faveur client, rien de cree")
+    rf = ok(client.get("/api/admin/tables/refunds", headers=AH), "table remboursements").json()
+    check(rf["total"] == 0, "aucun remboursement")
     dash2 = ok(client.get("/api/tailor/dashboard", headers=TH), "dashboard commandes").json()
     check(dash2["orders_by_status"].get("finished_delivered") == 1
           and dash2["orders_by_status"].get("declined") == 1

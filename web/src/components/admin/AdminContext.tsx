@@ -10,22 +10,31 @@
  */
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Core, type AdminMe } from "@/lib/api/admin";
+import { Core, Growth, type AdminMe, type PublicFeatures } from "@/lib/api/admin";
 import { getRefreshToken } from "@/lib/api/client";
 import { useAuth } from "@/components/AuthProvider";
 
 interface AdminState {
   me: AdminMe | null;
   counters: Record<string, number>;
+  features: PublicFeatures;
   can: (perm: string) => boolean;
   refreshCounters: () => void;
   reloadMe: () => Promise<void>;
   logout: () => void;
 }
 
+const DEFAULT_FEATURES: PublicFeatures = {
+  tailor_verification: false,
+  payments: false,
+  negotiation: false,
+  pattern_generation: "preview",
+};
+
 const Ctx = createContext<AdminState>({
   me: null,
   counters: {},
+  features: DEFAULT_FEATURES,
   can: () => false,
   refreshCounters: () => {},
   reloadMe: async () => {},
@@ -36,6 +45,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const { logout: baseLogout } = useAuth();
   const [me, setMe] = useState<AdminMe | null>(null);
   const [counters, setCounters] = useState<Record<string, number>>({});
+  const [features, setFeatures] = useState<PublicFeatures>(DEFAULT_FEATURES);
   const lastActivity = useRef(Date.now());
 
   const reloadMe = useCallback(async () => {
@@ -62,6 +72,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void reloadMe();
     refreshCounters();
+    // Fonctionnalites activees : masquent « Vérifications » et « Paiements »
+    // quand elles sont coupees (A2). Comme les compteurs, sans bloquer.
+    Growth.features()
+      .then((cfg) => {
+        if (cfg.features) setFeatures({ ...DEFAULT_FEATURES, ...cfg.features });
+      })
+      .catch(() => {});
     const timer = setInterval(refreshCounters, 60_000);
     return () => clearInterval(timer);
   }, [reloadMe, refreshCounters]);
@@ -88,8 +105,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const can = useCallback((perm: string) => Boolean(me?.permissions.includes(perm)), [me]);
 
   const value = useMemo(
-    () => ({ me, counters, can, refreshCounters, reloadMe, logout }),
-    [me, counters, can, refreshCounters, reloadMe, logout]
+    () => ({ me, counters, features, can, refreshCounters, reloadMe, logout }),
+    [me, counters, features, can, refreshCounters, reloadMe, logout]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

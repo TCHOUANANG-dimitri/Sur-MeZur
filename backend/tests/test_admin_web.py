@@ -133,7 +133,10 @@ def main() -> None:
     print("\n== M0 / M1")
     ok(client.get("/api/admin/counters", headers={**H, "X-SMZ-Background": "1"}), "compteurs")
     q = ok(client.get("/api/admin/queue", headers=H), "file des actions").json()
-    check(q["total"] >= 3, f"file non vide ({q['total']})")
+    check(q["total"] >= 1, f"file non vide ({q['total']})")
+    # Orientation sans argent ni verification : la file ne propose plus ces taches.
+    check(not any(x["type"] in ("verification", "payment", "refund") for x in q["items"]),
+          "file sans verification ni paiements")
     s = ok(client.get("/api/admin/search?q=Clien", headers=H), "recherche globale").json()
     check(any(x["type"] == "user" for x in s["results"]), "recherche trouve l'utilisateur")
     ok(client.post("/api/admin/notes", headers=H, json={"entity_type": "user", "entity_id": ids["client_user"], "body": "Appelée le 3/10"}), "note", 201)
@@ -217,8 +220,20 @@ def main() -> None:
     check(len(pm) == 1, "client voit le message")
     ok(client.post(f"/api/orders/{ids['order']}/dispute/messages", headers=CH, data={"body": "Voici ma réponse"}), "reponse partie", 201)
     ok(client.get("/api/admin/tables/disputes", headers=H), "table litiges")
+    # Paiements reactives pour ce passage : la decision « remboursement »
+    # cree un remboursement, comme avant l'orientation sans argent.
+    with SessionLocal() as db:
+        from app.services.platform_settings import set_setting as _set_features
+        _set_features(db, "features", {"payments": True}, None)
+        db.commit()
+    from app.services.platform_settings import invalidate as _invalidate_features
+    _invalidate_features()
     ok(client.post(f"/api/admin/disputes/{ids['order']}/decide", headers=H,
                    json={"decision": "refund_partial", "amount": 10000, "reason": "Retard avéré"}), "decision graduee")
+    with SessionLocal() as db:
+        _set_features(db, "features", {"payments": False}, None)
+        db.commit()
+    _invalidate_features()
     ok(client.get("/api/admin/disputes-stats", headers=H), "stats litiges")
 
     print("\n== M6 Paiements")

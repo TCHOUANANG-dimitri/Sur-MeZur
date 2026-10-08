@@ -99,6 +99,7 @@ export const ORDER_STATUS: Record<string, { label: string; tone: "success" | "er
   finished_delivered: { label: "Livrée", tone: "success" },
   finished_not_delivered: { label: "Terminée non livrée", tone: "error" },
   cancelled: { label: "Annulée", tone: "error" },
+  declined: { label: "Refusée", tone: "error" },
 };
 
 export const VERIFICATION_STATUS: Record<string, { label: string; tone: "success" | "error" | "neutral" | "pending" }> = {

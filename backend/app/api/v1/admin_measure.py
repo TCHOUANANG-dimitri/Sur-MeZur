@@ -20,7 +20,8 @@ from app.models.collecte import DatasetSubject
 from app.models.measurements import Measurement, MeasurementDataset, MeasurementSession
 from app.models.operations import FitFeedback
 from app.models.orders import Order
-from app.models.users import ClientProfile, User
+from app.models.tailor_tools import TailorClient, TailorClientMeasurement
+from app.models.users import ClientProfile, TailorProfile, User
 from app.services.activity import as_utc, local_day
 from app.services.admin_perms import require_perm
 from app.services.platform_settings import get_setting
@@ -124,6 +125,54 @@ def session_diagnostic(session_id: str, db: Session = Depends(get_db), _=Depends
         "user": {"id": user.id, "full_name": user.full_name, "is_guest": user.is_guest} if user else None,
         "measurement": {"id": measurement.id, "data": measurement.data or {}, "confidence": measurement.confidence} if measurement else None,
     }
+
+
+TAILOR_MEASURE_COLUMNS = [("created_at", "Date"), ("shop_name", "Atelier"), ("client", "Client"),
+                          ("source", "Origine"), ("height_cm", "Taille (cm)"), ("keys", "Mesures")]
+
+
+@router.get("/tables/tailor-measurements")
+def tailor_measurements_table(
+    params: TableParams = Depends(table_params),
+    source: str | None = Query(None, pattern="^(manual|photo)$"),
+    q: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    db: Session = Depends(get_db),
+    _=Depends(require_perm("measure")),
+):
+    """M9 — mesures faites par les tailleurs (carnet), saisie manuelle et
+    photo reunies, avec l'atelier et le client concernes."""
+    query = (
+        db.query(TailorClientMeasurement, TailorClient, TailorProfile)
+        .join(TailorClient, TailorClient.id == TailorClientMeasurement.tailor_client_id)
+        .join(TailorProfile, TailorProfile.id == TailorClient.tailor_id)
+    )
+    if source:
+        query = query.filter(TailorClientMeasurement.source == source)
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            or_(TailorClient.full_name.ilike(like), TailorProfile.shop_name.ilike(like))
+        )
+    if date_from:
+        query = query.filter(TailorClientMeasurement.created_at >= local_start_utc(date_from))
+    if date_to:
+        query = query.filter(TailorClientMeasurement.created_at < local_start_utc(date_to + timedelta(days=1)))
+    query = apply_sort(query, params, {"created_at": TailorClientMeasurement.created_at}, "created_at")
+    rows, total = page_of(query, params)
+
+    def serialize(row) -> dict:
+        m, c, tp = row
+        return {
+            "id": m.id, "created_at": iso(m.created_at), "source": m.source,
+            "shop_name": tp.shop_name, "tailor_user_id": tp.user_id,
+            "client": c.full_name, "tailor_client_id": c.id,
+            "height_cm": m.height_cm, "weight_kg": m.weight_kg,
+            "keys": len(m.data or {}), "note": m.note,
+        }
+
+    return table_response(params, rows, total, serialize, "mesures tailleurs", TAILOR_MEASURE_COLUMNS)
 
 
 @router.get("/measure/health")

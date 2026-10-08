@@ -97,8 +97,13 @@ def counters(user: User = Depends(require_roles("admin")), db: Session = Depends
     """Nombre d'elements en attente par entree du menu. Appele toutes les
     minutes par l'interface, avec l'en-tete X-SMZ-Background (ne prolonge
     pas la session)."""
+    from app.services.platform_settings import get_setting as get_platform_setting
+
+    features = get_platform_setting("features") or {}
+    verification_on = bool(features.get("tailor_verification", False))
+    payments_on = bool(features.get("payments", False))
     out: dict[str, int] = {}
-    if has_perm(user, "tailors"):
+    if has_perm(user, "tailors") and verification_on:
         out["verifications"] = _pending_verifications(db).count()
     if has_perm(user, "disputes"):
         out["disputes"] = db.query(func.count(Order.id)).filter(Order.dispute_status == "open").scalar() or 0
@@ -108,7 +113,7 @@ def counters(user: User = Depends(require_roles("admin")), db: Session = Depends
         )
     if has_perm(user, "catalog"):
         out["catalog"] = db.query(func.count(GarmentModel.id)).filter(GarmentModel.status == "pending").scalar() or 0
-    if has_perm(user, "payments"):
+    if has_perm(user, "payments") and payments_on:
         out["payments"] = (
             db.query(func.count(Payment.id)).filter(Payment.status == "failed").scalar() or 0
         ) + (db.query(func.count(Refund.id)).filter(Refund.status == "pending").scalar() or 0)
@@ -141,8 +146,13 @@ def counters(user: User = Depends(require_roles("admin")), db: Session = Depends
 def action_queue(user: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
     """1.2 — toutes les taches en attente, de la plus ancienne a la plus
     recente, avec un lien vers chacune."""
+    from app.services.platform_settings import get_setting as get_platform_setting
+
+    features = get_platform_setting("features") or {}
+    verification_on = bool(features.get("tailor_verification", False))
+    payments_on = bool(features.get("payments", False))
     items: list[dict] = []
-    if has_perm(user, "tailors"):
+    if has_perm(user, "tailors") and verification_on:
         for tp in _pending_verifications(db).all():
             items.append({
                 "type": "verification", "label": "Vérification de tailleur", "title": tp.shop_name,
@@ -166,7 +176,7 @@ def action_queue(user: User = Depends(require_roles("admin")), db: Session = Dep
                 "type": "model", "label": "Modèle à modérer", "title": m.name,
                 "since": iso(m.created_at), "href": "/admin/catalogue?onglet=moderation",
             })
-    if has_perm(user, "payments"):
+    if has_perm(user, "payments") and payments_on:
         for p in db.query(Payment).filter(Payment.status == "failed").all():
             items.append({
                 "type": "payment", "label": "Paiement en échec", "title": f"{float(p.amount):,.0f} FCFA".replace(",", " "),

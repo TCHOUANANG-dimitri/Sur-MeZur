@@ -429,6 +429,20 @@ export interface RtwRow {
   created_at: string;
 }
 
+export interface CategoryItem {
+  id: string;
+  name: string;
+  gender: string;
+  models: number;
+}
+
+export interface ModelStats {
+  views: number;
+  likes: number;
+  selections: number;
+  orders: number;
+}
+
 export const Catalog = {
   models: (p: Params) => table<ModelRow>("/admin/tables/models", p),
   moderate: (id: string, status: string, reason?: string) =>
@@ -463,6 +477,14 @@ export const Catalog = {
   rtw: (p: Params) => table<RtwRow>("/admin/tables/ready-to-wear", p),
   moderateRtw: (id: string, status: string, reason?: string) =>
     api.post<unknown>(`/admin/ready-to-wear/${id}/moderate`, { status, reason }),
+  modelStats: (id: string) => api.get<ModelStats>(`/admin/models/${id}/stats`),
+  spotlight: (id: string, body: { highlight?: string | null; sort_order?: number }) =>
+    api.patch<{ highlight: string | null; sort_order: number }>(`/admin/models/${id}/spotlight`, body),
+  categories: () => api.get<CategoryItem[]>("/admin/categories"),
+  createCategory: (body: { name: string; gender: string }) => api.post<CategoryItem>("/admin/categories", body),
+  updateCategory: (id: string, body: { name: string; gender: string }) =>
+    api.patch<CategoryItem>(`/admin/categories/${id}`, body),
+  deleteCategory: (id: string) => api.delete<void>(`/admin/categories/${id}`),
 };
 
 // --- M5 / M7 Commandes et litiges -------------------------------------------------------
@@ -745,6 +767,20 @@ export interface CollecteObjectives {
   by_week: { week: string; count: number }[];
 }
 
+export interface TailorMeasureRow {
+  id: string;
+  created_at: string;
+  source: string;
+  shop_name: string;
+  tailor_user_id: string;
+  client: string;
+  tailor_client_id: string;
+  height_cm: number | null;
+  weight_kg: number | null;
+  keys: number;
+  note: string | null;
+}
+
 export const Measure = {
   sessions: (p: Params) => table<SessionRow>("/admin/tables/measurement-sessions", p),
   session: (id: string) => api.get<SessionDiagnostic>(`/admin/measurement-sessions/${id}`),
@@ -752,6 +788,7 @@ export const Measure = {
   chain: () => api.get<Record<string, unknown>>("/admin/measure/chain"),
   precision: () => api.get<Precision>("/admin/measure/precision"),
   collecteObjectives: () => api.get<CollecteObjectives>("/admin/collecte/objectives"),
+  tailorMeasurements: (p: Params) => table<TailorMeasureRow>("/admin/tables/tailor-measurements", p),
 };
 
 // Campagne de collecte : routes existantes de l'application `collecte/`.
@@ -1088,8 +1125,30 @@ export interface Report {
   goals: Goal[];
 }
 
+export interface ProductStats {
+  days: number;
+  guest_sessions: number;
+  registered_sessions: number;
+  tailor_sessions: number;
+  tailor_signups: number;
+  tailor_manual_measurements: number;
+  tailor_photo_measurements: number;
+  patterns_total: number;
+  patterns_ready: number;
+  patterns_failed: number;
+}
+
+export interface PublicFeatures {
+  tailor_verification: boolean;
+  payments: boolean;
+  negotiation: boolean;
+  pattern_generation: string;
+}
+
 export const Growth = {
   overview: (as_of?: string) => api.get<Overview>(`/admin/growth/overview${qs({ as_of })}`),
+  product: (days = 30) => api.get<ProductStats>(`/admin/growth/product${qs({ days })}`),
+  features: () => api.get<{ features: PublicFeatures } & Record<string, unknown>>("/public/config"),
   newUsers: (p: Params) => api.get<NewUsers>(`/admin/growth/new-users${qs(p)}`),
   active: (p: Params) => api.get<ActiveStats>(`/admin/growth/active${qs(p)}`),
   churn: (p: Params) => api.get<ChurnStats>(`/admin/growth/churn${qs(p)}`),

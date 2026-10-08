@@ -422,6 +422,8 @@ DECISION_STATUS = {
 def decide_dispute(order_id: str, payload: DisputeDecisionIn, request: Request, db: Session = Depends(get_db),
                    admin: User = Depends(require_perm("disputes"))):
     """7.4 — decision graduee, motif communique aux deux parties."""
+    from app.services.platform_settings import get_setting as get_platform_setting
+
     o = get_or_404(db, Order, order_id, "Commande")
     if o.dispute_status != "open":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ce litige n'est pas ouvert")
@@ -429,10 +431,13 @@ def decide_dispute(order_id: str, payload: DisputeDecisionIn, request: Request, 
         float(p.amount) for p in db.query(Payment).filter(Payment.order_id == o.id).all()
         if str(getattr(p.status, "value", p.status)) in ("paid", "released")
     )
+    # A2.2 : sans argent dans la plateforme, une decision « remboursement »
+    # devient « en faveur du client » et aucun remboursement n'est cree.
+    no_money = not (get_platform_setting("features") or {}).get("payments", False)
     amount = None
-    if payload.decision == "refund_full":
+    if payload.decision == "refund_full" and not no_money:
         amount = paid
-    elif payload.decision == "refund_partial":
+    elif payload.decision == "refund_partial" and not no_money:
         if not payload.amount:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indiquez le montant du remboursement partiel")
         amount = payload.amount

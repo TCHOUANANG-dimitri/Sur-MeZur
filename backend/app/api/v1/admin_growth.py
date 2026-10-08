@@ -14,9 +14,12 @@ from sqlalchemy.orm import Session
 from app.api.v1.admin_common import get_or_404, iso
 from app.core.deps import get_db, require_roles
 from app.models.acquisition import AcquisitionChannel, AcquisitionComment, Campaign, GrowthGoal, UserAcquisition
-from app.models.users import TailorProfile, User
+from app.models.measurements import MeasurementSession
+from app.models.tailor_tools import TailorClientMeasurement, TailorPatternRequest
+from app.models.users import ClientProfile, TailorProfile, User
 from app.services import audit
 from app.services.acquisition import qualify
+from app.services.activity import local_day, utcnow
 from app.services.admin_perms import require_perm
 from app.services.tables import TableParams, apply_sort, csv_response, page_of, table_params, table_response
 from app.services.user_stats import (
@@ -104,8 +107,74 @@ def activation_stats(rng: tuple[date, date] = Depends(range_params), segment: Se
 
 @router.get("/returns", dependencies=[read])
 def return_stats(rng: tuple[date, date] = Depends(range_params), segment: Segment = Depends(segment_params), db: Session = Depends(get_db)):
-    """14.7 — utilisateurs revenus apres une periode d'inactivite."""
+    """14.7 - utilisateurs revenus apres une periode d'inactivite."""
     return returns(db, rng[0], rng[1], segment)
+
+
+@router.get("/product", dependencies=[read])
+def product_stats(days: int = Query(30, ge=1, le=365), db: Session = Depends(get_db)):
+    """Nouveau produit (octobre 2026) : les deux services gratuits mis en
+    avant — mesures par photo (invites, inscrits, tailleurs) et patrons
+    generes — plus les inscriptions de tailleurs."""
+    from app.services.user_stats import local_start_utc
+
+    since = local_start_utc(local_day() - timedelta(days=days))
+    guest_sessions = (
+        db.query(func.count(MeasurementSession.id))
+        .join(ClientProfile, ClientProfile.id == MeasurementSession.client_id)
+        .join(User, User.id == ClientProfile.user_id)
+        .filter(MeasurementSession.created_at >= since, User.is_guest.is_(True))
+        .scalar() or 0
+    )
+    registered_sessions = (
+        db.query(func.count(MeasurementSession.id))
+        .join(ClientProfile, ClientProfile.id == MeasurementSession.client_id)
+        .join(User, User.id == ClientProfile.user_id)
+        .filter(MeasurementSession.created_at >= since, User.is_guest.is_(False))
+        .scalar() or 0
+    )
+    tailor_sessions = (
+        db.query(func.count(MeasurementSession.id))
+        .filter(MeasurementSession.created_at >= since,
+                MeasurementSession.tailor_client_id.isnot(None))
+        .scalar() or 0
+    )
+    tailor_signups = (
+        db.query(func.count(User.id))
+        .filter(User.created_at >= since, User.role == "tailor", User.is_guest.is_(False))
+        .scalar() or 0
+    )
+    tailor_manual = (
+        db.query(func.count(TailorClientMeasurement.id))
+        .filter(TailorClientMeasurement.created_at >= since,
+                TailorClientMeasurement.source == "manual")
+        .scalar() or 0
+    )
+    tailor_photo = (
+        db.query(func.count(TailorClientMeasurement.id))
+        .filter(TailorClientMeasurement.created_at >= since,
+                TailorClientMeasurement.source == "photo")
+        .scalar() or 0
+    )
+    patterns = (
+        db.query(TailorPatternRequest.status, func.count(TailorPatternRequest.id))
+        .filter(TailorPatternRequest.created_at >= since)
+        .group_by(TailorPatternRequest.status)
+        .all()
+    )
+    by_status = {str(s): n for s, n in patterns}
+    return {
+        "days": days,
+        "guest_sessions": guest_sessions,
+        "registered_sessions": registered_sessions,
+        "tailor_sessions": tailor_sessions,
+        "tailor_signups": tailor_signups,
+        "tailor_manual_measurements": tailor_manual,
+        "tailor_photo_measurements": tailor_photo,
+        "patterns_total": sum(by_status.values()),
+        "patterns_ready": by_status.get("ready", 0),
+        "patterns_failed": by_status.get("failed", 0),
+    }
 
 
 @router.get("/channels-stats", dependencies=[read])
