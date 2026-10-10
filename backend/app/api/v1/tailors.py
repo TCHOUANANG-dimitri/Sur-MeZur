@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from pydantic import BaseModel, Field
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -138,6 +139,39 @@ def get_my_tailor_profile(
     tp = db.query(TailorProfile).filter(TailorProfile.user_id == user.id).first()
     if not tp:
         return None
+    out = TailorProfileOut.model_validate(tp)
+    out.verification_enabled = _verification_enabled()
+    return out
+
+
+class TailorProfilePatchIn(BaseModel):
+    shop_name: str | None = Field(None, min_length=2, max_length=255)
+    city: str | None = Field(None, max_length=120)
+    quartier: str | None = Field(None, max_length=120)
+    bio: str | None = Field(None, max_length=2000)
+
+
+@router.patch("/me", response_model=TailorProfileOut)
+def update_my_tailor_profile(
+    payload: TailorProfilePatchIn,
+    user: User = Depends(require_roles("tailor")),
+    db: Session = Depends(get_db),
+):
+    """Profil d'atelier modifiable depuis l'espace tailleur web, sans passer
+    par la verification (desactivable, A2.1). Le profil est cree au besoin :
+    un compte tailleur cree depuis un invite n'en a pas toujours."""
+    tp = db.query(TailorProfile).filter(TailorProfile.user_id == user.id).first()
+    if not tp:
+        tp = TailorProfile(user_id=user.id, tailor_type=TailorType.individual, shop_name=user.full_name)
+        db.add(tp)
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        if isinstance(value, str):
+            value = value.strip() or None
+        if field == "shop_name" and not value:
+            continue
+        setattr(tp, field, value)
+    db.commit()
+    db.refresh(tp)
     out = TailorProfileOut.model_validate(tp)
     out.verification_enabled = _verification_enabled()
     return out

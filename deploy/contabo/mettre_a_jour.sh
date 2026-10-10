@@ -42,6 +42,11 @@ run_py scripts/sync_sqlite_columns.py --apply
 # Supabase : ferme l'API REST publique sur les tables, nouvelles comprises
 # (sans effet en SQLite). Voir backend/scripts/securiser_supabase.py.
 run_py scripts/securiser_supabase.py
+# Fichiers prives (photos de corps, pieces d'identite) : sortis du dossier
+# public /uploads vers le stockage protege. Relancable sans risque : ce qui
+# est deja deplace est ignore. Sans cette etape, les fichiers existants
+# deviennent introuvables des la mise a jour (le statique les refuse).
+run_py scripts/migrer_fichiers_prives.py --apply
 
 systemctl restart surmezur-api
 

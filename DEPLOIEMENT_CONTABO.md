@@ -13,6 +13,41 @@ L'application mobile, le nom de domaine et le HTTPS de bout en bout font
 l'objet d'une [phase 2](#phase-2--nom-de-domaine-https-et-application-mobile),
 à faire plus tard.
 
+> ## Mise à jour d'octobre 2026 — votre serveur réel, dans cet ordre
+>
+> Le serveur actuel diffère de la procédure ci-dessous sur un point : **nginx**
+> sert déjà d'autres sites sur les ports 80 et 443. L'API Sur-MeZur est donc
+> servie par nginx sur le **port 8080** (pas par Caddy). Ne désactivez pas nginx.
+> Le domaine `gitingeniering.com` a expiré le 07/10/2026 : tout passe par l'IP.
+>
+> 1. **Sécurité d'abord** : suivre [`deploy/contabo/URGENCE_SECURITE.md`](deploy/contabo/URGENCE_SECURITE.md)
+>    (changer le mot de passe admin, `JWT_SECRET`, droits de `api.env`, mot de passe Supabase).
+> 2. **Compléter `/etc/surmezur/api.env`** avec les nouvelles variables de
+>    [`api.env.example`](deploy/contabo/api.env.example) : `ENV=production`,
+>    `OTP_DEV_CODE=false`, `PROTECTED_DIR=/srv/surmezur/data/protected_store`,
+>    `PAYMENT_WEBHOOK_SECRET=` (vide : paiements désactivés).
+>    *Pourquoi :* sans `OTP_DEV_CODE=false`, le code de réinitialisation du mot
+>    de passe s'affiche à l'écran et n'importe qui peut prendre un compte.
+> 3. **nginx sur 8080** : installer [`nginx-surmezur.conf`](deploy/contabo/nginx-surmezur.conf)
+>    (commandes en tête du fichier). *Pourquoi :* il remplace le bloc saisi à la
+>    main, ferme le webhook de paiement et masque la version de nginx.
+> 4. **Mettre à jour le code** : `sudo bash /srv/surmezur/app/deploy/contabo/mettre_a_jour.sh`.
+>    Le script crée les nouvelles tables et colonnes, verrouille Supabase et
+>    **déplace les photos et pièces d'identité** vers le stockage protégé.
+> 5. **Numéros de téléphone** (une fois) : lancer d'abord l'aperçu, lire les
+>    doublons signalés, puis relancer avec `--apply` à la fin :
+>    ```
+>    sudo -u surmezur -H bash -c 'set -a; . /etc/surmezur/api.env; set +a; cd /srv/surmezur/app/backend; /srv/surmezur/venv/bin/python scripts/normaliser_telephones.py'
+>    ``` *Pourquoi :* la connexion compare maintenant des numéros
+>    normalisés ; un compte saisi avec des espaces serait sinon introuvable.
+> 6. **Vercel** (site web et collecte) : `API_ORIGIN=http://169.58.69.36:8080`,
+>    puis *Redeploy* sans cache.
+> 7. **Vérifier** : `curl http://169.58.69.36:8080/api/health`, connexion admin
+>    sur le site, puis page *Administration → État technique*.
+>
+> Les variables `BACKUP_DIR` (défaut `/srv/surmezur/backups`) et la tâche de
+> sauvegarde (`sauvegarde.sh`) alimentent la page *État technique*.
+
 ```
                  HTTPS                    HTTP, par l'IP        ┌─ VPS Contabo ──────────────────────┐
  navigateur ──────────────► Vercel ──────────────────────────►│ Caddy :80 ─► API (127.0.0.1:8000)    │──► Supabase
