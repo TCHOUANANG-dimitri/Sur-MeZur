@@ -204,3 +204,42 @@
     margin-bottom: 10px;
   }
 }
+
+/* --- Choix du role a l''inscription (B2) ------------------------------------ */
+.roleChoice {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+@media (min-width: 560px) {
+  .roleChoice { grid-template-columns: 1fr 1fr; }
+}
+.roleCard {
+  text-align: left;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  cursor: pointer;
+  min-height: 44px;
+  display: grid;
+  gap: 2px;
+}
+.roleCard strong { font-size: 15px; color: var(--indigo-text); }
+.roleCard span { font-size: 13px; color: var(--text-secondary); }
+.roleCardActive {
+  border-color: var(--violet-primary);
+  background: var(--violet-tint);
+}
+.fieldOptional { font-weight: 400; color: var(--text-secondary); }
+.fieldRow { display: grid; gap: 0 12px; }
+@media (min-width: 560px) {
+  .fieldRow { grid-template-columns: 1fr 1fr; }
+}
+/* Code a 6 chiffres (double authentification). */
+.mfaCode {
+  text-align: center;
+  font-size: 22px;
+  letter-spacing: 0.35em;
+  text-indent: 0.35em;
+}

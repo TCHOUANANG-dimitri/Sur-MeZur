@@ -38,7 +38,23 @@ export const AuthApi = {
     photo_consent: boolean;
     /** Jeton du compte invite : ses mesures suivent le compte cree. */
     guest_token?: string;
+    city?: string;
+    /** Compte tailleur : nom de l'atelier et quartier, facultatifs. */
+    shop_name?: string;
+    quartier?: string;
+    /** 14.9 / 14.10 : origine de l'inscription. */
+    acquisition?: {
+      source?: string;
+      source_other?: string;
+      utm?: Record<string, string | undefined>;
+      referral_code?: string;
+      landing_path?: string;
+    };
   }) => api.post<TokenResponse>("/auth/register", body, { auth: false }),
+  mfa: (mfa_token: string, code: string) =>
+    api.post<TokenResponse>("/auth/mfa", { mfa_token, code }, { auth: false }),
+  logout: (refresh_token: string) =>
+    api.post<void>("/auth/logout", { refresh_token }, { auth: false }),
   login: (phone: string, password: string, guest_token?: string) =>
     api.post<TokenResponse>(
       "/auth/login",
@@ -77,6 +93,32 @@ export const UsersApi = {
   /** Efface les photos de mesure deja analysees. Les mensurations calculees
    *  sont conservees : seules les images disparaissent. */
   purgePhotos: () => api.post<{ purged: boolean }>("/me/photos/purge"),
+  changePassword: (current_password: string, new_password: string) =>
+    api.post<{ changed: boolean }>("/me/password", { current_password, new_password }),
+};
+
+// --- Pages publiques : bandeau, maintenance, pages d'information, contact ---
+export interface PublicConfig {
+  banner: { enabled: boolean; message: string; tone: string; link_url?: string; link_label?: string; ends_at?: string | null };
+  maintenance: { enabled: boolean; message: string };
+  cities: { name: string; quartiers: string[] }[];
+  signup_source_question: boolean;
+}
+
+export const PublicApi = {
+  config: () => api.get<PublicConfig>("/public/config"),
+  channels: () => api.get<{ code: string; name: string }[]>("/public/acquisition-channels"),
+  page: (slug: string) =>
+    api.get<{ slug: string; title: string; body: string; updated_at: string }>(`/public/pages/${slug}`),
+  pages: () => api.get<{ slug: string; title: string }[]>("/public/pages"),
+  contact: (body: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    subject: string;
+    body: string;
+    category: string;
+  }) => api.post<{ id: string; number: number }>("/support/tickets", body),
 };
 
 export const TailorsApi = {
@@ -292,7 +334,9 @@ export const AdminApi = {
   uploadModelPhotos: (modelId: string, files: File[]) => {
     const fd = new FormData();
     files.forEach((f) => fd.append("files", f));
-    return api.post<GarmentModel>(`/admin/models/${modelId}/photos`, fd);
+    // postForm et non post : post serialise le corps en JSON, ce qui
+    // envoyait un objet vide au lieu des fichiers.
+    return api.postForm<GarmentModel>(`/admin/models/${modelId}/photos`, fd);
   },
   // --- Reprises du mobile : absentes de l'ancien frontend Vite, necessaires
   // pour que l'admin web offre les memes ecrans que l'admin mobile.

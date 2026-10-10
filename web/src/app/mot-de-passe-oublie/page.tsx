@@ -14,7 +14,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthApi } from "@/lib/api/endpoints";
-import { setTokens, startAuthTimer } from "@/lib/api/client";
+import { ApiError, setTokens, startAuthTimer } from "@/lib/api/client";
 import { useAuth } from "@/components/AuthProvider";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner, InfoBanner } from "@/components/ui";
@@ -31,6 +31,9 @@ export default function MotDePasseOublie() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // Reinitialisation par code desactivee par l'equipe (l'API repond 503) :
+  // on oriente vers le support, qui communiquera un mot de passe provisoire.
+  const [otpDisabled, setOtpDisabled] = useState(false);
 
   // Le numero local vient de `splitPhone`, qui coupe sur les indicatifs
   // CONNUS. Une expression reguliere du type /^\+\d+/ ne marche pas :
@@ -47,7 +50,12 @@ export default function MotDePasseOublie() {
       setDevCode(res.dev_code ?? "");
       setStep("code");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Aucun compte avec ce numéro.");
+      if (err instanceof ApiError && err.status === 503) {
+        setOtpDisabled(true);
+        setError("");
+      } else {
+        setError(err instanceof Error ? err.message : "Aucun compte avec ce numéro.");
+      }
     } finally {
       setBusy(false);
     }
@@ -87,7 +95,19 @@ export default function MotDePasseOublie() {
 
         <ErrorBanner message={error} />
 
-        {step === "phone" ? (
+        {otpDisabled ? (
+          <>
+            <InfoBanner>
+              <span>
+                La réinitialisation par code est désactivée pour l&apos;instant. Contactez
+                le support : un mot de passe provisoire vous sera communiqué.
+              </span>
+            </InfoBanner>
+            <Link href="/contact" style={{ display: "contents" }}>
+              <Button block>Contacter le support</Button>
+            </Link>
+          </>
+        ) : step === "phone" ? (
           <>
             <p className="authSubtitle">
               Indiquez le numéro de votre compte, nous vous enverrons un code.

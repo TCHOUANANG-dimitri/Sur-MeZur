@@ -1,0 +1,22 @@
+{
+  "packageId": "com.surmezur.app",
+  "host": "sur-me-zur.vercel.app",
+  "name": "Sur-MeZur",
+  "launcherName": "Sur-MeZur",
+  "display": "standalone",
+  "themeColor": "#5b21b6",
+  "navigationColor": "#5b21b6",
+  "backgroundColor": "#ffffff",
+  "startUrl": "/",
+  "iconUrl": "https://sur-me-zur.vercel.app/icon-512.png",
+  "maskableIconUrl": "https://sur-me-zur.vercel.app/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "enableNotifications": false,
+  "minSdkVersion": 21,
+  "signingKey": {
+    "path": "%USERPROFILE%/.surmezur/android.keystore",
+    "alias": "surmezur"
+  },
+  "appVersion": "1.0.0",
+  "appVersionCode": 1
+}

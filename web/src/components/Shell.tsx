@@ -19,6 +19,7 @@ import {
   IconModels,
   IconMeasure,
   IconProfile,
+  IconTailor,
   IconDashboard,
   IconVerify,
   IconCatalog,
@@ -46,6 +47,20 @@ export const CLIENT_NAV: NavItem[] = [
   { href: "/modeles", label: "Modèles", Icon: IconModels },
   { href: "/mesures", label: "Mes mesures", Icon: IconMeasure },
   { href: "/profil", label: "Profil", Icon: IconProfile },
+];
+
+/**
+ * Navigation de l'espace tailleur (B3) : Accueil, Clients, Travaux, Patrons,
+ * Profil. Les commandes recues via la plateforme sont accessibles depuis
+ * l'accueil, avec un compteur — pas d'onglet dedie. Pas d'ecran Finances,
+ * ni verification, ni pret-a-porter dans cette version.
+ */
+export const TAILOR_NAV: NavItem[] = [
+  { href: "/tailleur", label: "Accueil", Icon: IconHome },
+  { href: "/tailleur/clients", label: "Clients", Icon: IconUsers },
+  { href: "/tailleur/travaux", label: "Travaux", Icon: IconOrders },
+  { href: "/tailleur/patrons", label: "Patrons", Icon: IconTailor },
+  { href: "/tailleur/profil", label: "Profil", Icon: IconProfile },
 ];
 
 export const ADMIN_NAV: NavItem[] = [

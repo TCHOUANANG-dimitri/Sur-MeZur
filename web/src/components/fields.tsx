@@ -16,6 +16,26 @@ import { useEffect, useRef, useState } from "react";
 import { COUNTRIES, splitPhone, type Country } from "@/lib/countries";
 import { IconChevronDown, IconEye, IconEyeOff } from "./icons";
 
+/**
+ * Ne garde que la partie locale d'un numero colle dans le champ.
+ *
+ * Quand la personne colle un numero complet (`+237 6 XX XX XX XX`,
+ * `00237…`, `237…`) ou avec un 0 initial dans le champ local, l'indicatif
+ * deja affiche devant ne doit pas etre duplique : sans cela on produisait
+ * `+237237…`. On retire donc l'indicatif (avec ou sans `00`) puis les zeros
+ * de tete. Le serveur normalise aussi de son cote (Agent A).
+ */
+export function stripToLocal(raw: string, dial: string): string {
+  let digits = raw.replace(/[^0-9]/g, "");
+  const dialDigits = dial.replace(/[^0-9]/g, "");
+  if (dialDigits && digits.startsWith(`00${dialDigits}`)) {
+    digits = digits.slice(2 + dialDigits.length);
+  } else if (dialDigits && digits.startsWith(dialDigits)) {
+    digits = digits.slice(dialDigits.length);
+  }
+  return digits.replace(/^0+/, "");
+}
+
 export function PhoneField({
   label,
   value,
@@ -68,7 +88,7 @@ export function PhoneField({
           placeholder="6 XX XX XX XX"
           maxLength={12}
           value={local}
-          onChange={(e) => onChange(`${country.dial}${e.target.value.replace(/[^0-9]/g, "")}`)}
+          onChange={(e) => onChange(`${country.dial}${stripToLocal(e.target.value, country.dial)}`)}
         />
       </div>
 

@@ -1,0 +1,261 @@
+/* ==========================================================================
+   Page d'accueil publique (B1) + bandeau du site + ecran de maintenance.
+   Mobile d'abord : base une colonne, grilles a partir de 720px.
+   ========================================================================== */
+
+/* --- Bandeau du site (monte dans layout, visible sur toutes les pages) --- */
+.siteBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px var(--gutter);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.siteBanner p { margin: 0; flex: 1; }
+.siteBannerInfo { background: #eef2ff; color: #3730a3; }
+.siteBannerAlerte { background: #fef2f2; color: #991b1b; }
+.siteBannerPromo { background: var(--violet-tint); color: var(--violet-deep); }
+.siteBannerLink { font-weight: 600; text-decoration: underline; color: inherit; }
+.siteBannerClose {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* --- Ecran de maintenance plein ecran --- */
+.maintenanceScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: var(--bg-page);
+}
+.maintenanceCard {
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
+  padding: clamp(24px, 6vw, 40px);
+  max-width: 480px;
+  text-align: center;
+}
+.maintenanceCard h1 { margin: 0 0 10px; }
+.maintenanceCard p { color: var(--text-secondary); margin: 0 0 20px; }
+
+/* --- Page d'accueil --- */
+.home { background: var(--bg); color: var(--indigo-text); }
+.homeSection { padding: clamp(36px, 9vw, 72px) var(--gutter); }
+.homeWrap { max-width: 1080px; margin: 0 auto; }
+.homeEyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--violet-primary);
+  margin-bottom: 10px;
+}
+.home h2 {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 6vw, 34px);
+  line-height: 1.2;
+  margin: 0 0 10px;
+  text-wrap: balance;
+}
+.homeLead { color: var(--text-secondary); font-size: clamp(15px, 3.8vw, 18px); max-width: 60ch; }
+.homeAlt { background: var(--bg-alt); }
+
+/* Bandeau principal */
+.homeHero {
+  background: var(--gradient);
+  color: #fff;
+  padding: clamp(44px, 12vw, 88px) var(--gutter) clamp(36px, 9vw, 64px);
+}
+.homeHeroGrid { max-width: 1080px; margin: 0 auto; display: grid; gap: 28px; align-items: center; }
+.homeBadge {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-chip);
+  padding: 6px 14px;
+  margin-bottom: 14px;
+}
+.homeHero h1 {
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: clamp(30px, 8.4vw, 52px);
+  line-height: 1.12;
+  margin: 0 0 12px;
+  text-wrap: balance;
+}
+.homeHeroSub { font-size: clamp(15px, 4vw, 19px); opacity: 0.93; margin: 0 0 24px; max-width: 44ch; }
+.homeCtas { display: grid; gap: 10px; max-width: 420px; }
+.homeCtas .btn { min-height: 52px; font-size: 16px; text-decoration: none; }
+.homeCtaPrimary { background: #fff; color: var(--violet-deep); }
+.homeCtaPrimary:hover { background: #f4f2f8; }
+.homeCtaSecondary {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+.homeCtaSecondary:hover { background: rgba(255, 255, 255, 0.2); }
+.homeHeroNote { font-size: 13px; opacity: 0.85; margin: 14px 0 0; }
+.homeHeroVisual {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.homeHeroVisual svg { width: 110px; height: auto; }
+.homeHeroVisual figcaption { font-size: 13px; opacity: 0.9; max-width: 18ch; }
+
+/* Bande de confiance */
+.homeTrust { border-bottom: 1px solid var(--border); }
+.homeTrustList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.homeTrustList li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  font-size: 15px;
+}
+.homeTrustIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+}
+.homeTrustList strong { display: block; }
+.homeTrustList span { color: var(--text-secondary); font-size: 14px; }
+
+/* Comment ca marche */
+.homeSteps { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 12px; }
+.homeSteps li {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 18px;
+}
+.homeStepNum {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--violet-primary);
+  color: #fff;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.homeSteps h3 { margin: 0 0 4px; font-size: 17px; }
+.homeSteps p { margin: 0; color: var(--text-secondary); font-size: 15px; }
+
+/* Deux publics */
+.homePublics { display: grid; gap: 12px; margin-top: 24px; }
+.homePublicCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.homePublicCard h3 { margin: 0; font-size: 19px; }
+.homePublicCard ul { margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 15px; display: grid; gap: 6px; }
+.homePublicCard .btn { margin-top: auto; text-decoration: none; min-height: 48px; }
+
+/* Patron a venir */
+.homePatternGrid { display: grid; gap: 20px; margin-top: 24px; align-items: center; }
+.homePatternSvg {
+  background: var(--surface);
+  border: 1px dashed var(--violet-primary);
+  border-radius: var(--radius-card);
+  padding: 16px;
+}
+.homePatternSvg svg { width: 100%; height: auto; display: block; }
+.homeComingBadge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pending);
+  background: #fef3c7;
+  border-radius: var(--radius-chip);
+  padding: 4px 12px;
+  margin-bottom: 10px;
+}
+
+/* FAQ */
+.homeFaq { margin-top: 20px; display: grid; gap: 10px; }
+.homeFaq details {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+}
+.homeFaq summary { font-weight: 600; cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.homeFaq p { color: var(--text-secondary); margin: 8px 0 4px; font-size: 15px; }
+
+/* Appel final + pied de page */
+.homeFinal { background: var(--violet-deep); color: #fff; text-align: center; }
+.homeFinal h2 { color: #fff; }
+.homeFinal p { opacity: 0.9; }
+.homeFinal .homeCtas { margin: 22px auto 0; }
+.homeFooter {
+  display: grid;
+  gap: 8px;
+  padding: 24px var(--gutter) calc(24px + env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.homeFooter nav { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center; }
+.homeFooter a { color: var(--violet-primary); font-weight: 500; }
+
+@media (min-width: 720px) {
+  .homeHeroGrid { grid-template-columns: 1.2fr 0.8fr; }
+  .homeCtas { grid-template-columns: 1fr 1fr; max-width: 520px; }
+  .homeFinal .homeCtas { justify-content: center; }
+  .homeTrustList { grid-template-columns: 1fr 1fr; }
+  .homeSteps { grid-template-columns: repeat(3, 1fr); }
+  .homePublics { grid-template-columns: 1fr 1fr; }
+  .homePatternGrid { grid-template-columns: 1fr 1fr; }
+}
+
+/* --- Pages d''information publiques (/infos/[slug]) --- */
+.infosBody { font-size: 16px; line-height: 1.65; }
+.infosBody h2 { font-size: 21px; margin: 26px 0 8px; }
+.infosBody h3 { font-size: 18px; margin: 20px 0 6px; }
+.infosBody p { margin: 0 0 12px; color: var(--indigo-text); }
+.infosBody ul { margin: 0 0 12px; padding-left: 22px; display: grid; gap: 6px; }
+.infosBody a { color: var(--violet-primary); }

@@ -27,6 +27,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MeasurementsApi } from "@/lib/api/endpoints";
+import type { JobStatus } from "@/lib/api/types";
 import { ensureSession } from "@/lib/guest";
 import { UnreadablePhotoError, compressForMeasurement } from "@/lib/imageCompress";
 import { friendlyError, withRetry } from "@/lib/retry";
@@ -57,13 +58,33 @@ const POLL_MAX = 72;
 
 type IconType = React.ComponentType<{ size?: number; strokeWidth?: number }>;
 
+/**
+ * Source des sessions de mesure. Par defaut les routes client ; l'espace
+ * tailleur injecte ici les routes tailleur (`/tailleur/mesurer`), sans
+ * dupliquer le parcours (consignes, photos, analyse).
+ */
+export interface FlowSession {
+  id: string;
+  status: JobStatus;
+  measurement_id: string | null;
+  error_message?: string | null;
+}
+
+export interface MeasureSessionApi {
+  createSession: (body: { height_cm: number; weight_kg?: number; gender?: string }) => Promise<FlowSession>;
+  uploadPhotos: (sessionId: string, front: File, side: File) => Promise<FlowSession>;
+  getSession: (sessionId: string) => Promise<FlowSession>;
+}
+
 export function MeasureFlow({
   guest = false,
   onDone,
+  sessionApi,
 }: {
   /** Visiteur sans compte : un compte invite est cree avant l'envoi. */
   guest?: boolean;
   onDone: (measurementId: string) => void;
+  sessionApi?: MeasureSessionApi;
 }) {
   const { refresh } = useAuth();
   const [step, setStep] = useState<Step>("infos");
@@ -99,6 +120,7 @@ export function MeasureFlow({
 
   const analyse = useCallback(async () => {
     if (!front || !side) return;
+    const sessions: MeasureSessionApi = sessionApi ?? MeasurementsApi;
     setError("");
     setErrorDetail("");
     setPhase("envoi");
@@ -112,7 +134,7 @@ export function MeasureFlow({
       stage = "ouverture de la mesure";
 
       const session = await withRetry(() =>
-        MeasurementsApi.createSession({
+        sessions.createSession({
           height_cm: Number(height),
           weight_kg: Number(weight),
           gender,
@@ -121,13 +143,13 @@ export function MeasureFlow({
       stage = "envoi des photos";
       // Reessayer l'envoi est sans risque : le serveur remplace les photos
       // precedentes de la session au lieu de les accumuler.
-      let current = await withRetry(() => MeasurementsApi.uploadPhotos(session.id, front, side));
+      let current = await withRetry(() => sessions.uploadPhotos(session.id, front, side));
       setPhase("analyse");
       stage = "suivi de l'analyse";
 
       for (let i = 0; i < POLL_MAX && current.status === "processing"; i++) {
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-        current = await withRetry(() => MeasurementsApi.getSession(session.id));
+        current = await withRetry(() => sessions.getSession(session.id));
       }
 
       if (current.status !== "ready" || !current.measurement_id) {
@@ -142,7 +164,7 @@ export function MeasureFlow({
       setErrorDetail(`${stage} · ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`);
       go("photos");
     }
-  }, [front, side, height, weight, gender, guest, refresh, onDone, go]);
+  }, [front, side, height, weight, gender, guest, refresh, onDone, go, sessionApi]);
 
   return (
     <div className="measureFlow">

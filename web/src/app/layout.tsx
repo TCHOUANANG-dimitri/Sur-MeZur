@@ -8,11 +8,20 @@ import "@/styles/catalog.css";
 import "@/styles/mesures.css";
 import "@/styles/profile.css";
 import "@/styles/mesurer.css";
+// Espace tailleur (B3).
+import "@/styles/tailleur.css";
+// Page d'accueil publique (B1) : chargee en dernier avec les ajustements.
+import "@/styles/accueil.css";
 // Charge en dernier : affine ce que les feuilles precedentes posent.
 import "@/styles/mobile.css";
 import { AuthProvider } from "@/components/AuthProvider";
+import { AcquisitionTracker } from "@/components/AcquisitionTracker";
+import { SiteBanner } from "@/components/SiteBanner";
+import { SwRegister } from "@/components/SwRegister";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://sur-me-zur.vercel.app"),
+  manifest: "/manifest.webmanifest",
   title: "Sur-MeZur — Vos mesures, sans mètre ruban",
   description:
     "Choisissez un modèle, prenez deux photos, obtenez vos mesures de couture et repartez avec votre fiche prête à imprimer.",
@@ -42,7 +51,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <SiteBanner />
+          <AcquisitionTracker />
+          <SwRegister />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,0 +1,155 @@
+/* ==========================================================================
+   Espace tailleur (B3). Mobile d'abord : une colonne, gros boutons (≥ 56 px),
+   peu de texte. Les fiches imprimables reutilisent les classes `.fiche*`
+   de mesures.css, pour un rendu papier identique a l'espace client.
+   ========================================================================== */
+
+.tPage { display: grid; gap: 14px; }
+.tHeader { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tHeader h1 { margin: 0; font-size: 22px; flex: 1; }
+
+/* Statistiques d'accueil */
+.tStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tStat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 12px;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  display: grid;
+  gap: 2px;
+}
+.tStatValue { font-size: 24px; font-weight: 700; color: var(--indigo-text); }
+.tStatValueAlert { color: var(--error); }
+.tStatLabel { font-size: 12px; color: var(--text-secondary); }
+
+/* Gros boutons d'action (≥ 56 px, au pouce) */
+.tBigButtons { display: grid; gap: 10px; }
+.tBigBtn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--violet-primary);
+  color: #fff;
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  min-height: 64px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.tBigBtn:hover { background: var(--violet-deep); }
+.tBigBtnSecondary { background: var(--surface); color: var(--violet-deep); border: 1.5px solid var(--violet-primary); }
+.tBigBtnSecondary:hover { background: var(--violet-tint); }
+.tBigBtnIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.18);
+}
+.tBigBtnSecondary .tBigBtnIcon { background: var(--violet-tint); color: var(--violet-primary); }
+.tBigBtn small { display: block; font-weight: 400; font-size: 13px; opacity: 0.85; }
+
+/* Listes (clients, travaux, commandes, patrons) */
+.tSearch { margin-bottom: 4px; }
+.tFilters { display: flex; gap: 8px; flex-wrap: wrap; }
+.tList { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.tRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 12px 14px;
+  text-decoration: none;
+  color: inherit;
+  min-height: 56px;
+}
+.tRowMain { flex: 1; min-width: 0; }
+.tRowTitle { font-weight: 600; font-size: 15px; }
+.tRowSub { font-size: 13px; color: var(--text-secondary); }
+.tAvatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--violet-tint);
+  color: var(--violet-deep);
+  font-weight: 700;
+}
+
+/* Ligne d'actions (appeler, WhatsApp, partager, imprimer) */
+.tActionRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tActionRow .btn { min-height: 52px; text-decoration: none; }
+
+/* Mesures : saisie manuelle des 12 mensurations */
+.tMeasureGrid { display: grid; gap: 10px; }
+@media (min-width: 560px) {
+  .tMeasureGrid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Messagerie commande */
+.tChat { display: grid; gap: 8px; }
+.tMsg {
+  max-width: 85%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 15px;
+}
+.tMsgDate { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+/* Patron : apercu SVG zoomable */
+.tPreviewBadge {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pending);
+  background: #fef3c7;
+  border-radius: var(--radius-chip);
+  padding: 6px 14px;
+}
+.tSvgFrame {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: auto;
+  max-height: 60vh;
+}
+.tSvgFrame img { display: block; width: 100%; height: auto; }
+.tZoomRow { display: flex; gap: 8px; align-items: center; }
+
+/* Etapes de suivi d'une commande */
+.tTracker { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.tTracker li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 15px; }
+.tTrackerDot {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: grid;
+  place-items: center;
+  color: transparent;
+  margin-top: 1px;
+}
+.tTrackerDone .tTrackerDot { background: var(--success); border-color: var(--success); color: #fff; }
+.tTrackerNow { font-weight: 700; }
+
+@media print {
+  .tSvgFrame { max-height: none; overflow: visible; }
+}
+
+@media (min-width: 720px) {
+  .tBigButtons { grid-template-columns: repeat(3, 1fr); }
+  .tBigBtn { flex-direction: column; text-align: center; padding: 20px 16px; }
+}

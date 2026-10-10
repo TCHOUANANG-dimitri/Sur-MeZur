@@ -31,6 +31,43 @@ const nextConfig: NextConfig = {
       { source: "/uploads/:path*", destination: `${API_ORIGIN}/uploads/:path*` },
     ];
   },
+
+  // En-tetes de securite (SECURITE_AUDIT.md, §5). Tout le trafic d'API passe
+  // par la meme origine (rewrites ci-dessus), d'ou `connect-src 'self'`.
+  // `'unsafe-inline'` en script-src est exige par Next sans nonce ; `blob:`
+  // sert aux fichiers proteges affiches via URL.createObjectURL (photos,
+  // patrons) ; la camera est autorisee pour le site lui-meme. HSTS est pose
+  // par Vercel en bordure.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "img-src 'self' data: blob:",
+              "media-src 'self' blob:",
+              "connect-src 'self'",
+              "worker-src 'self'",
+              "manifest-src 'self'",
+              "frame-ancestors 'none'",
+              "form-action 'self'",
+              "base-uri 'self'",
+            ].join("; "),
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

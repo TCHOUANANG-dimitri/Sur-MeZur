@@ -14,6 +14,9 @@ __pycache__/
 venv/
 node_modules/
 *.db
+# Journaux SQLite (mode WAL) crees a cote de la base.
+*.db-wal
+*.db-shm
 .expo/
 dist/
 build/
@@ -24,6 +27,12 @@ RAPPORT_PROJET.docx
 # Campagne de collecte synchronisee en local (ml/scripts/telecharger_collecte.py) :
 # photos de volontaires, jamais versionnees.
 ml/data/collecte/
+
+# Sur-MeZur Android (Agent B) : cles de signature et sorties de build, jamais
+# dans le depot public (ni cles, ni mots de passe).
+*.keystore
+*.jks
+android-twa/app/build/
 
 # Stockages runtime du backend : jamais versionnes, ignorent les photos.
 backend/uploads/

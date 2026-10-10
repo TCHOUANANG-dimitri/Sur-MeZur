@@ -56,7 +56,8 @@ export default function ResultatInvite() {
   }, [id]);
 
   const next = `/mesures/${id}`;
-  const signupHref = `/inscription?suite=${encodeURIComponent(next)}`;
+  const signupClientHref = `/inscription?suite=${encodeURIComponent(next)}&role=client`;
+  const signupTailleurHref = `/inscription?suite=${encodeURIComponent(next)}&role=tailleur`;
   const loginHref = `/connexion?suite=${encodeURIComponent(next)}`;
 
   if (measurement === undefined) return <Spinner label="Chargement de vos mesures…" />;
@@ -134,12 +135,18 @@ export default function ResultatInvite() {
             <p>
               Créez votre compte avec votre numéro de téléphone : vos mesures y sont
               enregistrées, et vous pourrez télécharger la fiche à remettre à votre tailleur.
+              Client ou tailleur, c&apos;est le même essai.
             </p>
           </div>
           <div className="unlockActions">
-            <Link href={signupHref} style={{ display: "contents" }}>
+            <Link href={signupClientHref} style={{ display: "contents" }}>
               <Button block>
-                <IconUserPlus size={18} aria-hidden /> Créer mon compte
+                <IconUserPlus size={18} aria-hidden /> Je suis client
+              </Button>
+            </Link>
+            <Link href={signupTailleurHref} style={{ display: "contents" }}>
+              <Button block variant="secondary">
+                Je suis tailleur
               </Button>
             </Link>
             <Link href={loginHref} className="unlockLogin">
@@ -183,7 +190,7 @@ export default function ResultatInvite() {
 
       {hasLocked && (
         <div className="unlockBar">
-          <Link href={signupHref} style={{ display: "contents" }}>
+          <Link href={signupClientHref} style={{ display: "contents" }}>
             <Button block>
               <IconLock size={17} aria-hidden /> Voir mes {total} mensurations
             </Button>
