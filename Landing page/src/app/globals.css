@@ -1,0 +1,517 @@
+@import "tailwindcss";
+
+/* ============================================================
+   SUR-MEZUR — DESIGN SYSTEM (light)
+   ------------------------------------------------------------
+   The logo (public/brand/Sur-MeZur.png) ships on a transparent ground and is
+   drawn for a light page, so the site simply follows it. Every value below was
+   sampled from the artwork composited over white:
+
+     wordmark indigo  #08044D   ("Sur" / "Zur", and the tagline)
+     core violet      #5D06CC   (the "Me", the ribbon, the needle)
+     bright violet    #8C29FB / #A537FC
+
+   There is no pink in the identity — the ramp runs indigo to violet only.
+
+   Token naming is kept from the previous dark build on purpose —
+   `ink-*` is always a SURFACE, `mist-*` is always TEXT — so the whole
+   component tree inverts from this file alone.
+   ============================================================ */
+
+@theme {
+  /* --- Brand violet, straight off the logo ------------------ */
+  --color-violet-50: #f7f2ff;
+  --color-violet-100: #eee3ff;
+  --color-violet-200: #ddc9ff;
+  --color-violet-300: #c2a3ff;
+  --color-violet-400: #a537fc;
+  --color-violet-500: #8c29fb;
+  --color-violet-600: #7014e8;
+  --color-violet-700: #5d06cc;
+  --color-violet-800: #4502ad;
+  --color-violet-900: #23076f;
+  --color-violet-950: #08044d;
+
+  /* --- Surfaces: white page, faintly lavender steps --------- */
+  --color-ink-950: #ffffff;
+  --color-ink-900: #f7f4fe;
+  --color-ink-850: #f3effc;
+  --color-ink-800: #efeafb;
+  --color-ink-700: #e3dbf6;
+  --color-ink-600: #d1c6ee;
+  --color-ink-500: #b8ace3;
+
+  /* --- Text: the wordmark's indigo, fading to lavender-grey - */
+  --color-mist-50: #08044d;
+  --color-mist-100: #191159;
+  --color-mist-200: #2c2468;
+  --color-mist-300: #4e4780;
+  --color-mist-400: #6b6494;
+  --color-mist-500: #746d99;
+
+  /* --- Typography ------------------------------------------
+     Playfair Display carries the logo's Didone wordmark; Jost is the
+     geometric companion that matches the tagline set in wide capitals. */
+  --font-display: var(--font-playfair), "Playfair Display", ui-serif, Georgia, serif;
+  --font-sans: var(--font-jost), "Jost", ui-sans-serif, system-ui, sans-serif;
+
+  /* --- Motion ---------------------------------------------- */
+  --ease-smz: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* --- Layout ---------------------------------------------- */
+  --radius-card: 1.25rem;
+
+  /* --- Elevation, tuned for a light ground ------------------ */
+  --shadow-soft: 0 1px 2px rgba(8, 4, 77, 0.04), 0 8px 24px -12px rgba(8, 4, 77, 0.10);
+  --shadow-lift: 0 2px 4px rgba(8, 4, 77, 0.05), 0 24px 48px -20px rgba(8, 4, 77, 0.18);
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --nav-h: 4.5rem;
+    /* Hairline used for every divider and card edge. */
+    --line: color-mix(in oklab, var(--color-violet-950) 12%, transparent);
+    --line-strong: color-mix(in oklab, var(--color-violet-950) 20%, transparent);
+  }
+
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: calc(var(--nav-h) + 1.5rem);
+  }
+
+  body {
+    background-color: var(--color-ink-950);
+    color: var(--color-mist-300);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    color: var(--color-mist-50);
+    text-wrap: balance;
+    /* A Didone wants far less negative tracking than a geometric sans. */
+    letter-spacing: -0.015em;
+    font-weight: 600;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--color-violet-600);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-violet-600);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  @media (pointer: fine) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--color-ink-900);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--color-ink-600);
+      border-radius: 99px;
+      border: 3px solid var(--color-ink-900);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--color-violet-500);
+    }
+  }
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+
+@utility container-smz {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+  max-width: 84rem;
+  @media (width >= 48rem) {
+    padding-inline: 2.5rem;
+  }
+  @media (width >= 80rem) {
+    padding-inline: 3.5rem;
+  }
+}
+
+@utility section-y {
+  padding-block: 5.5rem;
+  @media (width >= 48rem) {
+    padding-block: 7.5rem;
+  }
+  @media (width >= 80rem) {
+    padding-block: 9.5rem;
+  }
+}
+
+/* Violet wash for the words that carry the brand. */
+@utility text-gradient {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-violet-950) 0%,
+    var(--color-violet-600) 45%,
+    var(--color-violet-800) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/*
+ * Kept under its original name so headings do not have to be rewritten:
+ * on a light ground it is the deep-ink wash rather than the white one.
+ */
+@utility text-gradient-mist {
+  background-image: linear-gradient(
+    170deg,
+    var(--color-mist-50) 0%,
+    var(--color-mist-50) 45%,
+    var(--color-mist-200) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+@utility rule-smz {
+  height: 1px;
+  width: 100%;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--color-violet-700) 35%, transparent) 25%,
+    color-mix(in oklab, var(--color-violet-500) 40%, transparent) 60%,
+    transparent 100%
+  );
+}
+
+@utility surface-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+
+/* A tinted card for sections that need a second level of surface. */
+@utility surface-tint {
+  background: linear-gradient(160deg, var(--color-violet-50) 0%, #fff 70%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+}
+
+@utility eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-violet-700);
+}
+
+@utility grain {
+  position: relative;
+  isolation: isolate;
+}
+
+@utility step-index {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  line-height: 1;
+  color: color-mix(in oklab, var(--color-violet-700) 22%, transparent);
+}
+
+/* ============================================================
+   COMPONENT PRIMITIVES
+   ============================================================ */
+
+@layer components {
+  .eyebrow::before {
+    content: "";
+    width: 1.75rem;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.6;
+    flex: none;
+  }
+
+  /* Barely-there paper texture — dark speckle now that the ground is white. */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0.022;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* --- Buttons -------------------------------------------- */
+  .btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: 1rem 1.75rem;
+    letter-spacing: 0.005em;
+    white-space: nowrap;
+    transition:
+      transform 0.4s var(--ease-smz),
+      box-shadow 0.4s var(--ease-smz),
+      background-color 0.3s var(--ease-smz),
+      border-color 0.3s var(--ease-smz),
+      color 0.3s var(--ease-smz);
+  }
+
+  .btn-primary {
+    color: #fff;
+    background-image: linear-gradient(
+      100deg,
+      var(--color-violet-800) 0%,
+      var(--color-violet-600) 50%,
+      var(--color-violet-500) 100%
+    );
+    background-size: 170% 100%;
+    background-position: 0% 50%;
+    box-shadow: 0 10px 28px -12px color-mix(in oklab, var(--color-violet-700) 65%, transparent);
+    transition:
+      background-position 0.6s var(--ease-smz),
+      transform 0.4s var(--ease-smz),
+      box-shadow 0.4s var(--ease-smz);
+  }
+  .btn-primary:hover {
+    background-position: 100% 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 18px 40px -14px color-mix(in oklab, var(--color-violet-600) 75%, transparent);
+  }
+
+  .btn-ghost {
+    color: var(--color-violet-800);
+    border: 1px solid var(--line-strong);
+    background: #fff;
+  }
+  .btn-ghost:hover {
+    border-color: var(--color-violet-600);
+    color: var(--color-violet-700);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .btn-sm {
+    padding: 0.6875rem 1.125rem;
+    font-size: 0.8125rem;
+  }
+
+  .btn[disabled],
+  .btn[aria-disabled="true"] {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .btn .btn-arrow {
+    transition: transform 0.4s var(--ease-smz);
+  }
+  .btn:hover .btn-arrow {
+    transform: translateX(4px);
+  }
+
+  /* --- Spatial animations --------------------------------- */
+  .animate-pulse-soft {
+    animation: smz-pulse 4s var(--ease-smz) infinite;
+  }
+  .animate-drift {
+    animation: smz-drift 18s var(--ease-smz) infinite;
+  }
+  .animate-orbit {
+    animation: smz-orbit 46s linear infinite;
+  }
+  .animate-bob {
+    animation: smz-bob 8s var(--ease-smz) infinite;
+  }
+}
+
+/* ============================================================
+   SCROLL REVEAL  (CSS-driven; JS only flips [data-shown])
+   ============================================================ */
+
+/* Sans flou : un filtre blur sur chaque bloc coûte cher aux téléphones
+   d'entrée de gamme, cible principale du site. */
+[data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity 0.7s var(--ease-smz) var(--reveal-delay, 0ms),
+    transform 0.7s var(--ease-smz) var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+[data-reveal="left"] {
+  transform: translate3d(-24px, 0, 0);
+}
+[data-reveal="right"] {
+  transform: translate3d(24px, 0, 0);
+}
+[data-reveal="scale"] {
+  transform: scale(0.96);
+}
+
+[data-reveal][data-shown="true"] {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  will-change: auto;
+}
+
+/* ============================================================
+   PATRON : le tracé se dessine quand la section apparaît
+   ============================================================ */
+
+.pattern-draw .pp-cut,
+.pattern-draw .pp-seam {
+  stroke-dasharray: 1400;
+  stroke-dashoffset: 1400;
+}
+[data-shown="true"] .pattern-draw .pp-cut {
+  animation: smz-draw 2.4s var(--ease-smz) forwards;
+}
+[data-shown="true"] .pattern-draw .pp-seam {
+  animation: smz-draw-dash 2.4s var(--ease-smz) 0.6s forwards;
+}
+
+@keyframes smz-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Les marges restent en pointillé une fois tracées. */
+@keyframes smz-draw-dash {
+  0% {
+    stroke-dashoffset: 1400;
+  }
+  99% {
+    stroke-dashoffset: 0;
+    stroke-dasharray: 1400;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    stroke-dasharray: 4 4;
+  }
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+
+@keyframes smz-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes smz-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -3%, 0) scale(1.06);
+  }
+}
+
+@keyframes smz-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes smz-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes smz-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .pattern-draw .pp-cut {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+  .pattern-draw .pp-seam {
+    stroke-dasharray: 4 4;
+    stroke-dashoffset: 0;
+  }
+}
