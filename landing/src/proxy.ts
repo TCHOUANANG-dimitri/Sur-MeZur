@@ -24,7 +24,7 @@ function negotiate(header: string | null): string {
   return defaultLocale;
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   const first = pathname.split("/")[1];
