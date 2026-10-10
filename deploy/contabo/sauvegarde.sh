@@ -9,7 +9,8 @@
 # - base SQLite (si DATABASE_URL est en sqlite) : copie COHERENTE par l'API de
 #   sauvegarde de SQLite (un simple cp pourrait copier un fichier en cours
 #   d'ecriture).
-# - photos : archive de uploads/, dataset_store/ (collecte), avatar_store/ —
+# - photos : archive de uploads/, protected_store/, tailor_store/,
+#   dataset_store/ (collecte), avatar_store/ —
 #   elles restent sur le disque du VPS, pas dans Supabase.
 # - 14 jours conserves sur le VPS, et copie HORS du VPS si RCLONE_REMOTE est
 #   defini dans /etc/surmezur/backup.env : une sauvegarde qui reste sur le
@@ -57,7 +58,9 @@ PYEOF
 esac
 
 dirs=()
-for d in uploads dataset_store avatar_store; do
+# protected_store : photos de corps et pieces d'identite (sorties de uploads/) ;
+# tailor_store : patrons et photos de modeles de l'espace tailleur.
+for d in uploads protected_store tailor_store dataset_store avatar_store; do
   [ -d "$DATA/$d" ] && dirs+=("$d")
 done
 tar czf "$DEST/fichiers-$STAMP.tgz" -C "$DATA" "${dirs[@]}"
