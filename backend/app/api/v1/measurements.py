@@ -13,6 +13,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -32,7 +33,7 @@ from app.services import vision
 from app.services.activity import platform_of
 from app.services.measurement_corrections import corriger_mesures, inseam_corrige
 from app.services.notify import notify
-from app.services.storage import delete_upload, save_upload
+from app.services.storage import delete_upload, protected_path, save_upload
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +53,11 @@ def debug_analyze(
     height_cm: float = Form(...),
     weight_kg: float = Form(...),
     gender: str = Form(...),
-    # Tous les roles, SAUF les invites : cette route renvoie l'integralite des
-    # predictions et contournerait sinon le masquage des mesures non debloquees.
-    user: User = Depends(require_roles("client", "tailor", "admin")),
+    # Outil d'inspection interne A4.3 : reserve a l'equipe. Il renvoie
+    # l'integralite des predictions et des donnees corporelles brutes ; lui
+    # laisser l'acces aux clients/tailleurs exposerait ce que la mesure
+    # volontairement masque tant qu'elle n'est pas debloquee.
+    user: User = Depends(require_roles("admin")),
 ):
     """
     Renvoie **toute la trace intermédiaire** de la chaîne de mesure : les 33
@@ -64,6 +67,8 @@ def debug_analyze(
     particulier à mesurer l'écart entre les estimations MediaPipe et de vraies
     mensurations prises au mètre ruban.
     """
+    if settings.is_production:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Introuvable")
     front_path = save_upload(front, "debug")
     side_path = save_upload(side, "debug") if side is not None else None
     try:
@@ -89,9 +94,19 @@ def _client_profile(user: User, db: Session) -> ClientProfile:
 
 
 def _photo_path(url: str | None) -> str | None:
-    """Les URL stockées sont servies sous /uploads : on remonte au fichier."""
+    """Chemin disque d'une photo de session de mesure.
+
+    Les photos du corps vivent dans `protected_dir` (format conservé
+    `protected://mesure/...`), et un reliquat d'avant la migration vit encore
+    sous `/uploads/measurement_photos/` tant que le script n'a pas tourné :
+    on résout les deux. Toute autre URL renvoie `None` plutôt qu'un chemin.
+    """
     if not url:
         return None
+    if url.startswith("protected://"):
+        # Le dossier vient de l'URL elle-meme (measurement_photos, debug…),
+        # toujours restreint a protected_path aux sous-dossiers prives.
+        return protected_path(url)
     relative = url.split("/uploads/", 1)[-1]
     path = Path(settings.upload_dir) / relative
     return str(path) if path.exists() else None
@@ -375,6 +390,36 @@ def get_session(
     if not session_row or session_row.client_id != client.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Session not found")
     return session_row
+
+
+@router.get("/session/{session_id}/photos/{view}")
+def get_session_photo(
+    session_id: str,
+    view: str,
+    user: User = Depends(require_client_or_guest),
+    db: Session = Depends(get_db),
+):
+    """Photo brute de la session, pour le SEUL propriétaire de la session.
+
+    A4.2 : les photos de corps ne sont plus servies sous /uploads ; cette
+    route et la route admin correspondante sont désormais les deux seules
+    voies d'accès. La vérification d'appartenance est identique à celle de
+    `get_session`."""
+    if view not in ("front", "side"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Vue inconnue")
+    client = _client_profile(user, db)
+    session_row = db.get(MeasurementSession, session_id)
+    if not session_row or session_row.client_id != client.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Session not found")
+    url = session_row.front_photo_url if view == "front" else session_row.side_photo_url
+    path = _photo_path(url)
+    if not path:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Photo absente")
+    return FileResponse(
+        path,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
 
 
 # Mesures laissees lisibles a un invite. Choisies parce que tout le monde les

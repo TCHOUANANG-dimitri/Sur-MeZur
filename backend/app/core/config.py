@@ -13,6 +13,11 @@ _DEFAULT_MOBILE_SAM_CHECKPOINT = _BACKEND_DIR / "ml" / "weights" / "mobile_sam.p
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Environnement d'execution : "development" (defaut) ou "production".
+    # En production, les outils d'inspection internes sont desactives
+    # (ex. POST /measurements/debug/analyze).
+    env: str = "development"
+
     database_url: str = "sqlite:///./sur_mezur.db"
     # Pool de connexions PostgreSQL (ignore en SQLite). Par processus uvicorn :
     # avec 2 workers, au plus 2 x (5 + 5) = 20 connexions, sous la limite du
@@ -42,6 +47,12 @@ class Settings(BaseSettings):
     payment_webhook_secret: str = ""
 
     upload_dir: str = "./uploads"
+    # Fichiers prives : photos de mesure du corps, pieces d'identite de la
+    # verification tailleur. HORS de `upload_dir`, qui est monte publiquement
+    # sous /uploads (voir main.py). Un fichier ici ne sort QUE par des routes
+    # controlees — /measurements/session/{id}/photos pour le proprietaire,
+    # /admin/* pour l'equipe — jamais par une URL statique devinable.
+    protected_dir: str = "./protected_store"
 
     # --- Chaîne de mesure par vision ---------------------------------------
     # Tout est désactivable : sans modèle ni dépendances, le backend retombe sur
@@ -125,8 +136,13 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
+    @property
+    def is_production(self) -> bool:
+        return self.env.strip().lower() == "production"
+
 
 settings = Settings()
 os.makedirs(settings.upload_dir, exist_ok=True)
 os.makedirs(settings.avatar_output_dir, exist_ok=True)
 os.makedirs(settings.dataset_dir, exist_ok=True)
+os.makedirs(settings.protected_dir, exist_ok=True)

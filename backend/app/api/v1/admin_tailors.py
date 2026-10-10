@@ -4,9 +4,11 @@ Tailleurs et verification (M3) dans l'administration web.
 
 from __future__ import annotations
 
+import os
 from collections import Counter, defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -22,6 +24,7 @@ from app.services.activity import local_day
 from app.services.admin_perms import require_perm
 from app.services.notify import notify
 from app.services.platform_settings import get_setting
+from app.services.storage import protected_path
 from app.services.tables import TableParams, apply_sort, page_of, table_params, table_response
 
 router = APIRouter(prefix="/admin", tags=["admin-web"], dependencies=[Depends(require_roles("admin"))])
@@ -81,7 +84,11 @@ def verification_dossier(tailor_id: str, db: Session = Depends(get_db), _=Depend
         },
         "user": {"id": user.id, "full_name": user.full_name, "phone": user.phone, "created_at": iso(user.created_at)} if user else None,
         "documents": [
-            {"id": d.id, "type": d.type, "label": DOCUMENT_LABELS.get(d.type, d.type), "file_url": d.file_url,
+            # `file_url` est la route CONTROLEE qui sert le fichier, pas le
+            # chemin disque : les pieces d'identite vivent hors /uploads et
+            # l'interface charge l'image avec son jeton de session.
+            {"id": d.id, "type": d.type, "label": DOCUMENT_LABELS.get(d.type, d.type),
+             "file_url": f"/api/admin/verification-documents/{d.id}",
              "status": getattr(d.status, "value", d.status), "created_at": iso(d.created_at)}
             for d in docs
         ],
@@ -91,6 +98,34 @@ def verification_dossier(tailor_id: str, db: Session = Depends(get_db), _=Depend
             for e in events
         ],
     }
+
+
+@router.get("/verification-documents/{doc_id}")
+def verification_document_file(
+    doc_id: str, db: Session = Depends(get_db), _=Depends(require_perm("tailors"))
+):
+    """Sert le contenu d'une piece de verification, sous permission admin.
+
+    A4.2 : les pieces (carte d'identite, photos) vivent dans `protected_dir`,
+    hors du montage statique /uploads. Cette route — reservee a l'equipe — est
+    leur SEULE voie d'acces depuis l'interface."""
+    doc = db.get(VerificationDocument, doc_id)
+    if not doc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Piece introuvable")
+    path = protected_path(doc.file_url, "verification")
+    if not path or not os.path.exists(path):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Fichier introuvable sur le serveur")
+    media = {
+        "id_card": "image/jpeg",
+        "self_photo": "image/jpeg",
+        "atelier_photo": "image/jpeg",
+    }.get(doc.type, "application/octet-stream")
+    return FileResponse(
+        path,
+        media_type=media,
+        filename=os.path.basename(path),
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
 
 
 # --- 3.6 Qualite des tailleurs --------------------------------------------------------

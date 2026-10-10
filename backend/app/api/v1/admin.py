@@ -14,6 +14,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_db, require_roles
+from app.api.v1.admin_common import iso
 from app.models.catalog import Category, GarmentModel, GarmentModelLike
 from app.models.enums import ModerationStatus, VerificationStatus
 from app.models.measurements import TryonSession
@@ -33,7 +34,7 @@ from app.schemas.catalog import (
 from app.schemas.misc import DisputeResolveIn, ReviewOut, VerificationDecideIn
 from app.schemas.orders import OrderOut
 from app.schemas.payments import CommissionTierIn, CommissionTierOut
-from app.schemas.users import TailorProfileOut, UserOut, VerificationDocumentOut
+from app.schemas.users import TailorProfileOut, UserOut
 from app.services import audit
 from app.services.admin_perms import require_perm
 from app.services.notify import notify
@@ -232,12 +233,23 @@ def list_verifications(
     return query.order_by(TailorProfile.updated_at.desc()).all()
 
 
-@router.get("/verifications/{tailor_id}/documents", response_model=list[VerificationDocumentOut])
+@router.get("/verifications/{tailor_id}/documents")
 def list_verification_documents(tailor_id: str, db: Session = Depends(get_db), _=Depends(require_perm("tailors"))):
     tailor = db.get(TailorProfile, tailor_id)
     if not tailor:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor not found")
-    return db.query(VerificationDocument).filter(VerificationDocument.user_id == tailor.user_id).all()
+    docs = db.query(VerificationDocument).filter(VerificationDocument.user_id == tailor.user_id).all()
+    # `file_url` pointe vers la route controlee (voir admin_tailors.py) : le
+    # chemin disque des pieces d'identite ne sort jamais.
+    return [
+        {
+            "id": d.id, "user_id": d.user_id, "type": d.type,
+            "file_url": f"/api/admin/verification-documents/{d.id}",
+            "status": getattr(d.status, "value", d.status),
+            "created_at": iso(d.created_at),
+        }
+        for d in docs
+    ]
 
 
 @router.post("/verifications/{tailor_id}/decide", response_model=TailorProfileOut)

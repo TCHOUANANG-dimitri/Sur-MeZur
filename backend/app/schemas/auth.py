@@ -6,13 +6,17 @@ from app.models.enums import Language, UserRole
 from app.schemas.common import ORMModel
 
 PASSWORD_MIN_LENGTH = 6
-PASSWORD_MAX_LENGTH = 6
+PASSWORD_MAX_LENGTH = 64
 
 
 def validate_password(value: str) -> str:
-    if len(value) != PASSWORD_MIN_LENGTH:
+    if len(value) < PASSWORD_MIN_LENGTH:
         raise ValueError(
-            f"Le mot de passe doit contenir {PASSWORD_MIN_LENGTH} caractères exactement"
+            f"Le mot de passe doit contenir au moins {PASSWORD_MIN_LENGTH} caractères"
+        )
+    if len(value) > PASSWORD_MAX_LENGTH:
+        raise ValueError(
+            f"Le mot de passe ne peut pas dépasser {PASSWORD_MAX_LENGTH} caractères"
         )
     if not re.search(r"[a-zA-Z]", value):
         raise ValueError("Le mot de passe doit contenir au moins une lettre")

@@ -25,6 +25,39 @@ def _run_tryon_job(tryon_id: str) -> None:
         db.commit()
 
 
+def _client(user: User, db: Session) -> ClientProfile:
+    client = db.query(ClientProfile).filter(ClientProfile.user_id == user.id).first()
+    if not client:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Client profile not found")
+    return client
+
+
+def _owned_avatar(avatar_id: str, client: ClientProfile, db: Session) -> Avatar:
+    """Charge l'avatar et verifie qu'il appartient au client appeleur.
+
+    Sans ce controle, un client pouvait lancer un essayage (et donc lire
+    ensuite la session associee) avec l'avatar d'un autre compte en devinant
+    son identifiant."""
+    avatar = db.get(Avatar, avatar_id)
+    if not avatar or avatar.client_id != client.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Avatar not found")
+    return avatar
+
+
+def _owned_tryon(tryon_id: str, client: ClientProfile, db: Session) -> TryonSession:
+    """Charge une session d'essayage et verifie que son avatar appartient au
+    client appeleur. C'est la SEULE voie qui rende une session : sans ce
+    controle, n'importe quel visiteur — authentifie ou non — pouvait lire la
+    session d'un autre compte en enumerant son identifiant."""
+    session_row = db.get(TryonSession, tryon_id)
+    if not session_row:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tryon session not found")
+    avatar = db.get(Avatar, session_row.avatar_id) if session_row.avatar_id else None
+    if not avatar or avatar.client_id != client.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tryon session not found")
+    return session_row
+
+
 @router.post("", response_model=TryonOut)
 def create_tryon(
     payload: TryonCreateIn,
@@ -32,9 +65,8 @@ def create_tryon(
     user: User = Depends(require_roles("client")),
     db: Session = Depends(get_db),
 ):
-    avatar = db.get(Avatar, payload.avatar_id)
-    if not avatar:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Avatar not found")
+    client = _client(user, db)
+    avatar = _owned_avatar(payload.avatar_id, client, db)
 
     session_row = TryonSession(
         avatar_id=payload.avatar_id,
@@ -72,8 +104,9 @@ def list_my_tryons(
 
 
 @router.get("/{tryon_id}", response_model=TryonOut)
-def get_tryon(tryon_id: str, db: Session = Depends(get_db)):
-    session_row = db.get(TryonSession, tryon_id)
-    if not session_row:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tryon session not found")
-    return session_row
+def get_tryon(
+    tryon_id: str,
+    user: User = Depends(require_roles("client")),
+    db: Session = Depends(get_db),
+):
+    return _owned_tryon(tryon_id, _client(user, db), db)

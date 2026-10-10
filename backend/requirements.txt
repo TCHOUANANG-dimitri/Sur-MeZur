@@ -1,4 +1,4 @@
-fastapi==0.115.0
+fastapi==0.143.0
 uvicorn[standard]==0.30.6
 # Pont ASGI -> WSGI : requis par Passenger (cPanel/O2Switch), qui ne sait
 # parler qu'a une application WSGI. Sans effet sur uvicorn en local/Render,
@@ -10,10 +10,10 @@ SQLAlchemy==2.0.35
 psycopg[binary]==3.2.10
 pydantic==2.9.2
 pydantic-settings==2.5.2
-python-jose[cryptography]==3.3.0
+PyJWT==2.15.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
-python-multipart==0.0.9
+python-multipart==0.0.31
 email-validator==2.2.0
 # Optimisation des poids de morph targets (calibration avatar)
 numpy>=1.24.0

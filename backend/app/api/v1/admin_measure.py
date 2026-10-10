@@ -5,16 +5,19 @@ collecte (10.5) dans l'administration web.
 
 from __future__ import annotations
 
+import os
 import re
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 from statistics import mean, median
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import FileResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.v1.admin_common import get_or_404, iso
+from app.core.config import settings
 from app.core.deps import get_db, require_roles
 from app.models.collecte import DatasetSubject
 from app.models.measurements import Measurement, MeasurementDataset, MeasurementSession
@@ -25,6 +28,7 @@ from app.models.users import ClientProfile, TailorProfile, User
 from app.services.activity import as_utc, local_day
 from app.services.admin_perms import require_perm
 from app.services.platform_settings import get_setting
+from app.services.storage import protected_path
 from app.services.tables import TableParams, apply_sort, page_of, table_params, table_response
 from app.services.user_stats import local_start_utc
 
@@ -120,11 +124,56 @@ def session_diagnostic(session_id: str, db: Session = Depends(get_db), _=Depends
         "height_cm": s.height_cm, "weight_kg": s.weight_kg, "gender": s.gender,
         "photo_consent": consent,
         # Sans consentement, les photos ne sont pas montrees, meme a l'equipe.
-        "front_photo_url": s.front_photo_url if consent else None,
-        "side_photo_url": s.side_photo_url if consent else None,
+        # Avec, `*_photo_url` pointe vers la route CONTROLEE qui sert la photo
+        # (les photos de corps vivent hors /uploads) : l'interface la charge
+        # avec son jeton de session.
+        "front_photo_url": f"/api/admin/measurement-sessions/{s.id}/photos/front" if consent else None,
+        "side_photo_url": f"/api/admin/measurement-sessions/{s.id}/photos/side" if consent else None,
         "user": {"id": user.id, "full_name": user.full_name, "is_guest": user.is_guest} if user else None,
         "measurement": {"id": measurement.id, "data": measurement.data or {}, "confidence": measurement.confidence} if measurement else None,
     }
+
+
+def _session_photo_path(url: str | None) -> str | None:
+    """Chemin disque d'une photo de session, dans le stock prive d'abord,
+    avec repli sur l'ancien emplacement tant que la migration n'a pas tourne."""
+    if not url:
+        return None
+    path = protected_path(url, "measurement_photos")
+    if path and os.path.exists(path):
+        return path
+    if "/uploads/" in url:
+        relative = url.split("/uploads/", 1)[-1]
+        legacy = os.path.join(settings.upload_dir, relative)
+        return legacy if os.path.exists(legacy) else None
+    return None
+
+
+@router.get("/measurement-sessions/{session_id}/photos/{view}")
+def session_photo_file(
+    session_id: str, view: str, db: Session = Depends(get_db), _=Depends(require_perm("measure"))
+):
+    """Photo brute d'une session, sous permission « mesure » et consentement.
+
+    A4.2 : les photos de corps ne sont plus servies sous /uploads ; cette
+    route (et celle du proprietaire dans /measurements) sont les seules voies
+    d'acces. La photo n'est pas exposee sans consentement, meme a l'equipe."""
+    if view not in ("front", "side"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Vue inconnue")
+    s = get_or_404(db, MeasurementSession, session_id, "Analyse")
+    client = db.get(ClientProfile, s.client_id)
+    user = db.get(User, client.user_id) if client else None
+    if not (user and user.photo_consent):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Photo indisponible")
+    url = s.front_photo_url if view == "front" else s.side_photo_url
+    path = _session_photo_path(url)
+    if not path:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Photo absente")
+    return FileResponse(
+        path,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
 
 
 TAILOR_MEASURE_COLUMNS = [("created_at", "Date"), ("shop_name", "Atelier"), ("client", "Client"),

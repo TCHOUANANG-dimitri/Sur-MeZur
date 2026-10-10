@@ -24,3 +24,9 @@ RAPPORT_PROJET.docx
 # Campagne de collecte synchronisee en local (ml/scripts/telecharger_collecte.py) :
 # photos de volontaires, jamais versionnees.
 ml/data/collecte/
+
+# Stockages runtime du backend : jamais versionnes, ignorent les photos.
+backend/uploads/
+backend/protected_store/
+backend/avatar_store/
+backend/dataset_store/

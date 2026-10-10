@@ -68,8 +68,8 @@ def run() -> None:
         password = ADMIN_PASSWORD
         existe = db.query(User).filter(User.phone == ADMIN_PHONE).first() is not None
         if not existe and not password:
-            # 6 caracteres exactement (regle de validate_password) : 3 lettres
-            # + 3 chiffres, melanges.
+            # Regle de validate_password (A4.3) : 6 a 64 caracteres, dont au
+            # moins une lettre et un chiffre — 3 lettres + 3 chiffres melanges.
             lettres = [secrets.choice("abcdefghjkmnpqrstuvwxyz") for _ in range(3)]
             chiffres = [secrets.choice("23456789") for _ in range(3)]
             melange = lettres + chiffres

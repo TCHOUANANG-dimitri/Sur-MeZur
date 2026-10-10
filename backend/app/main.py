@@ -13,7 +13,7 @@ import sys
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
@@ -147,6 +147,26 @@ async def maintenance_guard(request: Request, call_next):
                     status_code=503,
                     content={"detail": state.get("message") or "Maintenance en cours", "maintenance": True},
                 )
+    return await call_next(request)
+
+
+# Sous-dossiers de `upload_dir` servis en statique qui sont PRIVÉS par
+# nature : photos de corps des sessions de mesure, pièces d'identité de la
+# vérification, analyses de débogage. La migration A4.2 les déplace dans
+# `protected_dir` (jamais monté) ; d'ici là, même une vieille URL devinée ne
+# doit rien renvoyer. Ces fichiers ne sortent que par les routes contrôlées
+# (/measurements/session/{id}/photos, /admin/verification-documents/{id}).
+#
+# Implémenté en middleware plutôt qu'en sous-classe de StaticFiles : le
+# montage transmet au StaticFiles un chemin relatif dont la forme dépend de la
+# version de Starlette, alors que `scope["path"]` est toujours l'URL complète.
+_PRIVATE_UPLOAD_PREFIXES = ("/uploads/measurement_photos/", "/uploads/verification/", "/uploads/debug/")
+
+
+@app.middleware("http")
+async def block_private_uploads(request: Request, call_next):
+    if request.url.path.startswith(_PRIVATE_UPLOAD_PREFIXES):
+        return PlainTextResponse("Forbidden", status_code=403)
     return await call_next(request)
 
 

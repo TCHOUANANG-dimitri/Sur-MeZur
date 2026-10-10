@@ -55,8 +55,9 @@
 - Réponse `TokenOut` :
   `{access_token, refresh_token, token_type: "bearer", user_id, role,
   must_change_password, mfa_required, mfa_token}`.
-- Mot de passe : 6 caractères exactement pour l'instant (lettre + chiffre
-  obligatoires) ; passera à 6–64 (l'Agent A prévient, voir `password.ts`).
+- Mot de passe : **6 à 64 caractères** (au moins une lettre et un chiffre
+  obligatoires), appliqué à l'inscription, au changement et à la
+  réinitialisation (Agent B : aligner `web/src/lib/password.ts` dessus).
 
 `POST /api/auth/password/reset/request` → **503** tant que la
 réinitialisation en libre-service est fermée :
