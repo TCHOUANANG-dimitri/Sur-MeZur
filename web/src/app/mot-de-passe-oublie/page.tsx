@@ -9,6 +9,7 @@
  * un oubli — elle devra disparaitre le jour ou les SMS partiront reellement.
  */
 
+import { homeFor } from "@/lib/home";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -70,7 +71,7 @@ export default function MotDePasseOublie() {
       setTokens(res.access_token, res.refresh_token);
       startAuthTimer();
       await refresh();
-      router.replace(res.role === "admin" ? "/admin" : "/accueil");
+      router.replace(homeFor(res.role));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Code invalide ou expiré.");
     } finally {

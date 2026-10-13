@@ -28,6 +28,7 @@ import { setTokens, startAuthTimer } from "@/lib/api/client";
 import { guestClaimToken, safeNext } from "@/lib/guest";
 import { readAcquisition } from "@/lib/acquisition";
 import { useAuth } from "@/components/AuthProvider";
+import { SignedInNotice } from "@/components/SignedInNotice";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
@@ -38,7 +39,9 @@ type Role = "client" | "tailor";
 function InscriptionInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const { refresh } = useAuth();
+  const { refresh, user, loading } = useAuth();
+  // Vrai des que CE formulaire a cree le compte : la redirection suit.
+  const [handedOff, setHandedOff] = useState(false);
   // Retour prevu apres inscription, typiquement les mesures completes de
   // la personne qui vient de les prendre sans compte.
   const next = safeNext(params.get("suite"));
@@ -127,6 +130,7 @@ function InscriptionInner() {
             ? { acquisition: readAcquisition(referral) }
             : {}),
       });
+      setHandedOff(true);
       setTokens(res.access_token, res.refresh_token);
       startAuthTimer();
       await refresh();
@@ -142,6 +146,15 @@ function InscriptionInner() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // Compte deja ouvert sur ce navigateur (hors compte invite, qui est
+  // justement converti par cette page) : creer un second compte par-dessus
+  // n'a pas de sens sans se deconnecter d'abord.
+  if (!loading && user && !user.is_guest && !handedOff) {
+    return (
+      <SignedInNotice message="Pour créer un nouveau compte, choisissez « Changer de compte » : vous serez déconnecté de celui-ci." />
+    );
   }
 
   return (

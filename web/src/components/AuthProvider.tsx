@@ -11,8 +11,8 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getToken, setTokens, setOnAuthFailure, startAuthTimer, stopAuthTimer } from "@/lib/api/client";
-import { UsersApi } from "@/lib/api/endpoints";
+import { getRefreshToken, getToken, setTokens, setOnAuthFailure, startAuthTimer, stopAuthTimer } from "@/lib/api/client";
+import { AuthApi, UsersApi } from "@/lib/api/endpoints";
 import type { User } from "@/lib/api/types";
 
 interface AuthState {
@@ -22,7 +22,10 @@ interface AuthState {
   loading: boolean;
   role: string | null;
   refresh: () => Promise<void>;
-  logout: () => void;
+  /** Ferme la session (cote serveur aussi), puis va vers `to`
+   *  (`/connexion` par defaut). `to: null` reste sur la page en cours :
+   *  utile pour « changer de compte » sans quitter la connexion ou la mesure. */
+  logout: (opts?: { to?: string | null }) => void;
 }
 
 const Ctx = createContext<AuthState>({
@@ -58,12 +61,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
-    setTokens(null, null);
-    stopAuthTimer();
-    setUser(null);
-    router.replace("/connexion");
-  }, [router]);
+  const logout = useCallback(
+    (opts?: { to?: string | null }) => {
+      // Revoque la session cote serveur (sessions administrateur, 13.5) ;
+      // sans effet pour les autres comptes. Ne bloque jamais la deconnexion.
+      const refreshToken = getRefreshToken();
+      if (refreshToken) AuthApi.logout(refreshToken).catch(() => {});
+      setTokens(null, null);
+      stopAuthTimer();
+      setUser(null);
+      const to = opts?.to === undefined ? "/connexion" : opts.to;
+      if (to !== null) router.replace(to);
+    },
+    [router]
+  );
 
   useEffect(() => {
     startAuthTimer();

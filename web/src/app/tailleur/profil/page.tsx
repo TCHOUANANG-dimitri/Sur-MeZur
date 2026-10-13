@@ -116,7 +116,7 @@ export default function ProfilTailleur() {
         </Button>
       </form>
 
-      <Button variant="secondary" block onClick={logout}>
+      <Button variant="secondary" block onClick={() => logout()}>
         Déconnexion
       </Button>
     </div>

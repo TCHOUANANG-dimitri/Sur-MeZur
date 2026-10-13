@@ -29,21 +29,23 @@ import { AuthApi } from "@/lib/api/endpoints";
 import { setTokens, startAuthTimer } from "@/lib/api/client";
 import { guestClaimToken, safeNext } from "@/lib/guest";
 import { useAuth } from "@/components/AuthProvider";
+import { SignedInNotice } from "@/components/SignedInNotice";
+import { homeFor } from "@/lib/home";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
 
 function destinationFor(role: string, next: string | null): string {
-  if (next) return next;
-  if (role === "tailor") return "/tailleur";
-  if (role === "admin") return "/admin";
-  return "/accueil";
+  return next ?? homeFor(role);
 }
 
 function ConnexionInner() {
   const router = useRouter();
-  const { refresh } = useAuth();
+  const { refresh, user, loading } = useAuth();
   const next = safeNext(useSearchParams().get("suite"));
+  // Vrai des que CE formulaire a ouvert la session : la redirection suit,
+  // le message « deja connecte » ne doit pas s'intercaler.
+  const [handedOff, setHandedOff] = useState(false);
   const [phone, setPhone] = useState(COUNTRIES[0].dial);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -61,6 +63,7 @@ function ConnexionInner() {
   const canSubmit = localDigits.length >= 6 && password.length > 0 && !busy;
 
   async function afterTokens(role: string, mustChange: boolean | undefined) {
+    setHandedOff(true);
     startAuthTimer();
     await refresh();
     if (mustChange) router.replace("/changer-mot-de-passe");
@@ -106,6 +109,19 @@ function ConnexionInner() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // Une session est deja ouverte (par exemple un compte administrateur sur
+  // ce navigateur) : on le dit et on laisse choisir, au lieu de renvoyer en
+  // silence vers son espace.
+  if (!loading && user && !user.is_guest && !handedOff) {
+    return (
+      <SignedInNotice
+        message="Pour vous connecter avec un autre compte, choisissez « Changer de compte »."
+        continueTo={next ?? undefined}
+        continueLabel={next ? "Continuer" : undefined}
+      />
+    );
   }
 
   return (

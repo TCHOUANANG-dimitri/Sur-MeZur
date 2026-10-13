@@ -12,6 +12,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
+import { homeFor } from "@/lib/home";
 
 export function HomeRedirect() {
   const { user, loading } = useAuth();
@@ -19,9 +20,7 @@ export function HomeRedirect() {
 
   useEffect(() => {
     if (loading || !user || user.is_guest) return;
-    if (user.role === "tailor") router.replace("/tailleur");
-    else if (user.role === "admin") router.replace("/admin");
-    else router.replace("/accueil");
+    router.replace(homeFor(user.role));
   }, [loading, user, router]);
 
   return null;

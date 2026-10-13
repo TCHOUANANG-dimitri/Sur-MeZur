@@ -13,7 +13,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
+import { SignedInNotice } from "./SignedInNotice";
 import { Spinner } from "./ui";
+import { ROLE_AUDIENCE } from "@/lib/home";
 
 export function RequireRole({
   role,
@@ -27,14 +29,27 @@ export function RequireRole({
 
   useEffect(() => {
     if (loading) return;
-    if (!user) router.replace("/connexion");
+    // Sans session : connexion, puis retour sur la page demandee.
+    if (!user) {
+      const here = `${window.location.pathname}${window.location.search}`;
+      router.replace(`/connexion?suite=${encodeURIComponent(here)}`);
+    }
     else if (user.is_guest) router.replace("/mesurer");
     // 2.6 : mot de passe provisoire fixe par l'equipe, a changer d'abord.
     else if (user.must_change_password) router.replace("/changer-mot-de-passe");
-    else if (user.role !== role) router.replace("/");
+    // Mauvais role : pas de redirection silencieuse vers un autre espace,
+    // le message ci-dessous laisse choisir.
   }, [loading, user, role, router]);
 
   if (loading) return <Spinner label="Chargement…" />;
-  if (!user || user.is_guest || user.must_change_password || user.role !== role) return null;
+  if (user && !user.is_guest && !user.must_change_password && user.role !== role) {
+    return (
+      <SignedInNotice
+        title={`Cette page est réservée aux ${ROLE_AUDIENCE[role]}`}
+        message="Allez à votre espace, ou changez de compte pour y accéder."
+      />
+    );
+  }
+  if (!user || user.is_guest || user.must_change_password) return null;
   return <>{children}</>;
 }
