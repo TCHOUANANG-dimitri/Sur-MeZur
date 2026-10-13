@@ -829,7 +829,7 @@ $ sudo bash /srv/surmezur/app/deploy/contabo/mettre_a_jour.sh --force
    avec le compte admin, onglet *Équipe*, pour créer les comptes des agents.
 4. **O2Switch** : une fois les données récupérées (étape 12) et la phase 2
    faite, l'application Python d'O2Switch peut être supprimée.
-   `DEPLOIEMENT.txt` devient alors obsolète.
+   (L'ancienne procédure O2Switch a été retirée du dépôt.)
 
 ---
 
