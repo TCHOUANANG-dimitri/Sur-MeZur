@@ -173,6 +173,18 @@ def main() -> None:
     check(len(doc["fiches"]) == 1 and doc["fiches"][0]["lecture"] == "retenu", "fiche exportee")
     check(doc["tailleurs"][0]["profil"]["nom"] == "Rose Ngo", "profil exporte")
 
+    print("\n== Acces direct (sans lien personnel)")
+    n1 = ok(client.post("/api/public/enquete/nouveau"), "acces direct cree", 201).json()["token"]
+    n2 = ok(client.post("/api/public/enquete/nouveau"), "second acces direct", 201).json()["token"]
+    check(n1 != n2 and len(n1) >= 20, "jetons distincts")
+    acc = ok(client.get(f"/api/public/enquete/{n1}"), "accueil acces direct").json()
+    check(acc["label"] == "Accès direct" and acc["modeles"] == [], "acces direct vierge")
+    ok(client.get(f"/api/public/enquete/{n2}/modeles/{c['id']}"), "acces direct ne voit pas les fiches des autres", 404)
+    inv = client.get("/api/admin/enquete/invites", headers=H).json()
+    check(sum(1 for i in inv if i["label"] == "Accès direct") == 2, "acces directs visibles dans l'admin")
+    codes = [client.post("/api/public/enquete/nouveau").status_code for _ in range(12)]
+    check(429 in codes, "limite de creation par IP")
+
     print("\n== Revocation")
     ok(client.patch(f"/api/admin/enquete/invites/{b['id']}", headers=H, json={"revoked": True}), "desactiver B")
     ok(client.get(f"/api/public/enquete/{tb}"), "lien B desactive", 410)

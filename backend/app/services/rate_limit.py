@@ -41,6 +41,8 @@ LIMITS = {
     # Enquete patrons (lien public par jeton) : appels et photos par jeton.
     "enquete_ip": (600, WINDOW_HOUR),
     "enquete_photo": (120, WINDOW_HOUR),
+    # Acces direct sans lien personnel : creation d'une fiche tailleur.
+    "enquete_new_ip": (10, WINDOW_HOUR),
 }
 
 TOO_MANY_FR = "Trop de tentatives. Attendez quelques minutes avant de réessayer."

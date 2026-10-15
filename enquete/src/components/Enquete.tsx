@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, enquete, type Accueil, type FicheResume, type GroupeGalerie, type Profil } from "@/lib/api";
+import { memoriserJeton } from "@/lib/jeton";
 import { SPECIALITES } from "@/lib/questionnaire";
 import { ChoixMultiple, Nombre } from "./champs";
 import { FicheEditor } from "./FicheEditor";
@@ -39,6 +40,7 @@ export function Enquete({ token }: { token: string }) {
   const charger = useCallback(async () => {
     try {
       setAccueil(await enquete(token).accueil());
+      memoriserJeton(token);
       setErreur(null);
     } catch (e) {
       setErreur(e as ApiError);
@@ -98,6 +100,7 @@ export function Enquete({ token }: { token: string }) {
   }
   return (
     <Liste
+      token={token}
       accueil={accueil}
       nouvelleCousue={async () => {
         const f = await api.creer("cousu");
@@ -208,8 +211,10 @@ function ProfilForm({ accueil, enregistrer }: { accueil: Accueil; enregistrer: (
 
 /* ------------------------------------------------------------------- Liste */
 
-function Liste({ accueil, nouvelleCousue }: { accueil: Accueil; nouvelleCousue: () => Promise<void> }) {
+function Liste({ token, accueil, nouvelleCousue }: { token: string; accueil: Accueil; nouvelleCousue: () => Promise<void> }) {
   const [occupe, setOccupe] = useState(false);
+  const [copie, setCopie] = useState(false);
+  const lienPerso = typeof window === "undefined" ? "" : `${window.location.origin}/${token}`;
   const [erreur, setErreur] = useState("");
   const envoyees = accueil.modeles.filter((m) => m.status === "envoye").length;
 
@@ -266,6 +271,20 @@ function Liste({ accueil, nouvelleCousue }: { accueil: Accueil; nouvelleCousue: 
           {[...accueil.modeles].reverse().map((m) => <LigneFiche key={m.id} m={m} />)}
         </div>
       )}
+
+      <Card variant="flat" className="lienPerso">
+        <strong>Votre lien personnel</strong>
+        <p className="muted">Sur ce téléphone, vos fiches sont retrouvées automatiquement. Pour continuer sur un autre appareil, gardez ce lien (envoyez-le-vous sur WhatsApp par exemple).</p>
+        <code>{lienPerso}</code>
+        <Button variant="secondary" onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(lienPerso);
+            setCopie(true);
+          } catch {
+            window.prompt("Copiez votre lien :", lienPerso);
+          }
+        }}>{copie ? "Lien copié" : "Copier mon lien"}</Button>
+      </Card>
     </main>
   );
 }

@@ -130,5 +130,8 @@ export function enquete(token: string) {
   };
 }
 
+/** Acces direct sans lien personnel : cree un acces et renvoie son jeton. */
+export const nouvelAcces = () => request<{ token: string }>("/public/enquete/nouveau", { method: "POST" });
+
 /** URL d'affichage d'une photo (renvoyee par l'API sans le prefixe /api). */
 export const photoSrc = (url: string) => `/api${url}`;

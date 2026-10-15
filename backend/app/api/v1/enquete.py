@@ -208,6 +208,20 @@ class ModeleDataIn(BaseModel):
     data: dict
 
 
+@public_router.post("/nouveau", status_code=status.HTTP_201_CREATED)
+def enquete_nouveau(request: Request, db: Session = Depends(get_db)):
+    """Acces direct par l'adresse du site, sans lien personnel : cree une
+    fiche tailleur anonyme et renvoie son jeton, que le site garde sur
+    l'appareil. Limite par IP ; chaque acces apparait dans l'admin
+    (« Acces direct ») et peut y etre desactive."""
+    rate_check("enquete_new_ip", client_ip(request))
+    inv = EnqueteInvite(token=secrets.token_urlsafe(18), label="Accès direct",
+                        note="Créé depuis l'adresse publique du questionnaire", profil={})
+    db.add(inv)
+    db.commit()
+    return {"token": inv.token}
+
+
 @public_router.get("/{token}")
 def enquete_accueil(token: str, request: Request, db: Session = Depends(get_db)):
     inv = _invite(token, db, request)
