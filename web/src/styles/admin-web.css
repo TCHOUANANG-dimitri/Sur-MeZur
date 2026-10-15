@@ -1407,3 +1407,8 @@ input.adInline {
     max-width: none;
   }
 }
+
+/* Enquete patrons : fiche lue en entier (sections empilees, texte libre long). */
+.adStack { display: grid; gap: 10px; }
+.adStack h4 { margin: 8px 0 0; }
+.adPre { white-space: pre-wrap; margin: 0; line-height: 1.5; }

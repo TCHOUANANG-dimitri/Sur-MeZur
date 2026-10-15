@@ -19,6 +19,7 @@ import {
   IconAcquisition,
   IconCatalog,
   IconCollecte,
+  IconEnquete,
   IconComms,
   IconDashboard,
   IconDisputes,
@@ -91,6 +92,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: "/admin/catalogue", label: "Catalogue", Icon: IconCatalog, perm: ["catalog"], counter: "catalog" },
       { href: "/admin/mesure", label: "Mesure par photo", Icon: IconMeasure, perm: ["measure"] },
       { href: "/admin/collecte", label: "Campagne de collecte", Icon: IconCollecte, perm: ["collecte"], counter: "collecte" },
+      { href: "/admin/enquete", label: "Enquête patrons", Icon: IconEnquete, perm: ["enquete"] },
     ],
   },
   {

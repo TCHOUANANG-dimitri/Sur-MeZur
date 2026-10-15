@@ -63,6 +63,7 @@ export {
   ChartColumn as IconStats,
   Megaphone as IconAcquisition,
   ClipboardList as IconCollecte,
+  NotebookPen as IconEnquete,
   MessageSquare as IconComms,
   LifeBuoy as IconSupport,
   Shield as IconTeam,

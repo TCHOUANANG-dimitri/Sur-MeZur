@@ -38,6 +38,9 @@ LIMITS = {
     "ticket_ip": (5, WINDOW_HOUR),
     # Inscription : 10 par heure par IP.
     "register_ip": (10, WINDOW_HOUR),
+    # Enquete patrons (lien public par jeton) : appels et photos par jeton.
+    "enquete_ip": (600, WINDOW_HOUR),
+    "enquete_photo": (120, WINDOW_HOUR),
 }
 
 TOO_MANY_FR = "Trop de tentatives. Attendez quelques minutes avant de réessayer."

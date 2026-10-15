@@ -19,6 +19,7 @@ from app.api.v1 import (
     chat,
     collecte,
     deliveries,
+    enquete,
     measurements,
     modifications,
     notifications,
@@ -70,3 +71,6 @@ api_router.include_router(admin_growth.router)
 api_router.include_router(support.public_router)
 api_router.include_router(support.admin_router)
 api_router.include_router(collecte.router)
+# Enquete patrons : questionnaire public par lien + lecture admin.
+api_router.include_router(enquete.public_router)
+api_router.include_router(enquete.admin_router)

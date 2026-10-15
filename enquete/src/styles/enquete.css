@@ -1,0 +1,148 @@
+/* Questionnaire des tailleurs — mobile d'abord, une colonne lisible sur ordinateur. */
+
+body {
+  background: var(--bg-page);
+  color: var(--indigo-text);
+  font-family: var(--font-body);
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px var(--gutter) 120px;
+  display: grid;
+  gap: 14px;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+h2 { font-size: 1.15rem; margin: 0 0 8px; }
+h3 { font-size: 1rem; margin: 12px 0 6px; }
+.card > * + * { margin-top: 10px; }
+
+/* Ici, toutes les pastilles passent a la ligne : sur telephone, un defilement
+   horizontal cacherait des choix. */
+.chipRow { flex-wrap: wrap; overflow: visible; }
+
+/* --- Accueil -------------------------------------------------------------- */
+.hero { display: grid; gap: 10px; text-align: center; padding: 8px 0; }
+.heroLogo { width: 140px; height: auto; margin: 0 auto; }
+.consignes ol { margin: 8px 0; padding-left: 20px; display: grid; gap: 6px; }
+.accord { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; line-height: 1.45; }
+.accord input { width: 22px; height: 22px; flex: none; margin-top: 2px; accent-color: var(--violet-primary); }
+.accord svg { vertical-align: -3px; color: var(--violet-primary); }
+
+/* --- En-tete et listes ----------------------------------------------------- */
+.barre { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; }
+.lien {
+  border: none; background: none; color: var(--violet-primary); font: inherit; font-weight: 600;
+  display: inline-flex; gap: 6px; align-items: center; cursor: pointer; padding: 6px 0;
+}
+.sectionTitre { margin-top: 8px; }
+.choixSource { display: grid; gap: 10px; }
+@media (min-width: 560px) { .choixSource { grid-template-columns: 1fr 1fr; } }
+.source {
+  display: grid; gap: 6px; justify-items: start; text-align: left; font: inherit;
+  padding: 16px; border-radius: var(--radius-card); border: 1.5px solid var(--border);
+  background: var(--surface); cursor: pointer; color: inherit;
+}
+.source svg { color: var(--violet-primary); }
+.source:hover, .source:focus-visible { border-color: var(--violet-vivid); }
+.source:disabled { opacity: 0.6; }
+.liste { display: grid; gap: 8px; }
+.ligne {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left;
+  padding: 14px 16px; border-radius: var(--radius-card); border: 1px solid var(--border);
+  background: var(--surface); font: inherit; color: inherit; cursor: pointer;
+}
+.ligneTexte { display: grid; gap: 2px; }
+.aCompleter { color: var(--pending); font-size: 0.85rem; display: inline-flex; gap: 4px; align-items: center; }
+
+/* --- Galerie --------------------------------------------------------------- */
+.galerieGroupe { display: grid; gap: 8px; }
+.galerieGrille { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media (min-width: 560px) { .galerieGrille { grid-template-columns: repeat(4, 1fr); } }
+.galerieCase {
+  display: grid; gap: 6px; padding: 0 0 10px; border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--border); background: var(--surface); font: inherit; color: inherit; cursor: pointer;
+}
+.galerieCase img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; background: var(--bg-alt); }
+.galerieCase span { padding: 0 8px; font-size: 0.9rem; font-weight: 600; }
+.modeleGalerie { display: flex; gap: 12px; align-items: center; }
+.modeleGalerie img { width: 64px; height: 84px; object-fit: cover; border-radius: 10px; }
+.modeleGalerie div { display: grid; }
+
+/* --- Fiche ----------------------------------------------------------------- */
+.etapeNum { margin: -6px 0 0; font-size: 0.85rem; }
+.etape { border: none; padding: 0; margin: 0; display: grid; gap: 14px; min-width: 0; }
+.etatSauvegarde { font-size: 0.82rem; color: var(--text-secondary); display: inline-flex; gap: 4px; align-items: center; }
+.etatErreur { color: var(--pending); }
+.noteEquipe {
+  display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px;
+  background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412;
+}
+.noteEquipe p { margin: 4px 0 0; }
+
+.nombre { position: relative; display: flex; align-items: center; }
+.nombre .input { padding-right: 52px; width: 100%; }
+.unite { position: absolute; right: 12px; color: var(--text-secondary); font-size: 0.85rem; pointer-events: none; }
+
+.grilleMesures { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+@media (min-width: 640px) { .grilleMesures { grid-template-columns: repeat(3, 1fr); } }
+
+.ligneEdition { display: flex; gap: 8px; align-items: flex-end; }
+.ligneEdition > :first-child { flex: 1; }
+.iconBtn {
+  flex: none; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--error); display: grid; place-items: center; cursor: pointer;
+}
+.piece { display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: var(--bg-alt); }
+.case { display: inline-flex; gap: 8px; align-items: center; padding-bottom: 12px; white-space: nowrap; }
+.case input { width: 20px; height: 20px; accent-color: var(--violet-primary); }
+.priseBloc { padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+.tableAisance { display: grid; grid-template-columns: 1.2fr repeat(3, 1fr); gap: 6px; align-items: center; }
+.tableAisance > .muted { font-size: 0.8rem; text-align: center; }
+.ligneAisance { display: contents; }
+.ligneAisance > span { font-size: 0.88rem; font-weight: 600; }
+.ligneAisance .input { padding: 10px 30px 10px 8px; }
+.ligneAisance .unite { right: 6px; font-size: 0.75rem; }
+
+.photos { display: grid; gap: 8px; }
+.photosTitre { display: grid; gap: 2px; }
+.photosGrille { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (min-width: 560px) { .photosGrille { grid-template-columns: repeat(5, 1fr); } }
+.photoCase {
+  position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden;
+  background: var(--bg-alt); border: 1px solid var(--border);
+}
+.photoCase img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photoSuppr {
+  position: absolute; top: 4px; right: 4px; width: 30px; height: 30px; border-radius: 999px; border: none;
+  background: rgba(255, 255, 255, 0.92); color: var(--error); display: grid; place-items: center; cursor: pointer;
+}
+.photoEnvoi { display: grid; place-items: center; }
+.photoAjout {
+  display: grid; place-content: center; justify-items: center; gap: 4px; cursor: pointer; font: inherit;
+  color: var(--violet-primary); border: 1.5px dashed var(--violet-vivid); background: var(--violet-tint);
+}
+
+.manques { margin: 4px 0; padding-left: 20px; }
+.actionsColonne { display: grid; gap: 10px; margin-top: 8px; }
+.merci { display: grid; gap: 12px; justify-items: center; text-align: center; padding: 28px 18px; }
+.merci svg { color: var(--success); }
+
+/* Barre Precedent / Suivant collee en bas : toujours a portee de pouce. */
+.navEtapes {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.96); border-top: 1px solid var(--border);
+}
+.navEtapes .btn { flex: 1; max-width: 340px; }
+.actions { display: grid; }

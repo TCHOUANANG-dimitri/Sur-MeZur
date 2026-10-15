@@ -39,6 +39,7 @@ PERMISSIONS: dict[str, set[str]] = {
     "reviews": {"moderator"},
     "measure": {"support", "moderator"},
     "collecte": {"moderator"},
+    "enquete": {"moderator"},
     "comms": {"support"},
     "support": {"support"},
     "growth": {"support", "finance", "moderator"},

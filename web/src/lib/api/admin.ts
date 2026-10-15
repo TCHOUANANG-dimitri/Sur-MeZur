@@ -837,6 +837,65 @@ export const Collecte = {
   exportArchive: (format: string) => downloadFile(`/collecte/export${qs({ format })}`, "collecte.zip"),
 };
 
+// --- Enquete patrons (questionnaire public des tailleurs) ---------------------------------------
+
+export interface EnqueteInvite {
+  id: string;
+  token: string;
+  label: string;
+  note: string | null;
+  revoked: boolean;
+  profil: Record<string, unknown>;
+  consentement: boolean;
+  created_at: string | null;
+  last_seen_at: string | null;
+  nb_brouillons: number;
+  nb_envoyes: number;
+}
+
+export interface EnquetePhoto {
+  id: string;
+  kind: "vetement" | "patron" | "autre";
+  legende: string | null;
+  url: string;
+}
+
+export interface EnqueteFiche {
+  id: string;
+  source: "cousu" | "galerie";
+  status: "brouillon" | "envoye";
+  nom: string | null;
+  categorie: string | null;
+  modele_galerie: { id: string; nom: string; photo_url: string | null; categorie: string | null } | null;
+  nb_photos: number;
+  submitted_at: string | null;
+  updated_at: string | null;
+  created_at: string | null;
+  review_status: "a_lire" | "retenu" | "a_completer" | "ecarte";
+  review_note: string | null;
+  tailleur: { invite_id: string | null; label: string | null; nom: string | null; ville: string | null; profil?: Record<string, unknown> };
+  data?: Record<string, unknown>;
+  photos?: EnquetePhoto[];
+}
+
+export const Enquete = {
+  invites: () => api.get<EnqueteInvite[]>("/admin/enquete/invites"),
+  createInvite: (label: string, note?: string) => api.post<EnqueteInvite>("/admin/enquete/invites", { label, note }),
+  patchInvite: (id: string, body: { label?: string; note?: string; revoked?: boolean }) =>
+    api.patch<EnqueteInvite>(`/admin/enquete/invites/${id}`, body),
+  fiches: (p: Params) => api.get<EnqueteFiche[]>(`/admin/enquete/modeles${qs(p)}`),
+  fiche: (id: string) => api.get<EnqueteFiche>(`/admin/enquete/modeles/${id}`),
+  review: (id: string, body: { review_status?: string; review_note?: string; rouvrir?: boolean }) =>
+    api.patch<EnqueteFiche>(`/admin/enquete/modeles/${id}`, body),
+  /** L'API renvoie `/admin/enquete/...` : prefixe /api pour AuthImage. */
+  photoUrl: (url: string) => `/api${url}`,
+  exportArchive: (tout = false) => downloadFile(`/admin/enquete/export${qs({ tout: tout || undefined })}`, "enquete_patrons.zip"),
+  /** Adresse du site du questionnaire (application `enquete/`, projet Vercel a part),
+   *  a renseigner dans NEXT_PUBLIC_ENQUETE_URL. Vide tant qu'elle n'est pas configuree. */
+  base: (process.env.NEXT_PUBLIC_ENQUETE_URL ?? "").replace(/\/$/, ""),
+  lien: (token: string) => `${(process.env.NEXT_PUBLIC_ENQUETE_URL ?? "").replace(/\/$/, "")}/${token}`,
+};
+
 // --- M11 Communication -------------------------------------------------------------------------
 
 export interface Audience {

@@ -27,6 +27,7 @@ from app.models.catalog import (
     ReadyToWear,
 )
 from app.models.collecte import DatasetPhoto, DatasetSubject
+from app.models.enquete import EnqueteInvite, EnqueteModele
 from app.models.measurements import (
     Avatar,
     Measurement,
@@ -55,6 +56,8 @@ from app.models.tailor_tools import (
 from app.models.users import ClientProfile, TailorProfile, User, VerificationDocument
 
 __all__ = [
+    "EnqueteInvite",
+    "EnqueteModele",
     "Accessory",
     "AcquisitionChannel",
     "AcquisitionComment",
