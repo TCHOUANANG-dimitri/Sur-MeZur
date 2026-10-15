@@ -43,7 +43,7 @@ _BACKEND_ROOT = Path(__file__).resolve().parents[3] / "backend"
 if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
 _ROOT = Path(__file__).resolve().parents[3]  # .../Sur-MeZur-App
-_PHOTOS_DIR = _ROOT / "IMAGES TEST"
+_PHOTOS_DIR = _ROOT / "ml" / "bench" / "photos"
 _SUJETS_JSON = _ROOT / "ml" / "bench" / "nouveaux_sujets_reels.json"
 
 

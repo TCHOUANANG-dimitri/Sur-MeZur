@@ -39,3 +39,8 @@ backend/uploads/
 backend/protected_store/
 backend/avatar_store/
 backend/dataset_store/
+
+# Photos des sujets mesures au metre ruban (ml/bench/sujets.json et
+# nouveaux_sujets_reels.json) : donnees personnelles, jamais dans le depot
+# public. Sauvegarde hors machine : voir ml/bench/eval_production.py.
+ml/bench/photos/

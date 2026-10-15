@@ -20,10 +20,19 @@ qui semblait solide (LOO sur 11-12 sujets) :
     catastrophique du lien poids -> largeur d'epaules (un sujet de 95kg
     predisait 47.2cm pour une carrure reelle de 35.0cm).
   - wrist : 1.17 -> 1.92 cm sur 6 sujets inedits, n'ameliore que 2/6.
-Ne pas les reintroduire sans nouvelle validation sur des sujets neufs.
+  - inseam, moyenne des deux chevilles (retire le 13 oct. 2026) :
+    3.60 -> 4.07 cm sur les sujets de validation, mesure le 25 aout puis
+    reconfirme a l'identique le 13 octobre ; l'entrejambe brut est garde.
+Ne pas les reintroduire sans nouvelle validation sur des sujets neufs
+(ml/bench/eval_production.py mesure la chaine telle qu'en production).
+
+Attention en evaluant : ces corrections supposent MobileSAM actif. Sans
+silhouette (checkpoint introuvable, delai depasse), les mesures brutes
+changent et biceps/thigh semblent alors degrader -- conclusion fausse
+tiree une fois le 13 octobre avant de trouver la cause.
 
 Usage :
-    from app.services.measurement_corrections import corriger_mesures, inseam_corrige
+    from app.services.measurement_corrections import corriger_mesures
 
     resultat = corriger_mesures(mesures_brutes, features, gender)
     # resultat["corrige"][mesure] : valeur apres correction (ou brute, si
@@ -156,9 +165,6 @@ def corriger_mesures(mesures_brutes: dict[str, float], features: dict[str, float
     calculees par le pipeline V3/V4 de production. N'a pas besoin d'acces
     aux photos ni au repere de pose -- fonctionne uniquement a partir de la
     sortie standard de `vision.run()` (`.data` et `.features`).
-
-    `inseam` n'est PAS corrige ici (necessite le repere de pose brut pour
-    la correction geometrique -- voir `inseam_corrige`).
     """
     corrige: dict[str, float] = {}
     confiance: dict[str, Confiance] = {}
@@ -185,31 +191,9 @@ def corriger_mesures(mesures_brutes: dict[str, float], features: dict[str, float
             confiance[mesure] = c
             origine[mesure] = o
             continue
-        # inseam (traite a part par inseam_corrige) ou mesure inconnue : valeur brute
+        # Sans correction validee (inseam, shoulder, wrist...) : valeur brute
         corrige[mesure] = valeur
         confiance[mesure] = "aucune_correction"
         origine[mesure] = "--"
 
     return {"corrige": corrige, "confiance": confiance, "origine": origine}
-
-
-def inseam_corrige(pose, cm_per_pixel: float) -> float | None:
-    """
-    Recalcule l'entrejambe par la moyenne des DEUX chevilles (au lieu de la
-    plus visible seule) -- voir claude_code.md section 3decies.
-    Fix construit sur les 13 sujets terrain : MAE 3.14 -> ~2.98 cm.
-
-    Validation independante du 25 aout 2026 (6 sujets inedits) : resultat
-    legerement negatif (3.60 -> 4.07 cm, n=6). Correction geometrique (pas
-    une extrapolation statistique comme shoulder/wrist), donc conservee --
-    confiance "moyenne" en attendant plus de donnees pour trancher si ce
-    recul est du bruit (n=6 est tres petit) ou un vrai signe que la moyenne
-    des deux chevilles ne generalise pas.
-    """
-    from app.services.vision.pose import LEFT_HIP, RIGHT_HIP, LEFT_ANKLE, RIGHT_ANKLE
-    from app.services.vision.scale import px_to_cm
-
-    hip_mid = pose.midpoint(LEFT_HIP, RIGHT_HIP)
-    left_px = ((hip_mid[0] - pose.point(LEFT_ANKLE).x) ** 2 + (hip_mid[1] - pose.point(LEFT_ANKLE).y) ** 2) ** 0.5
-    right_px = ((hip_mid[0] - pose.point(RIGHT_ANKLE).x) ** 2 + (hip_mid[1] - pose.point(RIGHT_ANKLE).y) ** 2) ** 0.5
-    return px_to_cm((left_px + right_px) / 2, cm_per_pixel)

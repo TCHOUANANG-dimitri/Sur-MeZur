@@ -50,7 +50,7 @@ from pipeline_ameliore import CORRECTIONS_UNIVERSELLES, CORRECTIONS_HOMMES  # no
 
 PROD_DUMP = Path(r"C:\Users\Admin\AppData\Local\Temp\opencode\real_baseline_dump.json")
 NOUVEAUX_JSON = RACINE / "ml" / "bench" / "nouveaux_sujets_reels.json"
-IMAGES_DIR = RACINE / "IMAGES TEST"
+IMAGES_DIR = RACINE / "ml" / "bench" / "photos"
 CACHE_NOUVEAUX = Path(__file__).with_name("cache_exp13_nouveaux.json")
 
 TOURS = ["neck", "chest", "waist", "hips", "biceps", "thigh", "wrist", "ankle"]

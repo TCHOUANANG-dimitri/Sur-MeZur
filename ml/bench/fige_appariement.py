@@ -26,7 +26,7 @@ from pathlib import Path
 RACINE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RACINE / "backend"))
 
-PHOTOS = RACINE / "backend" / "uploads" / "measurement_photos"
+PHOTOS = RACINE / "ml" / "bench" / "photos"
 SUJETS_JSON = Path(__file__).with_name("sujets.json")
 
 _HORODATAGE = re.compile(r"at (\d{1,2})\.(\d{2})\.(\d{2}) (AM|PM)(\d*)")
@@ -57,6 +57,10 @@ def rapport_epaules(chemin: Path) -> float | None:
 
 
 def main() -> None:
+    # Le dossier photos/ contient desormais aussi les sujets de validation :
+    # relancer ce script ecraserait l'appariement fige par un appariement faux.
+    if json.loads(SUJETS_JSON.read_text(encoding="utf-8")).get("photos"):
+        sys.exit("Appariement deja fige dans sujets.json : rien a faire.")
     fichiers = sorted(PHOTOS.glob("*.jpeg"), key=cle_temporelle)
     if len(fichiers) != 26:
         print(f"ATTENTION : {len(fichiers)} photos trouvees, 26 attendues")

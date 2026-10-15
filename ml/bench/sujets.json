@@ -7,7 +7,7 @@
     "Ce fichier a failli etre perdu : les chiffres n'existaient que dans un script",
     "jetable d'une session de travail. Ils sont desormais versionnes ici.",
     "",
-    "Photos associees : backend/uploads/measurement_photos/ (26 fichiers, 2 par sujet).",
+    "Photos associees : ml/bench/photos/ (26 fichiers, 2 par sujet ; dossier local, hors git).",
     "L'appariement photo -> sujet est fige dans `photos` : il a ete etabli une fois",
     "(tri par horodatage WhatsApp, puis face/profil departages par le rapport",
     "largeur d'epaules / hauteur de torse) et ne doit plus etre recalcule, sinon",

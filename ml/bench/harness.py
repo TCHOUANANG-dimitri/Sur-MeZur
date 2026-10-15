@@ -22,7 +22,7 @@ BACKEND = RACINE / "backend"
 if str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
 
-PHOTOS = BACKEND / "uploads" / "measurement_photos"
+PHOTOS = RACINE / "ml" / "bench" / "photos"
 SUJETS_JSON = Path(__file__).with_name("sujets.json")
 BASELINE_JSON = Path(__file__).with_name("baseline_v3.json")
 

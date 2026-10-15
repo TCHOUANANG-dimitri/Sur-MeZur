@@ -32,7 +32,7 @@ RACINE = Path(__file__).resolve().parents[3]  # .../Sur-MeZur-App
 BACKEND = RACINE / "backend"
 sys.path.insert(0, str(BACKEND))
 
-PHOTOS = BACKEND / "uploads" / "measurement_photos"
+PHOTOS = RACINE / "ml" / "bench" / "photos"
 SUJETS_JSON = Path(__file__).resolve().parents[1] / "sujets.json"
 
 

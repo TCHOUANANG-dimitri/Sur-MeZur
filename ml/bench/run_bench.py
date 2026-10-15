@@ -26,7 +26,7 @@ RACINE = Path(__file__).resolve().parents[2]
 BACKEND = RACINE / "backend"
 sys.path.insert(0, str(BACKEND))
 
-PHOTOS = BACKEND / "uploads" / "measurement_photos"
+PHOTOS = RACINE / "ml" / "bench" / "photos"
 SUJETS_JSON = Path(__file__).with_name("sujets.json")
 
 TOURS = ["neck", "chest", "waist", "hips", "biceps", "thigh", "wrist", "ankle"]

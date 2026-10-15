@@ -29,7 +29,7 @@ RACINE = Path(__file__).resolve().parents[2]
 BACKEND = RACINE / "backend"
 sys.path.insert(0, str(BACKEND))
 
-PHOTOS = BACKEND / "uploads" / "measurement_photos"
+PHOTOS = RACINE / "ml" / "bench" / "photos"
 SUJETS_JSON = Path(__file__).with_name("sujets.json")
 CACHE_JSON = Path(__file__).with_name("cache_limbs_rl2.json")
 PROD_DUMP = Path(r"C:\Users\Admin\AppData\Local\Temp\opencode\real_baseline_dump.json")

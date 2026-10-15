@@ -32,7 +32,7 @@ sys.path.insert(0, str(BACKEND))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import harness  # noqa: E402
 
-PHOTOS = BACKEND / "uploads" / "measurement_photos"
+PHOTOS = RACINE / "ml" / "bench" / "photos"
 
 # --- Reimplementation de scale_v4.estimate_scale, avec gender en fermeture --
 NOSE_HEIGHT_RATIO = 0.932
