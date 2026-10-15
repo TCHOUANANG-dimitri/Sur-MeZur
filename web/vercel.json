@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "ignoreCommand": "git cat-file -e \"$VERCEL_GIT_PREVIOUS_SHA^{commit}\" 2>/dev/null && git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- . || exit 1",
+  "ignoreCommand": "[ \"$VERCEL_GIT_PREVIOUS_SHA\" != \"$VERCEL_GIT_COMMIT_SHA\" ] && git cat-file -e \"$VERCEL_GIT_PREVIOUS_SHA^{commit}\" 2>/dev/null && git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- . || exit 1",
   "headers": [
     {
       "source": "/.well-known/assetlinks.json",
