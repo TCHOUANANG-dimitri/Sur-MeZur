@@ -1,24 +1,26 @@
 "use client";
 
 /**
- * Une fiche modele, en 8 etapes courtes. Sauvegarde automatique du brouillon
- * a chaque modification (petit delai) et a chaque changement d'etape : le
- * tailleur peut fermer la page et revenir plus tard par le meme lien.
+ * Une fiche modele en 3 etapes courtes + envoi (environ 5 minutes) : le
+ * modele, l'aisance, la coupe. Presque tout se fait en touchant des choix.
+ * Sauvegarde automatique du brouillon a chaque modification (petit delai) et
+ * a chaque changement d'etape : le tailleur peut fermer la page et revenir
+ * plus tard par le meme lien.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { enquete, type Fiche, type Photo } from "@/lib/api";
 import {
-  CATEGORIES, DIFFICULTE, ETAPES, FOIS_COUSU, MESURES, MESURES_AISANCE, POUR, TISSUS, VARIANTES,
-  manquants, normaliser, type FicheData,
+  AISANCE_PAR_CATEGORIE, CATEGORIES, ETAPES, FOIS_COUSU, LIBELLES_MESURES, MESURES_PAR_CATEGORIE, POUR,
+  TAILLE_OU, TYPES, TYPES_EVASES, manquants, normaliser, questionsCoupe, type FicheData,
 } from "@/lib/questionnaire";
 import { ChoixMultiple, ChoixUnique, Nombre, Photos } from "./champs";
 import { aller } from "./Enquete";
-import { IconBack, IconCheckCircle, IconDelete, IconNext, IconNote, IconOffline, IconPlus, IconSaved, IconSend } from "./icons";
+import { IconBack, IconCheckCircle, IconDelete, IconNext, IconNote, IconOffline, IconSaved, IconSend } from "./icons";
 import { Button, Card, ErrorBanner, Field, InfoBanner, Input, Spinner, Steps, Textarea } from "./ui";
 
 type Sauvegarde = "ok" | "en_cours" | "erreur";
-const SUGGESTIONS_PIECES = ["Devant", "Dos", "Manche", "Col", "Pied de col", "Ceinture", "Parementure", "Poche", "Empiècement", "Volant", "Poignet"];
+const AVEC_TAILLE = ["jupe", "robe", "haut", "pantalon", "chemise", "autre"];
 
 export function FicheEditor({ token, id, onChange }: { token: string; id: string; onChange: () => Promise<void> }) {
   const api = enquete(token);
@@ -73,6 +75,8 @@ export function FicheEditor({ token, id, onChange }: { token: string; id: string
       return n;
     });
   }
+  const majGeneral = (x: Partial<FicheData["general"]>) => maj((d) => ({ ...d, general: { ...d.general, ...x } }));
+  const majCoupe = (x: Partial<FicheData["coupe"]>) => maj((d) => ({ ...d, coupe: { ...d.coupe, ...x } }));
 
   function changerEtape(n: number) {
     if (minuteur.current) clearTimeout(minuteur.current);
@@ -84,9 +88,9 @@ export function FicheEditor({ token, id, onChange }: { token: string; id: string
   if (erreur && !fiche) return <main className="page"><ErrorBanner message={erreur} /><Button variant="secondary" onClick={() => aller("")}>Mes fiches</Button></main>;
   if (!fiche || !data) return <main className="page"><Spinner label="Ouverture de la fiche…" /></main>;
 
-  const parType = (k: Photo["kind"]) => photos.filter((p) => p.kind === k);
-  const ajouterPhoto = (kind: Photo["kind"]) => async (f: File) => {
-    const p = await api.ajouterPhoto(id, f, kind);
+  const vetements = photos.filter((p) => p.kind === "vetement");
+  const ajouterPhoto = async (f: File) => {
+    const p = await api.ajouterPhoto(id, f, "vetement");
     setPhotos((l) => [...l, p]);
   };
   const supprimerPhoto = async (p: Photo) => {
@@ -94,23 +98,28 @@ export function FicheEditor({ token, id, onChange }: { token: string; id: string
     setPhotos((l) => l.filter((x) => x.id !== p.id));
   };
 
+  const g = data.general;
+  const nomAffiche = g.type && g.type !== "autre" ? g.type_label : g.nom;
+
   if (envoyee) {
     return (
       <main className="page">
         <Card className="merci">
           <IconCheckCircle size={44} aria-hidden />
           <h1>Merci !</h1>
-          <p>Votre fiche « {data.general.nom} » est envoyée. L&apos;équipe Sur-MeZur la lira et pourra vous recontacter si un point n&apos;est pas clair.</p>
+          <p>Votre fiche « {nomAffiche || "modèle"} » est envoyée. L&apos;équipe Sur-MeZur la lira et pourra vous recontacter si un point n&apos;est pas clair.</p>
           <Button block onClick={() => { void onChange(); aller(""); }}>Ajouter un autre modèle</Button>
         </Card>
       </main>
     );
   }
 
-  const g = data.general;
-  const pers = data.personne;
-  const mesuresRemplies = MESURES.filter((m) => (pers.mesures[m.key] ?? 0) > 0);
-  const manque = manquants(data, fiche.source, parType("vetement").length);
+  const cat = g.categorie;
+  const types = cat ? TYPES[cat] ?? [] : [];
+  const mesuresProposees = cat ? MESURES_PAR_CATEGORIE[cat] ?? [] : [];
+  const aisances = cat ? AISANCE_PAR_CATEGORIE[cat] ?? [] : [];
+  const questions = questionsCoupe(cat, g.type);
+  const manque = manquants(data);
 
   return (
     <main className="page">
@@ -131,42 +140,35 @@ export function FicheEditor({ token, id, onChange }: { token: string; id: string
       <fieldset disabled={lectureSeule} className="etape">
         {etape === 0 && (
           <>
-            {fiche.modele_galerie && (
-              <Card variant="flat" className="modeleGalerie">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {fiche.modele_galerie.photo_url && <img src={fiche.modele_galerie.photo_url} alt={fiche.modele_galerie.nom} />}
-                <div><span className="muted">Modèle de la galerie</span><strong>{fiche.modele_galerie.nom}</strong></div>
-              </Card>
-            )}
             <Card>
-              <Field label="Nom du modèle *" hint="Le nom que vous lui donnez à l'atelier.">
-                <Input value={g.nom ?? ""} onChange={(e) => maj((d) => ({ ...d, general: { ...d.general, nom: e.target.value } }))} />
-              </Field>
-              <div className="field"><span className="fieldLabel">Catégorie *</span>
-                <ChoixUnique choix={CATEGORIES} value={g.categorie} onChange={(v) => maj((d) => ({ ...d, general: { ...d.general, categorie: v } }))} />
+              <div className="field"><span className="fieldLabel">Quel vêtement ? *</span>
+                <ChoixUnique choix={CATEGORIES} value={cat}
+                  onChange={(v) => majGeneral({ categorie: v, type: undefined, type_label: undefined })} />
               </div>
+              {cat && (
+                <div className="field"><span className="fieldLabel">Quel modèle exactement ? *</span>
+                  <ChoixUnique choix={types} value={g.type}
+                    onChange={(v) => majGeneral({ type: v, type_label: types.find((t) => t.value === v)?.label })} />
+                </div>
+              )}
+              {g.type === "autre" && (
+                <Field label="Son nom à l'atelier *" hint="Ex. : robe sirène, jupe portefeuille…">
+                  <Input value={g.nom ?? ""} onChange={(e) => majGeneral({ nom: e.target.value })} />
+                </Field>
+              )}
               <div className="field"><span className="fieldLabel">Pour</span>
-                <ChoixUnique choix={POUR} value={g.pour} onChange={(v) => maj((d) => ({ ...d, general: { ...d.general, pour: v } }))} />
+                <ChoixUnique choix={POUR} value={g.pour} onChange={(v) => majGeneral({ pour: v })} />
               </div>
               <div className="field"><span className="fieldLabel">Combien de fois l&apos;avez-vous cousu ? *</span>
-                <ChoixUnique choix={FOIS_COUSU} value={g.fois_cousu} onChange={(v) => maj((d) => ({ ...d, general: { ...d.general, fois_cousu: v } }))} />
+                <ChoixUnique choix={FOIS_COUSU} value={g.fois_cousu} onChange={(v) => majGeneral({ fois_cousu: v })} />
               </div>
-              <div className="field"><span className="fieldLabel">Difficulté</span>
-                <ChoixUnique choix={DIFFICULTE} value={g.difficulte} onChange={(v) => maj((d) => ({ ...d, general: { ...d.general, difficulte: v } }))} />
-              </div>
-              <Field label="Temps de confection">
-                <Nombre value={g.temps_heures} unite="heures" max={200} onChange={(v) => maj((d) => ({ ...d, general: { ...d.general, temps_heures: v } }))} />
-              </Field>
-              <Field label="Description courte" hint="Ex. : jupe droite avec fente au dos et ceinture montée.">
-                <Textarea rows={3} value={g.description ?? ""} onChange={(e) => maj((d) => ({ ...d, general: { ...d.general, description: e.target.value } }))} />
-              </Field>
             </Card>
             <Card>
               <Photos
-                titre={fiche.source === "cousu" ? "Photos du vêtement *" : "Photos d'un vêtement que vous avez cousu (facultatif)"}
-                aide="Devant, dos, et les détails (col, fermeture, poches)."
-                photos={parType("vetement")}
-                onAjouter={ajouterPhoto("vetement")}
+                titre="Une photo du vêtement (facultatif)"
+                aide="Un vêtement de ce modèle que vous avez cousu, porté ou à plat. Pas besoin de patron."
+                photos={vetements}
+                onAjouter={ajouterPhoto}
                 onSupprimer={supprimerPhoto}
                 lectureSeule={lectureSeule}
               />
@@ -175,236 +177,82 @@ export function FicheEditor({ token, id, onChange }: { token: string; id: string
         )}
 
         {etape === 1 && (
-          <>
-            <Card>
-              {fiche.source === "galerie" ? (
-                <p className="muted">Ce modèle vient de la galerie : imaginez une personne qui le porterait et <strong>estimez ses mesures</strong>, comme vous le feriez pour une cliente type.</p>
-              ) : (
-                <div className="field"><span className="fieldLabel">Les mesures ci-dessous sont…</span>
-                  <ChoixUnique
-                    choix={[{ value: "reelles", label: "Celles d'un vrai client" }, { value: "estimees", label: "Estimées" }]}
-                    value={pers.origine}
-                    onChange={(v) => maj((d) => ({ ...d, personne: { ...d.personne, origine: v as "reelles" | "estimees" | undefined } }))}
-                  />
+          !cat ? (
+            <Card><p className="muted">Choisissez d&apos;abord le vêtement à l&apos;étape 1.</p></Card>
+          ) : (
+            <>
+              <Card>
+                <h2>L&apos;aisance *</h2>
+                <p className="muted">
+                  Pour ce modèle porté normalement, combien de <strong>centimètres ajoutez-vous</strong> au tour que
+                  vous avez mesuré ? Mettez 0 si vous n&apos;ajoutez rien, laissez vide si vous ne savez pas.
+                </p>
+                <div className="grilleMesures">
+                  {aisances.map((k) => (
+                    <Field key={k} label={`${LIBELLES_MESURES[k]} +`}>
+                      <Nombre value={data.aisance_cm[k]} unite="cm" max={80} ariaLabel={`Aisance ${LIBELLES_MESURES[k]}`}
+                        onChange={(v) => maj((d) => ({ ...d, aisance_cm: { ...d.aisance_cm, [k]: v } }))} />
+                    </Field>
+                  ))}
                 </div>
-              )}
-              <div className="field"><span className="fieldLabel">La personne</span>
-                <ChoixUnique choix={[{ value: "femme", label: "Femme" }, { value: "homme", label: "Homme" }, { value: "enfant", label: "Enfant" }]}
-                  value={pers.sexe} onChange={(v) => maj((d) => ({ ...d, personne: { ...d.personne, sexe: v } }))} />
-              </div>
-              <div className="fieldRow">
-                <Field label="Taille"><Nombre value={pers.taille_cm} unite="cm" max={230} onChange={(v) => maj((d) => ({ ...d, personne: { ...d.personne, taille_cm: v } }))} /></Field>
-                <Field label="Poids"><Nombre value={pers.poids_kg} unite="kg" max={250} onChange={(v) => maj((d) => ({ ...d, personne: { ...d.personne, poids_kg: v } }))} /></Field>
-              </div>
-            </Card>
-            <Card>
-              <p className="muted">Remplissez seulement les mesures que vous utilisez pour ce modèle (au moins 3).</p>
-              <div className="grilleMesures">
-                {MESURES.map((m) => (
-                  <Field key={m.key} label={m.label}>
-                    <Nombre value={pers.mesures[m.key]} unite="cm" ariaLabel={m.label}
-                      onChange={(v) => maj((d) => ({ ...d, personne: { ...d.personne, mesures: { ...d.personne.mesures, [m.key]: v } } }))} />
-                  </Field>
-                ))}
-              </div>
-              <h3>Autres mesures que vous prenez</h3>
-              {pers.autres_mesures.map((a, i) => (
-                <div key={i} className="ligneEdition">
-                  <Input placeholder="Nom de la mesure" value={a.nom} onChange={(e) => maj((d) => {
-                    const l = [...d.personne.autres_mesures]; l[i] = { ...l[i], nom: e.target.value };
-                    return { ...d, personne: { ...d.personne, autres_mesures: l } };
-                  })} />
-                  <Nombre value={a.valeur} unite="cm" onChange={(v) => maj((d) => {
-                    const l = [...d.personne.autres_mesures]; l[i] = { ...l[i], valeur: v };
-                    return { ...d, personne: { ...d.personne, autres_mesures: l } };
-                  })} />
-                  <button type="button" className="iconBtn" aria-label="Retirer" onClick={() => maj((d) => ({
-                    ...d, personne: { ...d.personne, autres_mesures: d.personne.autres_mesures.filter((_, j) => j !== i) },
-                  }))}><IconDelete size={18} aria-hidden /></button>
+              </Card>
+              <Card>
+                <div className="field"><span className="fieldLabel">Les mesures que vous prenez pour ce modèle</span>
+                  <ChoixMultiple choix={mesuresProposees.map((k) => LIBELLES_MESURES[k])}
+                    value={data.mesures_prises.map((k) => LIBELLES_MESURES[k] ?? k)}
+                    onChange={(l) => maj((d) => ({
+                      ...d, mesures_prises: l.map((lab) => Object.keys(LIBELLES_MESURES).find((k) => LIBELLES_MESURES[k] === lab) ?? lab),
+                    }))} />
                 </div>
-              ))}
-              <Button variant="ghost" type="button" onClick={() => maj((d) => ({
-                ...d, personne: { ...d.personne, autres_mesures: [...d.personne.autres_mesures, { nom: "", valeur: null }] },
-              }))}><IconPlus size={16} aria-hidden /> Ajouter une mesure</Button>
-            </Card>
-          </>
+                {AVEC_TAILLE.includes(cat) && (
+                  <div className="field"><span className="fieldLabel">Où placez-vous le ruban pour le tour de taille ?</span>
+                    <ChoixUnique choix={TAILLE_OU} value={data.taille_ou} onChange={(v) => maj((d) => ({ ...d, taille_ou: v }))} />
+                  </div>
+                )}
+              </Card>
+            </>
+          )
         )}
 
         {etape === 2 && (
-          <Card>
-            {mesuresRemplies.length === 0 ? (
-              <p className="muted">Renseignez d&apos;abord des mesures à l&apos;étape précédente.</p>
-            ) : (
-              <>
-                <p className="muted">Pour chaque mesure, où placez-vous le ruban ? Chaque tailleur a sa façon : c&apos;est justement ce que nous voulons connaître.</p>
-                {mesuresRemplies.map((m) => {
-                  const pr = data.prise[m.key] ?? {};
-                  return (
-                    <div key={m.key} className="field priseBloc">
-                      <span className="fieldLabel">{m.label}</span>
-                      {m.lieux && (
-                        <ChoixUnique choix={[...m.lieux, { value: "autre", label: "Autrement" }]} value={pr.lieu}
-                          onChange={(v) => maj((d) => ({ ...d, prise: { ...d.prise, [m.key]: { ...pr, lieu: v } } }))} />
-                      )}
-                      <Input placeholder="Précision (facultatif)" value={pr.precision ?? ""}
-                        onChange={(e) => maj((d) => ({ ...d, prise: { ...d.prise, [m.key]: { ...pr, precision: e.target.value } } }))} />
-                    </div>
-                  );
-                })}
-              </>
+          <>
+            <Card>
+              <div className="fieldRow">
+                <Field label="Valeur de couture *" hint="Ce que vous laissez sur les côtés.">
+                  <Nombre value={data.coupe.couture_cm} unite="cm" max={10} ariaLabel="Valeur de couture"
+                    onChange={(v) => majCoupe({ couture_cm: v })} />
+                </Field>
+                <Field label="Ourlet" hint="Ce que vous laissez en bas.">
+                  <Nombre value={data.coupe.ourlet_cm} unite="cm" max={20} ariaLabel="Ourlet" onChange={(v) => majCoupe({ ourlet_cm: v })} />
+                </Field>
+              </div>
+              {g.type && TYPES_EVASES.includes(g.type) && (
+                <Field label="Évasement" hint="Combien de cm ajoutez-vous en bas, de chaque côté, par rapport aux hanches (ou à la poitrine) ?">
+                  <Nombre value={data.coupe.evasement_cm} unite="cm" max={80} ariaLabel="Évasement" onChange={(v) => majCoupe({ evasement_cm: v })} />
+                </Field>
+              )}
+            </Card>
+            {questions.length > 0 && (
+              <Card>
+                {questions.map((q) => (
+                  <div key={q.cle} className="field"><span className="fieldLabel">{q.label}</span>
+                    <ChoixUnique choix={q.choix} value={data.coupe[q.cle] as string | undefined}
+                      onChange={(v) => majCoupe({ [q.cle]: v })} />
+                  </div>
+                ))}
+              </Card>
             )}
-          </Card>
-        )}
-
-        {etape === 3 && (
-          <Card>
-            <p className="muted">Listez les pièces que vous coupez pour ce modèle.</p>
-            {data.pieces.map((p, i) => (
-              <div key={i} className="piece">
-                <div className="ligneEdition">
-                  <Input placeholder="Nom de la pièce" value={p.nom} onChange={(e) => maj((d) => {
-                    const l = [...d.pieces]; l[i] = { ...l[i], nom: e.target.value }; return { ...d, pieces: l };
-                  })} />
-                  <button type="button" className="iconBtn" aria-label="Retirer la pièce" onClick={() => maj((d) => ({
-                    ...d, pieces: d.pieces.filter((_, j) => j !== i),
-                  }))}><IconDelete size={18} aria-hidden /></button>
-                </div>
-                <div className="ligneEdition">
-                  <Field label="Nombre à couper">
-                    <Nombre value={p.nombre} max={20} onChange={(v) => maj((d) => {
-                      const l = [...d.pieces]; l[i] = { ...l[i], nombre: v == null ? null : Math.round(v) }; return { ...d, pieces: l };
-                    })} />
-                  </Field>
-                  <label className="case">
-                    <input type="checkbox" checked={p.au_pli} onChange={(e) => maj((d) => {
-                      const l = [...d.pieces]; l[i] = { ...l[i], au_pli: e.target.checked }; return { ...d, pieces: l };
-                    })} /> Coupée au pli
-                  </label>
-                </div>
-                <Input placeholder="Remarque (pince, fente, plis…)" value={p.notes ?? ""} onChange={(e) => maj((d) => {
-                  const l = [...d.pieces]; l[i] = { ...l[i], notes: e.target.value }; return { ...d, pieces: l };
-                })} />
-              </div>
-            ))}
-            <span className="fieldLabel">Ajouter une pièce</span>
-            <div className="chipRow">
-              {SUGGESTIONS_PIECES.map((s) => (
-                <button key={s} type="button" className="chip" onClick={() => maj((d) => ({ ...d, pieces: [...d.pieces, { nom: s, nombre: 1, au_pli: false }] }))}>+ {s}</button>
-              ))}
-              <button type="button" className="chip" onClick={() => maj((d) => ({ ...d, pieces: [...d.pieces, { nom: "", nombre: 1, au_pli: false }] }))}>+ Autre</button>
-            </div>
-          </Card>
-        )}
-
-        {etape === 4 && (
-          <>
             <Card>
-              <h3>Aisance</h3>
-              <p className="muted">Combien de centimètres ajoutez-vous au tour du corps, selon que le client veut le vêtement <strong>ajusté</strong>, <strong>normal</strong> ou <strong>ample</strong> ? Laissez vide ce que vous ne faites pas.</p>
-              <div className="tableAisance">
-                <span />
-                <span className="muted">Ajusté</span><span className="muted">Normal</span><span className="muted">Ample</span>
-                {MESURES_AISANCE.map((k) => {
-                  const lab = MESURES.find((m) => m.key === k)?.label ?? k;
-                  const a = data.aisance[k] ?? {};
-                  const set = (champ: "ajuste" | "normal" | "ample") => (v: number | null) =>
-                    maj((d) => ({ ...d, aisance: { ...d.aisance, [k]: { ...(d.aisance[k] ?? {}), [champ]: v } } }));
-                  return (
-                    <div key={k} className="ligneAisance">
-                      <span>{lab}</span>
-                      <Nombre value={a.ajuste} unite="cm" max={60} ariaLabel={`${lab} ajusté`} onChange={set("ajuste")} />
-                      <Nombre value={a.normal} unite="cm" max={60} ariaLabel={`${lab} normal`} onChange={set("normal")} />
-                      <Nombre value={a.ample} unite="cm" max={80} ariaLabel={`${lab} ample`} onChange={set("ample")} />
-                    </div>
-                  );
-                })}
-              </div>
-              <Field label="Remarques sur l'aisance" hint="Ex. : moins d'aisance avec un tissu extensible, plus avec du bazin.">
-                <Textarea rows={2} value={data.aisance_notes ?? ""} onChange={(e) => maj((d) => ({ ...d, aisance_notes: e.target.value }))} />
+              <Field label="Vos calculs ou astuces de traçage (facultatif)"
+                hint="Ex. : « devant = tour de hanches ÷ 4 + 1 cm », « je descends la pince de 12 cm », « avec le bazin j'ajoute 2 cm ».">
+                <Textarea rows={4} value={data.astuces ?? ""} onChange={(e) => maj((d) => ({ ...d, astuces: e.target.value }))} />
               </Field>
-            </Card>
-            <Card>
-              <h3>Marges de couture</h3>
-              <div className="grilleMesures">
-                <Field label="Côtés"><Nombre value={data.marges.cotes} unite="cm" max={10} onChange={(v) => maj((d) => ({ ...d, marges: { ...d.marges, cotes: v } }))} /></Field>
-                <Field label="Ourlet"><Nombre value={data.marges.ourlet} unite="cm" max={15} onChange={(v) => maj((d) => ({ ...d, marges: { ...d.marges, ourlet: v } }))} /></Field>
-                <Field label="Encolure / emmanchure"><Nombre value={data.marges.encolure_emmanchure} unite="cm" max={10} onChange={(v) => maj((d) => ({ ...d, marges: { ...d.marges, encolure_emmanchure: v } }))} /></Field>
-                <Field label="Ceinture"><Nombre value={data.marges.ceinture} unite="cm" max={10} onChange={(v) => maj((d) => ({ ...d, marges: { ...d.marges, ceinture: v } }))} /></Field>
-              </div>
-              <Field label="Remarques sur les marges">
-                <Input value={data.marges.notes ?? ""} onChange={(e) => maj((d) => ({ ...d, marges: { ...d.marges, notes: e.target.value } }))} />
-              </Field>
-            </Card>
-          </>
-        )}
-
-        {etape === 5 && (
-          <>
-            <Card>
-              <p className="muted">Quelles variantes savez-vous faire sur ce modèle ?</p>
-              {VARIANTES.map((v) => (
-                <div key={v.key} className="field">
-                  <span className="fieldLabel">{v.label}</span>
-                  <ChoixMultiple choix={v.choix} value={(data.variantes[v.key] as string[]) ?? []}
-                    onChange={(l) => maj((d) => ({ ...d, variantes: { ...d.variantes, [v.key]: l } }))} />
-                </div>
-              ))}
-              <Field label="Autres variantes">
-                <Input value={data.variantes.autres ?? ""} onChange={(e) => maj((d) => ({ ...d, variantes: { ...d.variantes, autres: e.target.value } }))} />
-              </Field>
-            </Card>
-            <Card>
-              <div className="field"><span className="fieldLabel">Tissus conseillés</span>
-                <ChoixMultiple choix={TISSUS} value={data.tissus.conseilles} onChange={(l) => maj((d) => ({ ...d, tissus: { ...d.tissus, conseilles: l } }))} />
-              </div>
-              <Field label="Métrage habituel pour la personne de l'étape 2">
-                <Nombre value={data.tissus.metrage_m} unite="m" max={20} onChange={(v) => maj((d) => ({ ...d, tissus: { ...d.tissus, metrage_m: v } }))} />
-              </Field>
-              <Field label="Remarques sur les tissus">
-                <Input value={data.tissus.notes ?? ""} onChange={(e) => maj((d) => ({ ...d, tissus: { ...d.tissus, notes: e.target.value } }))} />
-              </Field>
-            </Card>
-          </>
-        )}
-
-        {etape === 6 && (
-          <>
-            <Card>
-              <Photos
-                titre="Photos de votre patron papier"
-                aide="Le plus précieux ! Pièce par pièce, à plat, avec les cotes écrites dessus si possible."
-                photos={parType("patron")}
-                onAjouter={ajouterPhoto("patron")}
-                onSupprimer={supprimerPhoto}
-                lectureSeule={lectureSeule}
-              />
-            </Card>
-            <Card>
-              <Field label="Comment tracez-vous ce modèle ?" hint="Expliquez comme à un apprenti : par quelle pièce commencez-vous, quels calculs faites-vous (ex. « tour de hanches divisé par 4 plus 1 cm »), où placez-vous les pinces…">
-                <Textarea rows={8} value={data.trace.etapes ?? ""} onChange={(e) => maj((d) => ({ ...d, trace: { ...d.trace, etapes: e.target.value } }))} />
-              </Field>
-              <Field label="Les retouches les plus fréquentes sur ce modèle">
-                <Textarea rows={3} value={data.retouches.frequentes ?? ""} onChange={(e) => maj((d) => ({ ...d, retouches: { ...d.retouches, frequentes: e.target.value } }))} />
-              </Field>
-              <Field label="Vos conseils pour bien le réussir">
-                <Textarea rows={3} value={data.retouches.conseils ?? ""} onChange={(e) => maj((d) => ({ ...d, retouches: { ...d.retouches, conseils: e.target.value } }))} />
-              </Field>
-            </Card>
-            <Card>
-              <Photos
-                titre="Autres photos (facultatif)"
-                aide="Croquis, étapes de montage, détails."
-                photos={parType("autre")}
-                onAjouter={ajouterPhoto("autre")}
-                onSupprimer={supprimerPhoto}
-                lectureSeule={lectureSeule}
-              />
             </Card>
           </>
         )}
       </fieldset>
 
-      {etape === 7 && (
+      {etape === 3 && (
         <Card>
           {lectureSeule ? (
             <p>Cette fiche a été envoyée{fiche.submitted_at ? ` le ${new Date(fiche.submitted_at).toLocaleDateString("fr-FR")}` : ""}. Merci !</p>

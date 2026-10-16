@@ -874,6 +874,8 @@ export interface EnqueteFiche {
   review_status: "a_lire" | "retenu" | "a_completer" | "ecarte";
   review_note: string | null;
   tailleur: { invite_id: string | null; label: string | null; nom: string | null; ville: string | null; profil?: Record<string, unknown> };
+  /** 1 : mesures et pieces ; 2 : recette (aisances, marges, coupe). */
+  schema_version?: number;
   data?: Record<string, unknown>;
   photos?: EnquetePhoto[];
 }

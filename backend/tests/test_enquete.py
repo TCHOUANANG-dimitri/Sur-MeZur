@@ -28,7 +28,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
 from app.db.base import SessionLocal  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import GarmentModel, User  # noqa: E402
+from app.models import EnqueteModele, GarmentModel, User  # noqa: E402
 from app.models.catalog import Category  # noqa: E402
 
 client = TestClient(app)
@@ -76,10 +76,16 @@ def seed() -> dict:
 
 
 def donnees_completes() -> dict:
+    """Fiche v2 : la recette du tailleur (aisances, marges, coupe)."""
     return {
-        "general": {"nom": "Jupe droite", "categorie": "jupe", "fois_cousu": "6-20", "difficulte": "simple"},
-        "personne": {"origine": "reelles", "mesures": {"waist": 74, "hips": 98, "skirt_length": 60}},
-        "pieces": [{"nom": "Devant", "nombre": 1, "au_pli": True}, {"nom": "Dos", "nombre": 2, "au_pli": False}],
+        "general": {"categorie": "jupe", "type": "jupe_droite", "type_label": "Droite, ajustée à pinces",
+                    "pour": "femme", "fois_cousu": "6-20"},
+        "mesures_prises": ["waist", "hips", "garment_length"],
+        "taille_ou": "creux",
+        "aisance_cm": {"waist": 1, "hips": 4},
+        "coupe": {"couture_cm": 1.5, "ourlet_cm": 3, "devant": "pli", "dos": "deux", "pinces_devant": "1",
+                  "pinces_dos": "2", "fermeture": "eclair_dos", "ceinture": "montee"},
+        "astuces": "devant = hanches / 4 + 1",
     }
 
 
@@ -125,9 +131,16 @@ def main() -> None:
     print("\n== Fiche « cousu » : brouillon, photos, envoi")
     c = ok(client.post(f"/api/public/enquete/{ta}/modeles", json={"source": "cousu"}), "fiche cousu", 201).json()
     base = f"/api/public/enquete/{ta}/modeles/{c['id']}"
-    ok(client.put(base, json={"data": {"general": {"nom": "Ju"}}}), "sauvegarde brouillon")
+    ok(client.put(base, json={"data": {"general": {"categorie": "jupe"}}}), "sauvegarde brouillon")
     r = ok(client.post(f"{base}/envoyer"), "envoi incomplet refuse", 422)
-    check("photo du vêtement" in r.text and "catégorie" in r.text, "message liste les manques")
+    check("type de modèle" in r.text and "aisance" in r.text and "valeur de couture" in r.text,
+          "message liste les manques")
+    check("photo" not in r.text, "photo facultative")
+    ok(client.put(base, json={"data": {**donnees_completes(),
+                                       "general": {"categorie": "jupe", "type": "autre", "fois_cousu": "2-5"}}}),
+       "type autre sans nom")
+    r = ok(client.post(f"{base}/envoyer"), "type autre : nom exige", 422)
+    check("nom du modèle" in r.text, "nom demande pour un type autre")
     ok(client.put(base, json={"data": {"x": "y" * 70000}}), "fiche trop longue", 413)
     ok(client.post(f"{base}/photos", files={"photo": ("x.jpg", io.BytesIO(b"MZ\x90\x00" * 50), "image/jpeg")},
                    data={"kind": "vetement"}), "faux jpeg refuse", 400)
@@ -144,9 +157,21 @@ def main() -> None:
     ok(client.put(base, json={"data": donnees_completes()}), "fiche complete")
     env = ok(client.post(f"{base}/envoyer"), "envoi").json()
     check(env["status"] == "envoye" and env["submitted_at"], "fiche envoyee")
+    check(env["nom"] == "Droite, ajustée à pinces" and env["schema_version"] == 2, "nom = type choisi, version 2")
     ok(client.put(base, json={"data": {}}), "envoyee non modifiable", 409)
     ok(client.delete(base), "envoyee non supprimable", 409)
     ok(client.delete(f"/api/public/enquete/{ta}/modeles/{g['id']}"), "brouillon supprime", 204)
+
+    print("\n== Ancienne fiche (version 1)")
+    v1 = ok(client.post(f"/api/public/enquete/{ta}/modeles", json={"source": "cousu"}), "fiche v1", 201).json()
+    with SessionLocal() as db:
+        row = db.get(EnqueteModele, v1["id"])
+        row.schema_version = 1
+        row.data = {"general": {"nom": "Ancienne", "categorie": "jupe", "fois_cousu": "2-5"}}
+        db.commit()
+    r = ok(client.post(f"/api/public/enquete/{ta}/modeles/{v1['id']}/envoyer"), "v1 : ancienne regle", 422)
+    check("3 mesures" in r.text, "regle v1 conservee")
+    ok(client.delete(f"/api/public/enquete/{ta}/modeles/{v1['id']}"), "fiche v1 supprimee", 204)
 
     print("\n== Lecture admin, reouverture, export")
     inv = ok(client.get("/api/admin/enquete/invites", headers=H), "liste des liens").json()

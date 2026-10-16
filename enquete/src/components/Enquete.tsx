@@ -2,27 +2,30 @@
 
 /**
  * Parcours complet d'un tailleur, sur une seule page :
- *   profil + accord -> liste de ses fiches -> (galerie) -> fiche modele.
+ *   profil + accord -> liste de ses fiches -> fiche modele.
  *
- * Navigation par le fragment d'URL (#galerie, #fiche=<id>, #profil) : le
- * bouton « retour » du telephone fonctionne, sans quitter le lien personnel.
+ * Navigation par le fragment d'URL (#fiche=<id>, #profil) : le bouton
+ * « retour » du telephone fonctionne, sans quitter le lien personnel.
+ *
+ * La galerie (choisir un modele de l'app et estimer les mesures d'une
+ * personne) n'est plus proposee : la fiche ne demande plus de mesures de
+ * personne. La route serveur reste en place.
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, enquete, type Accueil, type FicheResume, type GroupeGalerie, type Profil } from "@/lib/api";
+import { ApiError, enquete, type Accueil, type FicheResume, type Profil } from "@/lib/api";
 import { memoriserJeton } from "@/lib/jeton";
-import { SPECIALITES } from "@/lib/questionnaire";
-import { ChoixMultiple, Nombre } from "./champs";
+import { CATEGORIES } from "@/lib/questionnaire";
+import { Nombre } from "./champs";
 import { FicheEditor } from "./FicheEditor";
-import { IconCheckCircle, IconEdit, IconGallery, IconNote, IconScissors, IconShield } from "./icons";
+import { IconCheckCircle, IconEdit, IconNote, IconPlus, IconShield } from "./icons";
 import { Badge, Button, Card, EmptyState, ErrorBanner, Field, InfoBanner, Input, Spinner } from "./ui";
 
-type Vue = { nom: "liste" } | { nom: "profil" } | { nom: "galerie" } | { nom: "fiche"; id: string };
+type Vue = { nom: "liste" } | { nom: "profil" } | { nom: "fiche"; id: string };
 
 function lireVue(): Vue {
   const h = typeof window === "undefined" ? "" : window.location.hash.slice(1);
   if (h === "profil") return { nom: "profil" };
-  if (h === "galerie") return { nom: "galerie" };
   if (h.startsWith("fiche=")) return { nom: "fiche", id: h.slice(6) };
   return { nom: "liste" };
 }
@@ -79,18 +82,6 @@ export function Enquete({ token }: { token: string }) {
           await api.profil(p);
           await charger();
           aller("");
-        }}
-      />
-    );
-  }
-  if (vue.nom === "galerie") {
-    return (
-      <Galerie
-        charger={api.galerie}
-        choisir={async (id) => {
-          const f = await api.creer("galerie", id);
-          await charger();
-          aller(`fiche=${f.id}`);
         }}
       />
     );
@@ -160,31 +151,25 @@ function ProfilForm({ accueil, enregistrer }: { accueil: Accueil; enregistrer: (
         <Card variant="flat" className="consignes">
           <h2>Comment ça se passe</h2>
           <ol>
-            <li>Vous choisissez un modèle <strong>simple</strong>, que vous avez <strong>cousu plusieurs fois</strong> : un modèle que vous avez déjà fait (avec ses photos), ou un modèle de notre galerie.</li>
-            <li>Vous répondez à des questions courtes : les mesures, les pièces, l&apos;aisance, les marges…</li>
-            <li>Si vous avez votre patron papier, prenez-le en photo avec les cotes. C&apos;est le plus précieux.</li>
+            <li>Vous choisissez un modèle <strong>simple</strong> que vous <strong>cousez souvent</strong> (jupe droite, kaba…).</li>
+            <li>Vous dites combien de centimètres vous ajoutez aux mesures, et comment vous le coupez : surtout des choix à toucher.</li>
+            <li>Pas de patron à fournir, pas de mesures de client à donner.</li>
           </ol>
-          <p className="muted">Environ 15 minutes par modèle. Tout est enregistré au fur et à mesure : vous pouvez vous arrêter et revenir plus tard avec le même lien.</p>
+          <p className="muted">Environ 5 minutes par modèle. Tout est enregistré au fur et à mesure : vous pouvez vous arrêter et revenir plus tard avec le même lien.</p>
         </Card>
       )}
 
       <Card>
         <h2>Vous</h2>
         <Field label="Votre nom *"><Input value={p.nom} onChange={(e) => maj({ nom: e.target.value })} autoComplete="name" /></Field>
-        <Field label="Nom de votre atelier"><Input value={p.atelier ?? ""} onChange={(e) => maj({ atelier: e.target.value })} /></Field>
         <Field label="Téléphone (WhatsApp)" hint="Pour vous recontacter si une réponse n'est pas claire.">
           <Input type="tel" inputMode="tel" value={p.telephone ?? ""} onChange={(e) => maj({ telephone: e.target.value })} />
         </Field>
         <div className="fieldRow">
           <Field label="Ville"><Input value={p.ville ?? ""} onChange={(e) => maj({ ville: e.target.value })} /></Field>
-          <Field label="Quartier"><Input value={p.quartier ?? ""} onChange={(e) => maj({ quartier: e.target.value })} /></Field>
-        </div>
-        <Field label="Années d'expérience">
-          <Nombre value={p.experience_annees} onChange={(v) => maj({ experience_annees: v == null ? null : Math.round(v) })} unite="ans" max={80} />
-        </Field>
-        <div className="field">
-          <span className="fieldLabel">Vos spécialités</span>
-          <ChoixMultiple choix={SPECIALITES} value={p.specialites} onChange={(v) => maj({ specialites: v })} />
+          <Field label="Années d'expérience">
+            <Nombre value={p.experience_annees} onChange={(v) => maj({ experience_annees: v == null ? null : Math.round(v) })} unite="ans" max={80} />
+          </Field>
         </div>
       </Card>
 
@@ -192,7 +177,7 @@ function ProfilForm({ accueil, enregistrer }: { accueil: Accueil; enregistrer: (
         <label className="accord">
           <input type="checkbox" checked={p.consentement} onChange={(e) => maj({ consentement: e.target.checked })} />
           <span>
-            <IconShield size={16} aria-hidden /> J&apos;accepte que Sur-MeZur utilise mes réponses et mes photos pour
+            <IconShield size={16} aria-hidden /> J&apos;accepte que Sur-MeZur utilise mes réponses et mes éventuelles photos pour
             concevoir son outil de patrons. Mes coordonnées ne seront pas publiées. Je peux demander leur suppression
             à tout moment.
           </span>
@@ -247,19 +232,10 @@ function Liste({ token, accueil, nouvelleCousue }: { token: string; accueil: Acc
 
       <Card variant="flat" className="consignes">
         <strong>Ajouter un modèle</strong>
-        <p className="muted">Choisissez un modèle <strong>simple</strong> que vous avez <strong>cousu plusieurs fois</strong>.</p>
-        <div className="choixSource">
-          <button className="source" onClick={() => void creer()} disabled={occupe}>
-            <IconScissors size={24} aria-hidden />
-            <strong>Un modèle que j&apos;ai déjà cousu</strong>
-            <span className="muted">Avec des photos du vêtement, et si possible de votre patron.</span>
-          </button>
-          <button className="source" onClick={() => aller("galerie")}>
-            <IconGallery size={24} aria-hidden />
-            <strong>Un modèle de la galerie</strong>
-            <span className="muted">Vous estimez les mesures d&apos;une personne pour ce modèle.</span>
-          </button>
-        </div>
+        <p className="muted">Un modèle <strong>simple</strong> que vous <strong>cousez souvent</strong>. Environ 5 minutes.</p>
+        <Button block onClick={() => void creer()} disabled={occupe}>
+          <IconPlus size={18} aria-hidden /> {occupe ? "Ouverture…" : "Ajouter un modèle"}
+        </Button>
         <ErrorBanner message={erreur} />
       </Card>
 
@@ -293,9 +269,10 @@ function LigneFiche({ m }: { m: FicheResume }) {
   return (
     <button className="ligne" onClick={() => aller(`fiche=${m.id}`)}>
       <div className="ligneTexte">
-        <strong>{m.nom || "Modèle sans nom"}</strong>
+        <strong>{m.nom || "Modèle à compléter"}</strong>
         <span className="muted">
-          {m.source === "galerie" ? "Galerie" : "Modèle cousu"} · {m.nb_photos} photo{m.nb_photos > 1 ? "s" : ""}
+          {CATEGORIES.find((c) => c.value === m.categorie)?.label ?? "Catégorie à choisir"}
+          {m.nb_photos ? ` · ${m.nb_photos} photo${m.nb_photos > 1 ? "s" : ""}` : ""}
         </span>
         {m.a_completer && (
           <span className="aCompleter"><IconNote size={14} aria-hidden /> L&apos;équipe vous demande un complément</span>
@@ -303,55 +280,5 @@ function LigneFiche({ m }: { m: FicheResume }) {
       </div>
       {m.status === "envoye" ? <Badge tone="success">Envoyée</Badge> : <Badge tone="pending">Brouillon</Badge>}
     </button>
-  );
-}
-
-/* ----------------------------------------------------------------- Galerie */
-
-function Galerie({ charger, choisir }: { charger: () => Promise<GroupeGalerie[]>; choisir: (id: string) => Promise<void> }) {
-  const [groupes, setGroupes] = useState<GroupeGalerie[] | null>(null);
-  const [erreur, setErreur] = useState("");
-  const [occupe, setOccupe] = useState<string | null>(null);
-
-  useEffect(() => {
-    charger().then(setGroupes).catch((e) => setErreur((e as Error).message));
-  }, [charger]);
-
-  return (
-    <main className="page">
-      <header className="barre">
-        <button className="lien" onClick={() => aller("")}>← Mes fiches</button>
-      </header>
-      <h1>Choisir un modèle</h1>
-      <p className="muted">Prenez un modèle <strong>simple</strong> que vous avez déjà cousu plusieurs fois. Vous estimerez ensuite les mesures d&apos;une personne qui pourrait le porter.</p>
-      <ErrorBanner message={erreur} />
-      {!groupes && !erreur && <Spinner label="Chargement de la galerie…" />}
-      {groupes?.length === 0 && <EmptyState title="Galerie vide" body="Revenez en arrière et ajoutez plutôt un modèle que vous avez cousu." />}
-      {groupes?.map((g) => (
-        <section key={`${g.genre}-${g.categorie}`} className="galerieGroupe">
-          <h2 className="sectionTitre">{g.categorie} <span className="muted">· {g.genre === "female" ? "Femme" : g.genre === "male" ? "Homme" : "Mixte"}</span></h2>
-          <div className="galerieGrille">
-            {g.modeles.map((m) => (
-              <button key={m.id} className="galerieCase" disabled={occupe !== null} onClick={async () => {
-                setOccupe(m.id);
-                try {
-                  await choisir(m.id);
-                } catch (e) {
-                  setErreur((e as Error).message);
-                  setOccupe(null);
-                }
-              }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {m.photo_url && <img src={m.photo_url} alt={m.nom} loading="lazy" />}
-                <span>{occupe === m.id ? "Ouverture…" : m.nom}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-      ))}
-      <div className="actions">
-        <Button variant="secondary" block onClick={() => aller("")}>Revenir à mes fiches</Button>
-      </div>
-    </main>
   );
 }

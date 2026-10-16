@@ -53,7 +53,9 @@ admin_router = APIRouter(
     prefix="/admin/enquete", tags=["admin-web"], dependencies=[Depends(require_roles("admin"))]
 )
 
-SCHEMA_VERSION = 1
+# 2 : la fiche recueille la recette du tailleur (aisances, marges, choix de
+# coupe) au lieu des mesures d'une personne et des pieces de son patron.
+SCHEMA_VERSION = 2
 SOURCES = ("cousu", "galerie")
 PHOTO_KINDS = ("vetement", "patron", "autre")
 REVIEW_STATUSES = ("a_lire", "retenu", "a_completer", "ecarte")
@@ -143,7 +145,7 @@ def _modele_out(m: EnqueteModele, base: str, db: Session, full: bool = True) -> 
         "id": m.id,
         "source": m.source,
         "status": m.status,
-        "nom": general.get("nom") or (gm.name if gm else None),
+        "nom": _nom_fiche(general) or (gm.name if gm else None),
         "categorie": general.get("categorie"),
         "modele_galerie": _model_brief(gm),
         "nb_photos": len(m.photos or []),
@@ -164,8 +166,38 @@ def _check_size(data: dict) -> None:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Fiche trop longue")
 
 
+def _nom_fiche(general: dict) -> str | None:
+    """Nom affiche : le type choisi, ou le nom donne a l'atelier pour « autre »."""
+    if general.get("type") and general.get("type") != "autre" and general.get("type_label"):
+        return str(general["type_label"])
+    return general.get("nom") or None
+
+
 def _missing_for_submit(m: EnqueteModele) -> list[str]:
     """Ce qui manque pour envoyer une fiche : le minimum exploitable."""
+    if (m.schema_version or 1) < 2:
+        return _missing_v1(m)
+    d = m.data or {}
+    g = d.get("general") or {}
+    manque = []
+    if not g.get("categorie"):
+        manque.append("la catégorie")
+    if not g.get("type"):
+        manque.append("le type de modèle")
+    if g.get("type") == "autre" and len(str(g.get("nom") or "").strip()) < 2:
+        manque.append("le nom du modèle")
+    if not g.get("fois_cousu"):
+        manque.append("le nombre de fois où vous l'avez cousu")
+    aisances = d.get("aisance_cm") or {}
+    if not any(isinstance(v, (int, float)) and not isinstance(v, bool) for v in aisances.values()):
+        manque.append("au moins une aisance")
+    if not isinstance((d.get("coupe") or {}).get("couture_cm"), (int, float)):
+        manque.append("la valeur de couture")
+    return manque
+
+
+def _missing_v1(m: EnqueteModele) -> list[str]:
+    """Regle de la premiere version (fiches avec mesures et pieces)."""
     d = m.data or {}
     g = d.get("general") or {}
     manque = []

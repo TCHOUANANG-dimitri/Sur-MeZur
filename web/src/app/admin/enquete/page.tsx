@@ -32,7 +32,7 @@ export default function EnquetePage() {
     <div className="adPage">
       <PageHead
         title="Enquête patrons"
-        sub="Savoir-faire des tailleurs partenaires : leurs modèles, mesures, aisances et patrons."
+        sub="Savoir-faire des tailleurs partenaires : pour chaque modèle, leurs aisances, marges et choix de coupe."
         actions={<Button variant="secondary" className="adBtnSm" onClick={() => void Enquete.exportArchive()}>Exporter (ZIP)</Button>}
       />
       <Tabs<Onglet> tabs={[{ key: "fiches", label: "Fiches reçues" }, { key: "liens", label: "Liens des tailleurs" }]} value={onglet} onChange={setOnglet} />
@@ -111,41 +111,45 @@ function DetailFiche({ id, onChange }: { id: string; onChange: () => void }) {
     <div className="adStack">
       {f.review_note && <p className="adWarn">Note de l&apos;équipe : {f.review_note}</p>}
       <Section titre="Tailleur" valeurs={f.tailleur.profil ?? {}} />
-      <Section titre="Le modèle" valeurs={d.general ?? {}} />
-      <h4>La personne</h4>
-      <dl className="adMeasureGrid">
-        {Object.entries(d.personne ?? {}).filter(([k]) => !["mesures", "autres_mesures"].includes(k)).map(([k, v]) => (
-          <div className="adKv" key={k}><dt>{k}</dt><dd>{String(v ?? "—")}</dd></div>
-        ))}
-        {Object.entries((d.personne?.mesures ?? {}) as Record<string, number | null>).filter(([, v]) => v != null).map(([k, v]) => (
-          <div className="adKv" key={k}>
-            <dt>{LIBELLES_MESURES[k] ?? k}</dt>
-            <dd>{v} cm{d.prise?.[k]?.lieu ? ` · ${d.prise[k].lieu}` : ""}{d.prise?.[k]?.precision ? ` (${d.prise[k].precision})` : ""}</dd>
-          </div>
-        ))}
-        {((d.personne?.autres_mesures ?? []) as { nom: string; valeur: number | null }[]).map((a, i) => (
-          <div className="adKv" key={`a${i}`}><dt>{a.nom}</dt><dd>{a.valeur ?? "—"} cm</dd></div>
-        ))}
-      </dl>
-      <h4>Pièces</h4>
-      <ul className="adList">
-        {((d.pieces ?? []) as { nom: string; nombre: number | null; au_pli: boolean; notes?: string }[]).map((p, i) => (
-          <li key={i}><strong>{p.nom}</strong> × {p.nombre ?? "?"}{p.au_pli ? " · au pli" : ""}{p.notes ? ` — ${p.notes}` : ""}</li>
-        ))}
-      </ul>
-      <h4>Aisance (cm ajoutés : ajusté / normal / ample)</h4>
-      <ul className="adList">
-        {Object.entries((d.aisance ?? {}) as Record<string, { ajuste?: number; normal?: number; ample?: number }>).map(([k, a]) => (
-          <li key={k}>{LIBELLES_MESURES[k] ?? k} : {a.ajuste ?? "—"} / {a.normal ?? "—"} / {a.ample ?? "—"}</li>
-        ))}
-      </ul>
-      {d.aisance_notes && <p className="adHint">{d.aisance_notes}</p>}
-      <Section titre="Marges de couture (cm)" valeurs={d.marges ?? {}} />
-      <Section titre="Variantes" valeurs={d.variantes ?? {}} />
-      <Section titre="Tissus" valeurs={d.tissus ?? {}} />
-      <h4>Méthode de tracé</h4>
-      <p className="adPre">{d.trace?.etapes || "—"}</p>
-      <Section titre="Retouches et conseils" valeurs={d.retouches ?? {}} />
+      {d.aisance_cm !== undefined || (f.schema_version ?? 1) >= 2 ? <Recette d={d} /> : (
+        <>
+        <Section titre="Le modèle" valeurs={d.general ?? {}} />
+        <h4>La personne</h4>
+        <dl className="adMeasureGrid">
+          {Object.entries(d.personne ?? {}).filter(([k]) => !["mesures", "autres_mesures"].includes(k)).map(([k, v]) => (
+            <div className="adKv" key={k}><dt>{k}</dt><dd>{String(v ?? "—")}</dd></div>
+          ))}
+          {Object.entries((d.personne?.mesures ?? {}) as Record<string, number | null>).filter(([, v]) => v != null).map(([k, v]) => (
+            <div className="adKv" key={k}>
+              <dt>{LIBELLES_MESURES[k] ?? k}</dt>
+              <dd>{v} cm{d.prise?.[k]?.lieu ? ` · ${d.prise[k].lieu}` : ""}{d.prise?.[k]?.precision ? ` (${d.prise[k].precision})` : ""}</dd>
+            </div>
+          ))}
+          {((d.personne?.autres_mesures ?? []) as { nom: string; valeur: number | null }[]).map((a, i) => (
+            <div className="adKv" key={`a${i}`}><dt>{a.nom}</dt><dd>{a.valeur ?? "—"} cm</dd></div>
+          ))}
+        </dl>
+        <h4>Pièces</h4>
+        <ul className="adList">
+          {((d.pieces ?? []) as { nom: string; nombre: number | null; au_pli: boolean; notes?: string }[]).map((p, i) => (
+            <li key={i}><strong>{p.nom}</strong> × {p.nombre ?? "?"}{p.au_pli ? " · au pli" : ""}{p.notes ? ` — ${p.notes}` : ""}</li>
+          ))}
+        </ul>
+        <h4>Aisance (cm ajoutés : ajusté / normal / ample)</h4>
+        <ul className="adList">
+          {Object.entries((d.aisance ?? {}) as Record<string, { ajuste?: number; normal?: number; ample?: number }>).map(([k, a]) => (
+            <li key={k}>{LIBELLES_MESURES[k] ?? k} : {a.ajuste ?? "—"} / {a.normal ?? "—"} / {a.ample ?? "—"}</li>
+          ))}
+        </ul>
+        {d.aisance_notes && <p className="adHint">{d.aisance_notes}</p>}
+        <Section titre="Marges de couture (cm)" valeurs={d.marges ?? {}} />
+        <Section titre="Variantes" valeurs={d.variantes ?? {}} />
+        <Section titre="Tissus" valeurs={d.tissus ?? {}} />
+        <h4>Méthode de tracé</h4>
+        <p className="adPre">{d.trace?.etapes || "—"}</p>
+        <Section titre="Retouches et conseils" valeurs={d.retouches ?? {}} />
+        </>
+      )}
       <h4>Photos</h4>
       <div className="adDocGrid">
         {(f.photos ?? []).map((p) => (
@@ -161,6 +165,33 @@ function DetailFiche({ id, onChange }: { id: string; onChange: () => void }) {
         <Button variant="danger" className="adBtnSm" onClick={() => void lire("ecarte")}>Écarter</Button>
       </div>
     </div>
+  );
+}
+
+/** Fiche v2 : la recette du tailleur (aisances, marges, choix de coupe). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function Recette({ d }: { d: Record<string, any> }) {
+  const g = d.general ?? {};
+  const aisances = Object.entries((d.aisance_cm ?? {}) as Record<string, number | null>).filter(([, v]) => v != null);
+  return (
+    <>
+      <Section titre="Le modèle" valeurs={{
+        catégorie: g.categorie, type: g.type_label ?? g.type, nom: g.nom, pour: g.pour, "fois cousu": g.fois_cousu,
+      }} />
+      <h4>Aisance (cm ajoutés au tour mesuré)</h4>
+      {aisances.length ? (
+        <ul className="adList">
+          {aisances.map(([k, v]) => <li key={k}>{LIBELLES_MESURES[k] ?? k} : +{v} cm</li>)}
+        </ul>
+      ) : <p className="adHint">—</p>}
+      <Section titre="Mesures prises" valeurs={{
+        mesures: ((d.mesures_prises ?? []) as string[]).map((k) => LIBELLES_MESURES[k] ?? k),
+        "tour de taille pris": d.taille_ou,
+      }} />
+      <Section titre="Coupe (marges en cm)" valeurs={d.coupe ?? {}} />
+      <h4>Calculs et astuces</h4>
+      <p className="adPre">{d.astuces || "—"}</p>
+    </>
   );
 }
 
