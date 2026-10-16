@@ -81,6 +81,31 @@ export interface TailorPattern {
   pieces?: string[];
   created_at: string;
   error_message?: string | null;
+  /** « preview-v0 » (apercu) ou « garmentcode-v1 » (vrai patron cote). */
+  engine?: string;
+  base_label?: string | null;
+  /** Consigne de coupe par piece (« Couper 1 au pli »...), moteur garmentcode. */
+  consignes?: Record<string, string>;
+  controles?: { controle: string; statut: string; detail: string }[];
+  remarques?: string[];
+  pdf_types?: string[];
+}
+
+/** Catalogue des patrons (GET /tailor/patterns/catalogue). */
+export interface PatternBase {
+  id: string;
+  label: string;
+  genre: string;
+  description: string;
+  statut: string;
+  longueur_depuis: string;
+  style_defaut: Record<string, string | number>;
+}
+export interface PatternCatalogue {
+  mode: string;
+  pdfs: Record<string, string>;
+  categories: { id: string; label: string; bases: PatternBase[]; a_venir: string | null }[];
+  styles: Record<string, { label: string; type: "nombre" | "choix"; unite?: string; choix?: (string | number)[] }>;
 }
 
 export interface ShareLink {
@@ -89,12 +114,15 @@ export interface ShareLink {
 }
 
 export const GARMENT_TYPES = [
-  { code: "chemise", name: "Chemise" },
-  { code: "pantalon", name: "Pantalon" },
-  { code: "robe", name: "Robe" },
   { code: "jupe", name: "Jupe" },
-  { code: "boubou", name: "Boubou" },
+  { code: "robe", name: "Robe" },
   { code: "kaba", name: "Kaba" },
+  { code: "haut", name: "Haut / blouse" },
+  { code: "tunique", name: "Tunique homme" },
+  { code: "pantalon", name: "Pantalon" },
+  { code: "chemise", name: "Chemise" },
+  { code: "boubou", name: "Boubou" },
+  { code: "agbada", name: "Agbada" },
 ];
 
 // --- Traduction entre l'interface et l'API reelle ---------------------------
@@ -181,9 +209,9 @@ function jobBody(body: Partial<TailorJob>): Raw {
 }
 
 function toPattern(r: Raw): TailorPattern {
-  const pieces = Array.isArray(r.result?.pieces)
-    ? r.result.pieces.map((p: Raw) => String(p.label ?? ""))
-    : undefined;
+  const rows: Raw[] = Array.isArray(r.result?.pieces) ? r.result.pieces : [];
+  const pieces = rows.length ? rows.map((p) => String(p.nom ?? p.label ?? "")) : undefined;
+  const consignes = Object.fromEntries(rows.filter((p) => p.consigne).map((p) => [String(p.nom), String(p.consigne)]));
   return {
     id: r.id,
     garment_type: r.garment_type,
@@ -192,6 +220,12 @@ function toPattern(r: Raw): TailorPattern {
     pieces,
     created_at: r.created_at,
     error_message: r.error_message ?? null,
+    engine: r.engine,
+    base_label: r.result?.base?.label ?? null,
+    consignes,
+    controles: Array.isArray(r.result?.controles) ? r.result.controles : [],
+    remarques: Array.isArray(r.result?.remarques) ? r.result.remarques : [],
+    pdf_types: r.pdf_urls ? Object.keys(r.pdf_urls) : [],
   };
 }
 
@@ -297,15 +331,20 @@ const RealTailorApi = {
     api.post<{ id: string; body: string | null; created_at: string; sender_id: string }>(`/orders/${id}/chat`, { body }),
 
   patterns: async () => (await api.get<Raw[]>("/tailor/patterns")).map(toPattern),
+  patternCatalogue: () => api.get<PatternCatalogue>("/tailor/patterns/catalogue"),
   createPattern: async (body: {
-    image: File;
+    image?: File | null;
     garment_type: string;
     tailor_client_id?: string;
     measurements?: Record<string, number>;
+    base?: string;
+    style?: Record<string, string | number>;
   }) => {
     const form = new FormData();
-    form.append("image", body.image);
+    if (body.image) form.append("image", body.image);
     form.append("garment_type", body.garment_type);
+    if (body.base) form.append("base", body.base);
+    if (body.style) form.append("style", JSON.stringify(body.style));
     if (body.tailor_client_id) form.append("tailor_client_id", body.tailor_client_id);
     if (body.measurements) form.append("measurements", JSON.stringify(body.measurements));
     return toPattern(await api.postForm<Raw>("/tailor/patterns", form));
@@ -328,6 +367,25 @@ const RealTailorApi = {
     if (!res.ok) throw new Error("Patron indisponible.");
     const blob = await res.blob();
     return URL.createObjectURL(blob);
+  },
+
+  /** Telecharge un PDF du patron (route protegee : meme principe que le SVG). */
+  downloadPatternPdf: async (id: string, type: string): Promise<void> => {
+    const res = await fetch(`/api/tailor/patterns/${id}/pdf?type=${encodeURIComponent(type)}`, {
+      headers: {
+        Authorization: `Bearer ${getToken() ?? ""}`,
+        "X-SMZ-Platform": "web",
+      },
+    });
+    if (!res.ok) throw new Error("PDF indisponible.");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `patron-${type}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   },
 
   profile: () => api.get<TailorProfile | null>("/tailors/me"),

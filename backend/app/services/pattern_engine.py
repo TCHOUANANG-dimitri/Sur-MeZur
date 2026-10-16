@@ -18,7 +18,8 @@ import html
 from datetime import datetime, timezone
 
 # Types de vetements acceptes par POST /tailor/patterns.
-GARMENT_TYPES = ("robe", "jupe", "chemise", "pantalon", "boubou", "kaba")
+# Meme liste que les categories du catalogue des patrons (services/patrons/catalogue.py).
+GARMENT_TYPES = ("robe", "jupe", "chemise", "pantalon", "boubou", "kaba", "agbada", "tunique", "haut")
 
 PREVIEW_NOTE = "Aperçu — la génération à partir de l'image arrive bientôt."
 
@@ -80,7 +81,7 @@ def _pieces_for(garment_type: str, m: dict) -> tuple[list[dict], bool]:
             {"label": "Dos", "w": half(hips), "h": skirt_len, "keys": ["hips"]},
             {"label": "Ceinture", "w": round(waist + 2 * EASE_MM, 1), "h": 80.0, "keys": ["waist"]},
         ]
-    elif garment_type == "chemise":
+    elif garment_type in ("chemise", "haut", "tunique"):
         pieces = [
             {"label": "Devant", "w": half(chest), "h": round(back, 1), "keys": ["chest", "back_length"]},
             {"label": "Dos", "w": half(chest), "h": round(back, 1), "keys": ["chest", "back_length"]},

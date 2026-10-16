@@ -63,7 +63,8 @@ DEFAULTS: dict[str, Any] = {
         "tailor_verification": False,
         "payments": False,
         "negotiation": False,
-        # "off" | "preview" | "on"  (A2.4 : moteur « preview-v0 » pour l'instant)
+        # "off" | "preview" (apercu preview-v0) | "on" (vrais patrons garmentcode-v1,
+        # apercu pour les categories sans modele de base)
         "pattern_generation": "preview",
     },
 }

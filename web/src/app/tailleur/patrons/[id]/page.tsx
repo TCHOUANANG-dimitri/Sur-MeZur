@@ -2,9 +2,19 @@
 
 /**
  * Patron genere (B3.7) : affichage du SVG zoomable, impression A4 en tuiles
- * (impression navigateur), liste des pieces. Bandeau « Apercu » rappele en
- * tete. En cours de generation : le statut est interroge toutes les 2 s.
+ * (impression navigateur), liste des pieces. En cours de generation : le
+ * statut est interroge toutes les 2 s.
+ *
+ * Moteur GarmentCode : trois PDF a telecharger (fiche de tracage cotee,
+ * patron 1:1 en pages A4, patron 1:1 pleine page), consigne de coupe par
+ * piece, controles et remarques. Moteur apercu : bandeau « Apercu ».
  */
+
+const PDFS: { type: string; label: string; aide: string }[] = [
+  { type: "tracage", label: "Fiche de traçage", aide: "une page par pièce : cotes et points à reporter à la craie" },
+  { type: "a4", label: "Patron A4 à assembler", aide: "taille réelle, à imprimer à 100 % et à coller" },
+  { type: "plein", label: "Patron pleine taille", aide: "une seule grande page, pour un traceur ou une imprimerie" },
+];
 
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -21,6 +31,7 @@ export default function PatronDetail() {
   const [svgUrl, setSvgUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(100);
   const [error, setError] = useState("");
+  const [telechargement, setTelechargement] = useState("");
 
   const load = useCallback(async () => {
     if (!id) return null;
@@ -70,6 +81,18 @@ export default function PatronDetail() {
     };
   }, [id, pattern?.status]);
 
+  async function telecharger(type: string) {
+    if (!id) return;
+    setTelechargement(type);
+    try {
+      await TailorApi.downloadPatternPdf(id, type);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Téléchargement impossible.");
+    } finally {
+      setTelechargement("");
+    }
+  }
+
   async function remove() {
     if (!id || !window.confirm("Supprimer ce patron ?")) return;
     try {
@@ -91,10 +114,12 @@ export default function PatronDetail() {
 
   return (
     <div className="tPage">
-      <PageHeader title={`Patron — ${pattern.garment_type}`} back />
+      <PageHeader title={`Patron — ${pattern.base_label ?? pattern.garment_type}`} back />
       <ErrorBanner message={error} />
       <p>
-        <span className="tPreviewBadge">Aperçu — la génération à partir de l&apos;image s&apos;améliore bientôt</span>{" "}
+        {pattern.engine !== "garmentcode-v1" && (
+          <><span className="tPreviewBadge">Aperçu — patron indicatif</span>{" "}</>
+        )}
         <PatternBadge status={pattern.status} />
       </p>
 
@@ -107,6 +132,19 @@ export default function PatronDetail() {
 
       {pattern.status === "ready" && (
         <>
+          {pattern.pdf_types && pattern.pdf_types.length > 0 && (
+            <section aria-label="Télécharger le patron" className="no-print" style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+              {PDFS.filter((d) => pattern.pdf_types?.includes(d.type)).map((d) => (
+                <div key={d.type}>
+                  <Button variant={d.type === "tracage" ? "primary" : "secondary"} block
+                          onClick={() => telecharger(d.type)} disabled={telechargement === d.type}>
+                    {telechargement === d.type ? "Téléchargement…" : `${d.label} (PDF)`}
+                  </Button>
+                  <span className="muted" style={{ fontSize: 13 }}>{d.aide}</span>
+                </div>
+              ))}
+            </section>
+          )}
           <div className="tZoomRow no-print">
             <Button variant="secondary" onClick={() => setZoom((z) => Math.max(50, z - 25))} aria-label="Réduire">−</Button>
             <span className="tRowSub">{zoom} %</span>
@@ -129,8 +167,29 @@ export default function PatronDetail() {
               <h2 style={{ fontSize: 18 }}>Pièces ({pattern.pieces.length})</h2>
               <ul>
                 {pattern.pieces.map((piece) => (
-                  <li key={piece}>{piece}</li>
+                  <li key={piece}>{piece}{pattern.consignes?.[piece] ? ` — ${pattern.consignes[piece]}` : ""}</li>
                 ))}
+              </ul>
+            </section>
+          )}
+          {pattern.controles && pattern.controles.some((c) => c.statut === "a_verifier" || c.statut === "echec") && (
+            <section aria-label="Points à vérifier">
+              <h2 style={{ fontSize: 18 }}>À vérifier</h2>
+              <ul>
+                {pattern.controles.filter((c) => c.statut === "a_verifier" || c.statut === "echec").map((c) => (
+                  <li key={c.controle}>{c.controle} : {c.detail}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {((pattern.remarques?.length ?? 0) > 0 || pattern.controles?.some((c) => c.statut === "info")) && (
+            <section aria-label="À savoir">
+              <h2 style={{ fontSize: 18 }}>À savoir</h2>
+              <ul>
+                {pattern.controles?.filter((c) => c.statut === "info").map((c) => (
+                  <li key={c.controle}>{c.controle} : {c.detail}</li>
+                ))}
+                {pattern.remarques?.map((r) => <li key={r}>{r}</li>)}
               </ul>
             </section>
           )}

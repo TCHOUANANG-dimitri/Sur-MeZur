@@ -144,7 +144,7 @@ function FeatureToggles({ value, onSave, saving }: { value: Record<string, unkno
         <select className="input" value={String(v.pattern_generation ?? "preview")} onChange={(e) => set("pattern_generation", e.target.value)}>
           <option value="off">Coupée</option>
           <option value="preview">Aperçu (moteur de démonstration)</option>
-          <option value="on">Activée (vrai moteur)</option>
+          <option value="on">Activée (GarmentCode : patrons cotés, PDF)</option>
         </select>
       </label>
       <Button variant="primary" className="adBtnSm" type="submit" disabled={saving}>Enregistrer les fonctionnalités</Button>

@@ -47,6 +47,7 @@ from app.models.tailor_tools import (
 )
 from app.models.users import TailorProfile, User
 from app.services.activity import platform_of, utcnow
+from app.services import patrons
 from app.services.pattern_engine import GARMENT_TYPES, PREVIEW_NOTE, generate_preview_svg
 from app.services.phone import normalize_phone
 from app.services.platform_settings import get_setting as get_platform_setting
@@ -107,10 +108,15 @@ def _tailor_store(*parts: str) -> Path:
     return path
 
 
-def _clean_measure_data(data: dict) -> dict:
+# Mesures acceptees en plus pour une demande de patron « libre » (hors carnet) :
+# le moteur garmentcode-v1 s'en sert pour les longueurs.
+PATTERN_EXTRA_KEYS = ("height", "underbust", "waist_hip_height", "outseam")
+
+
+def _clean_measure_data(data: dict, extra: tuple[str, ...] = ()) -> dict:
     if not isinstance(data, dict) or not data:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indiquez au moins une mesure")
-    unknown = [k for k in data if k not in MEASURE_KEYS]
+    unknown = [k for k in data if k not in MEASURE_KEYS and k not in extra]
     if unknown:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Mesures inconnues : {', '.join(sorted(unknown))}")
     out: dict[str, float] = {}
@@ -740,8 +746,21 @@ def _pattern_out(r: TailorPatternRequest) -> dict:
         "error_message": r.error_message,
         "image_url": f"/api/tailor/patterns/{r.id}/image" if r.image_url else None,
         "svg_url": f"/api/tailor/patterns/{r.id}/svg" if r.status == "ready" else None,
+        "pdf_urls": (
+            {k: f"/api/tailor/patterns/{r.id}/pdf?type={k}" for k in PATTERN_PDFS}
+            if r.status == "ready" and r.engine == patrons.MOTEUR else None
+        ),
         "created_at": r.created_at,
     }
+
+
+# PDF du moteur garmentcode-v1 (stockes sous patterns/<id>_<type>.pdf).
+PATTERN_PDFS = {
+    "tracage": "fiche de traçage (une page par pièce, cotes et points)",
+    "a4": "patron 1:1 en pages A4 à assembler",
+    "plein": "patron 1:1 sur une seule page (traceur, imprimerie)",
+}
+_GENRE = {"female": "femme", "male": "homme", "femme": "femme", "homme": "homme", "f": "femme", "m": "homme"}
 
 
 def _owned_pattern(tailor_id: str, pattern_id: str, db: Session) -> TailorPatternRequest:
@@ -773,13 +792,33 @@ def _run_pattern_job(request_id: str) -> None:
                     measurements = dict(row.data or {})
                     if row.height_cm:
                         measurements.setdefault("height_total", row.height_cm)
-            svg, tech = generate_preview_svg(r.garment_type, measurements, title=f"Patron — {r.garment_type}")
-            dest = _tailor_store("patterns", f"{r.id}.svg")
-            dest.write_text(svg, encoding="utf-8")
-            tech["note"] = PREVIEW_NOTE
+            demande = dict((r.result or {}).get("demande") or {})
+            if r.engine == patrons.MOTEUR:
+                genre = demande.get("genre")
+                if not genre and r.tailor_client_id:
+                    c = db.get(TailorClient, r.tailor_client_id)
+                    genre = _GENRE.get((c.gender or "").lower()) if c else None
+                patron = patrons.generer(demande["base"], measurements, demande.get("style"), genre)
+                for nom, contenu in patrons.fichiers(patron).items():
+                    _tailor_store("patterns", f"{r.id}.svg" if nom == "svg" else f"{r.id}_{nom}").write_bytes(contenu)
+                tech = patron.fiche()
+            else:
+                svg, tech = generate_preview_svg(r.garment_type, measurements, title=f"Patron — {r.garment_type}")
+                _tailor_store("patterns", f"{r.id}.svg").write_text(svg, encoding="utf-8")
+                tech["note"] = PREVIEW_NOTE
+            if demande:
+                tech["demande"] = demande
             r.result = tech
             r.status = "ready"
             db.commit()
+        except patrons.PatronImpossible as e:
+            # Message destine au tailleur (mesure hors limites, reglage impossible).
+            db.rollback()
+            r = db.get(TailorPatternRequest, request_id)
+            if r:
+                r.status = "failed"
+                r.error_message = str(e)[:500]
+                db.commit()
         except Exception:
             db.rollback()
             r = db.get(TailorPatternRequest, request_id)
@@ -792,25 +831,62 @@ def _run_pattern_job(request_id: str) -> None:
 @router.post("/patterns", status_code=status.HTTP_201_CREATED)
 def create_pattern(
     background_tasks: BackgroundTasks,
-    image: UploadFile = File(...),
+    image: UploadFile | None = File(None),
     garment_type: str = Form(...),
     tailor_client_id: str | None = Form(None),
     measurements: str | None = Form(None),
+    base: str | None = Form(None),
+    style: str | None = Form(None),
+    genre: str | None = Form(None),
     user: User = Depends(require_roles("tailor")),
     db: Session = Depends(get_db),
 ):
-    """Demande de patron : image de reference + type + mesures (client du
-    carnet OU JSON `{"chest": 94, ...}`)."""
+    """Demande de patron : type (categorie) + mesures (client du carnet OU
+    JSON `{"chest": 94, ...}`), image de reference.
+
+    Reglage `features.pattern_generation` :
+    - "preview"     : apercu rectangulaire (preview-v0), image obligatoire ;
+    - "on"          : vrai patron (garmentcode-v1) si la categorie a un modele
+      de base, image facultative ; `base` choisit le modele (sinon celui par
+      defaut), `style` est un JSON de reglages (`{"longueur_cm": 60}`),
+      `genre` (femme/homme) le gabarit des mesures manquantes.
+    """
     tp = _tailor(user, db)
     features = get_platform_setting("features") or {}
-    if features.get("pattern_generation", "preview") == "off":
+    mode = features.get("pattern_generation", "preview")
+    if mode == "off":
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Patrons désactivés")
     gtype = (garment_type or "").strip().lower()
     if gtype not in GARMENT_TYPES:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            f"Type inconnu (robe, jupe, chemise, pantalon, boubou, kaba)",
+            f"Type inconnu ({', '.join(GARMENT_TYPES)})",
         )
+    demande: dict = {}
+    if mode in ("on", "garmentcode"):
+        base_id = (base or "").strip() or patrons.BASE_PAR_DEFAUT.get(gtype)
+        if base_id:
+            b = patrons.BASES_PAR_ID.get(base_id)
+            if b is None or b.categorie != gtype:
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Modèle de base inconnu pour « {gtype} »")
+            demande["base"] = base_id
+        if style:
+            import json
+
+            try:
+                parsed_style = json.loads(style)
+            except ValueError:
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Style JSON invalide")
+            if not isinstance(parsed_style, dict):
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Style JSON invalide")
+            demande["style"] = parsed_style
+        if genre:
+            if genre not in ("femme", "homme"):
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Genre : femme ou homme")
+            demande["genre"] = genre
+    engine = patrons.MOTEUR if demande.get("base") else "preview-v0"
+    if image is None and engine == "preview-v0":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Image de référence requise")
     if tailor_client_id:
         _owned_client(tp.id, tailor_client_id, db)
     else:
@@ -819,22 +895,25 @@ def create_pattern(
                 status.HTTP_400_BAD_REQUEST,
                 "Indiquez tailor_client_id ou des mensurations",
             )
-    content = image.file.read(MAX_IMAGE_BYTES + 1) if hasattr(image.file, "read") else b""
-    if len(content) > MAX_IMAGE_BYTES:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Image trop lourde (10 Mo maximum)")
-    ext = _image_ext(content[:12])
+    content = b""
+    if image is not None:
+        content = image.file.read(MAX_IMAGE_BYTES + 1) if hasattr(image.file, "read") else b""
+        if len(content) > MAX_IMAGE_BYTES:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Image trop lourde (10 Mo maximum)")
+    ext = _image_ext(content[:12]) if content else None
     r = TailorPatternRequest(
         tailor_id=tp.id,
         tailor_client_id=tailor_client_id,
         garment_type=gtype,
         status="processing",
-        engine="preview-v0",
+        engine=engine,
     )
     db.add(r)
     db.flush()
-    dest = _tailor_store("patterns", f"{r.id}{ext}")
-    dest.write_bytes(content)
-    r.image_url = f"tailor_store/patterns/{dest.name}"
+    if content:
+        dest = _tailor_store("patterns", f"{r.id}{ext}")
+        dest.write_bytes(content)
+        r.image_url = f"tailor_store/patterns/{dest.name}"
     if measurements and not tailor_client_id:
         import json
 
@@ -845,11 +924,22 @@ def create_pattern(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Mensurations JSON invalides")
         # Mesures « libres » (hors carnet) : conservees sur la demande, lues
         # par le moteur ; rien n'est ecrit dans le carnet.
-        r.result = {"adhoc_measurements": _clean_measure_data(parsed)}
+        r.result = {"adhoc_measurements": _clean_measure_data(parsed, PATTERN_EXTRA_KEYS)}
+    if demande:
+        r.result = {**(r.result or {}), "demande": demande}
     db.commit()
     db.refresh(r)
     background_tasks.add_task(_run_pattern_job, r.id)
     return _pattern_out(r)
+
+
+@router.get("/patterns/catalogue")
+def pattern_catalogue(user: User = Depends(require_roles("tailor"))):
+    """Categories, modeles de base et reglages de style du moteur de patrons,
+    avec le mode actif (`preview` ou `garmentcode`)."""
+    features = get_platform_setting("features") or {}
+    return {"mode": features.get("pattern_generation", "preview"), "pdfs": PATTERN_PDFS,
+            **patrons.catalogue_public()}
 
 
 @router.get("/patterns")
@@ -892,6 +982,23 @@ def get_pattern_svg(
     return FileResponse(path, media_type="image/svg+xml")
 
 
+@router.get("/patterns/{pattern_id}/pdf")
+def get_pattern_pdf(
+    pattern_id: str,
+    type: str = "tracage",
+    user: User = Depends(require_roles("tailor")),
+    db: Session = Depends(get_db),
+):
+    tp = _tailor(user, db)
+    r = _owned_pattern(tp.id, pattern_id, db)
+    if type not in PATTERN_PDFS:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Type : {', '.join(PATTERN_PDFS)}")
+    path = _tailor_store("patterns", f"{r.id}_{type}.pdf")
+    if r.status != "ready" or not path.exists():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "PDF indisponible pour ce patron")
+    return FileResponse(path, media_type="application/pdf", filename=f"patron-{r.garment_type}-{type}.pdf")
+
+
 @router.get("/patterns/{pattern_id}/image")
 def get_pattern_image(
     pattern_id: str,
@@ -916,7 +1023,9 @@ def delete_pattern(
 ):
     tp = _tailor(user, db)
     r = _owned_pattern(tp.id, pattern_id, db)
-    for name in (f"{r.id}.svg", os.path.basename(r.image_url) if r.image_url else ""):
+    noms = [f"{r.id}.svg", os.path.basename(r.image_url) if r.image_url else ""]
+    noms += [f"{r.id}_{k}.pdf" for k in PATTERN_PDFS]
+    for name in noms:
         if name:
             try:
                 os.remove(_tailor_store("patterns", name))

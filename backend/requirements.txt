@@ -14,3 +14,11 @@ email-validator==2.2.0
 # Optimisation des poids de morph targets (calibration avatar)
 numpy>=1.24.0
 scipy>=1.10.0
+# Moteur de patrons « garmentcode-v1 » (app/services/patrons) : GarmentCode est
+# copie dans third_party/garmentcode (MIT) ; il lui faut pyyaml et svgpathtools.
+# shapely calcule les valeurs de couture, reportlab ecrit le PDF A4 a l'echelle.
+PyYAML>=6.0
+svgpathtools==1.8.0
+svgwrite==1.4.3
+shapely==2.0.7
+reportlab==4.2.5

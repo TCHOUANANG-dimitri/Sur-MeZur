@@ -19,6 +19,7 @@ import type {
   TailorClient,
   TailorDashboard,
   TailorJob,
+  PatternCatalogue,
   TailorMeasureSession,
   TailorPattern,
 } from "./tailor";
@@ -460,11 +461,18 @@ export const MockTailorApi = {
     if (changed) save(store);
     return store.patterns.map(stripSvgMeta);
   },
+  patternCatalogue: async (): Promise<PatternCatalogue> => {
+    await wait(200);
+    // Simulation : seul l'apercu existe.
+    return { mode: "preview", pdfs: {}, categories: [], styles: {} };
+  },
   createPattern: async (body: {
-    image: File;
+    image?: File | null;
     garment_type: string;
     tailor_client_id?: string;
     measurements?: Record<string, number>;
+    base?: string;
+    style?: Record<string, string | number>;
   }): Promise<TailorPattern> => {
     await wait(600);
     void body.image;
@@ -516,6 +524,11 @@ export const MockTailorApi = {
     const found = store.patterns.find((p) => p.id === id);
     if (!found?.svg) throw new Error("Patron indisponible.");
     return URL.createObjectURL(new Blob([found.svg], { type: "image/svg+xml" }));
+  },
+
+  downloadPatternPdf: async (): Promise<void> => {
+    await wait(200);
+    throw new Error("PDF indisponible en simulation.");
   },
 
   profile: async () => {
