@@ -3,11 +3,9 @@
 // Utilisateurs (2.1, 2.2, 2.7, 0.4 a 0.8) : liste paginee, filtres combinables
 // conserves dans l'adresse, export, actions groupees, nettoyage des invites.
 
-import Link from "next/link";
 import { useState } from "react";
 import { Growth, Users, type UserRow } from "@/lib/api/admin";
 import { Button } from "@/components/ui";
-import { useAdmin } from "@/components/admin/AdminContext";
 import { useFeedback, Modal } from "@/components/admin/Feedback";
 import {
   DataTable,
@@ -21,7 +19,7 @@ import {
   type Column,
 } from "@/components/admin/DataTable";
 import { PageHead, StatusBadge, useLoad } from "@/components/admin/kit";
-import { ROLE_LABEL, USER_STATUS, VERIFICATION_STATUS, ago, formatDate, formatDateTime } from "@/components/admin/format";
+import { ROLE_LABEL, USER_STATUS, ago, formatDate, formatDateTime } from "@/components/admin/format";
 
 const COLUMNS: Column<UserRow>[] = [
   { key: "full_name", label: "Nom", sort: "full_name", render: (u) => u.full_name },
@@ -29,7 +27,6 @@ const COLUMNS: Column<UserRow>[] = [
   { key: "role", label: "Rôle", sort: "role", render: (u) => ROLE_LABEL[u.role] ?? u.role },
   { key: "status", label: "Statut", render: (u) => <StatusBadge map={USER_STATUS} value={u.status} /> },
   { key: "city", label: "Ville", render: (u) => u.city ?? "—" },
-  { key: "verification_status", label: "Vérification", optional: true, render: (u) => (u.verification_status ? <StatusBadge map={VERIFICATION_STATUS} value={u.verification_status} /> : "—") },
   { key: "channel", label: "Canal", optional: true, render: (u) => u.channel ?? "—" },
   { key: "platform", label: "Support", optional: true, render: (u) => (u.platform === "web" ? "Site" : "Application") },
   { key: "email", label: "E-mail", optional: true, render: (u) => u.email ?? "—" },
@@ -39,7 +36,6 @@ const COLUMNS: Column<UserRow>[] = [
 ];
 
 export default function UsersPage() {
-  const { can } = useAdmin();
   const { confirm, toast } = useFeedback();
   const [s, set] = useUrlState({
     ...TABLE_DEFAULTS,
@@ -55,7 +51,7 @@ export default function UsersPage() {
   });
   const [reload, setReload] = useState(0);
   const [guests, setGuests] = useState(false);
-  const segments = useLoad(() => (can("growth") ? Growth.segments() : Promise.resolve({ cities: [], channels: [] })), [can]);
+  const segments = useLoad(() => Growth.segments(), []);
 
   const bulkAction = async (ids: string[], action: "suspend" | "reactivate" | "delete", done: () => void) => {
     const labels = { suspend: "Suspendre", reactivate: "Réactiver", delete: "Supprimer définitivement" };
@@ -91,9 +87,6 @@ export default function UsersPage() {
         sub="Clients, tailleurs, agents de collecte et comptes invités."
         actions={
           <>
-            <Link href="/admin/utilisateurs/doublons" className="btn btnSecondary adBtnSm">
-              Comptes en double
-            </Link>
             <Button variant="secondary" className="adBtnSm" onClick={() => setGuests(true)}>
               Comptes invités
             </Button>
@@ -113,7 +106,7 @@ export default function UsersPage() {
           allLabel="Toutes"
         />
         <FilterSelect label="Support" value={s.platform} onChange={(platform) => set({ platform })} options={{ web: "Site web", app: "Application" }} />
-        {can("growth") && (
+        {(
           <FilterSelect
             label="Canal"
             value={s.channel_id}
@@ -143,7 +136,7 @@ export default function UsersPage() {
         rowHref={(u) => `/admin/utilisateurs/${u.id}`}
         exportPath="/admin/tables/users"
         exportName="utilisateurs"
-        selectable={can("users.write")}
+        selectable
         reloadToken={reload}
         bulk={(ids, done) => (
           <>
@@ -153,7 +146,7 @@ export default function UsersPage() {
             <Button variant="secondary" className="adBtnSm" onClick={() => bulkAction(ids, "reactivate", done)}>
               Réactiver
             </Button>
-            {can("users.delete") && (
+            {(
               <Button variant="danger" className="adBtnSm" onClick={() => bulkAction(ids, "delete", done)}>
                 Supprimer
               </Button>
@@ -169,7 +162,6 @@ export default function UsersPage() {
 
 /** 2.7 — nettoyage des comptes invites restes sans inscription. */
 function GuestsModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const { can } = useAdmin();
   const { confirm, toast } = useFeedback();
   const preview = useLoad(() => Users.guestsPreview(), []);
   const run = async () => {
@@ -208,7 +200,7 @@ function GuestsModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
             <dd>{preview.data.to_delete}</dd>
           </dl>
           <p className="adHint">La durée se règle dans Réglages.</p>
-          {can("users.delete") && (
+          {(
             <Button variant="danger" onClick={run} disabled={!preview.data.to_delete}>
               Nettoyer maintenant
             </Button>

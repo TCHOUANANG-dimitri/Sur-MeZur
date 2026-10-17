@@ -16,7 +16,7 @@ import "@/styles/accueil.css";
 import "@/styles/mobile.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { AcquisitionTracker } from "@/components/AcquisitionTracker";
-import { SiteBanner } from "@/components/SiteBanner";
+import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { SwRegister } from "@/components/SwRegister";
 
 export const metadata: Metadata = {
@@ -52,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AuthProvider>
-          <SiteBanner />
+          <MaintenanceScreen />
           <AcquisitionTracker />
           <SwRegister />
           {children}

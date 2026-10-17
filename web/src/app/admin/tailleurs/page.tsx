@@ -1,13 +1,12 @@
 "use client";
 
-// Tailleurs (3.6 a 3.8) : qualite (note, litiges, retards, alertes), mise en
-// avant et ordre, repartition par ville et quartier.
+// Tailleurs (3.6 a 3.8) : suivi (commandes, livraisons, retards, delai de
+// reponse, alertes), mise en avant et ordre, repartition par ville et quartier.
 
 import Link from "next/link";
 import { useState } from "react";
 import { Tailors, type TailorRow } from "@/lib/api/admin";
 import { Button } from "@/components/ui";
-import { useAdmin } from "@/components/admin/AdminContext";
 import { useFeedback } from "@/components/admin/Feedback";
 import {
   DataTable,
@@ -19,28 +18,24 @@ import {
   useUrlState,
   type Column,
 } from "@/components/admin/DataTable";
-import { ErrorState, Loading, PageHead, Panel, StatusBadge, useLoad } from "@/components/admin/kit";
-import { VERIFICATION_STATUS, formatNumber } from "@/components/admin/format";
+import { ErrorState, Loading, PageHead, Panel, useLoad } from "@/components/admin/kit";
+import { formatNumber } from "@/components/admin/format";
 
 const COLUMNS: Column<TailorRow>[] = [
   { key: "shop_name", label: "Atelier", sort: "shop_name", render: (t) => <Link href={`/admin/utilisateurs/${t.user_id}`}>{t.shop_name}</Link> },
   { key: "full_name", label: "Tailleur", render: (t) => `${t.full_name} · ${t.phone}` },
   { key: "city", label: "Ville", render: (t) => `${t.city ?? "—"}${t.quartier ? ` · ${t.quartier}` : ""}` },
-  { key: "verification_status", label: "Vérification", render: (t) => <StatusBadge map={VERIFICATION_STATUS} value={t.verification_status} /> },
-  { key: "rating_avg", label: "Note", sort: "rating_avg", align: "right", render: (t) => formatNumber(t.rating_avg, 1) },
   { key: "orders", label: "Commandes", align: "right", render: (t) => formatNumber(t.orders) },
   { key: "delivered", label: "Livrées", align: "right", optional: true, render: (t) => formatNumber(t.delivered) },
-  { key: "dispute_rate", label: "Litiges", align: "right", render: (t) => (t.dispute_rate == null ? "—" : `${formatNumber(t.dispute_rate * 100, 0)} %`) },
-  { key: "late_rate", label: "Retards", align: "right", optional: true, render: (t) => (t.late_rate == null ? "—" : `${formatNumber(t.late_rate * 100, 0)} %`) },
+  { key: "late_rate", label: "Retards", align: "right", render: (t) => (t.late_rate == null ? "—" : `${formatNumber(t.late_rate * 100, 0)} %`) },
   { key: "avg_response_minutes", label: "Délai réponse", align: "right", optional: true, render: (t) => (t.avg_response_minutes == null ? "—" : `${formatNumber(t.avg_response_minutes)} min`) },
   { key: "alerts", label: "Alertes", render: (t) => (t.alerts ? <span className="adWarn">{t.alerts}</span> : <span className="adMuted">—</span>) },
   { key: "is_featured", label: "En avant", render: (t) => (t.is_featured ? `Oui${t.featured_rank != null ? ` (#${t.featured_rank})` : ""}` : "—") },
 ];
 
 export default function TailorsPage() {
-  const { features } = useAdmin();
   const { confirm, toast } = useFeedback();
-  const [s, set] = useUrlState({ ...TABLE_DEFAULTS, q: "", city: "", verification: "", featured: "", alert: "", tab: "liste" });
+  const [s, set] = useUrlState({ ...TABLE_DEFAULTS, q: "", city: "", featured: "", alert: "", tab: "liste" });
   const [reload, setReload] = useState(0);
   const map = useLoad(() => Tailors.map(), [s.tab]);
 
@@ -85,8 +80,8 @@ export default function TailorsPage() {
             <ul className="adList">
               {map.data.cities.map((c) => (
                 <li key={c.city}>
-                  <strong>{c.city}</strong> — {c.total} tailleur(s){features.tailor_verification ? `, ${c.verified} vérifié(s)` : ""}
-                  {c.quartiers.length > 0 && <span className="adHint"> · {c.quartiers.slice(0, 6).map((q) => `${q.name} (${q.verified})`).join(", ")}</span>}
+                  <strong>{c.city}</strong> — {c.total} tailleur(s)
+                  {c.quartiers.length > 0 && <span className="adHint"> · {c.quartiers.slice(0, 6).map((q) => `${q.name} (${q.total})`).join(", ")}</span>}
                 </li>
               ))}
             </ul>
@@ -98,9 +93,6 @@ export default function TailorsPage() {
           <div className="adToolbar">
             <FilterText label="Recherche" value={s.q} onChange={(q) => set({ q })} placeholder="Atelier, nom, téléphone" wide />
             <FilterText label="Ville" value={s.city} onChange={(city) => set({ city })} placeholder="Douala" />
-            {features.tailor_verification && (
-              <FilterSelect label="Vérification" value={s.verification} onChange={(verification) => set({ verification })} options={{ pending: "En attente", approved: "Vérifiés", rejected: "Refusés", info_requested: "Complément demandé" }} />
-            )}
             <FilterSelect label="Mise en avant" value={s.featured} onChange={(featured) => set({ featured })} options={{ true: "Mis en avant", false: "Non mis en avant" }} />
             <FilterSelect label="Alertes" value={s.alert} onChange={(alert) => set({ alert })} options={{ true: "Avec alertes" }} allLabel="Tous" />
           </div>

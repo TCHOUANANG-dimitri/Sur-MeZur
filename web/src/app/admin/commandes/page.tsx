@@ -31,7 +31,6 @@ const COLUMNS: Column<OrderRow>[] = [
   { key: "city", label: "Ville", optional: true, render: (o) => o.city ?? "—" },
   { key: "agreed_price", label: "Prix convenu", sort: "agreed_price", align: "right", render: (o) => (o.agreed_price == null ? "—" : formatFcfa(o.agreed_price)) },
   { key: "desired_date", label: "Souhaitée le", sort: "desired_date", render: (o) => formatDate(o.desired_date) },
-  { key: "dispute_status", label: "Litige", optional: true, render: (o) => (o.dispute_status ? "Oui" : "—") },
   { key: "created_at", label: "Créée le", sort: "created_at", render: (o) => formatDate(o.created_at) },
   { key: "alert", label: "Alerte", render: (o) => (o.overdue || o.alert ? <span className="adWarn">{o.alert ?? `En retard (${o.age_days} j)`}</span> : <span className="adMuted">—</span>) },
 ];
@@ -39,7 +38,7 @@ const COLUMNS: Column<OrderRow>[] = [
 export default function OrdersPage() {
   const [s, set] = useUrlState({
     ...TABLE_DEFAULTS,
-    q: "", status: "", city: "", dispute: "", late: "", date_from: "", date_to: "",
+    q: "", status: "", city: "", late: "", date_from: "", date_to: "",
   });
   const alerts = useLoad(() => Orders.alerts(), []);
 
@@ -68,7 +67,6 @@ export default function OrdersPage() {
           options={{ new: "Nouvelles", in_progress: "En cours", ready_for_pickup: "Prêtes à retirer", finished_delivered: "Livrées", finished_not_delivered: "Non livrées", declined: "Refusées", cancelled: "Annulées" }}
         />
         <FilterText label="Ville" value={s.city} onChange={(city) => set({ city })} placeholder="Douala" />
-        <FilterSelect label="Litige" value={s.dispute} onChange={(dispute) => set({ dispute })} options={{ open: "Litige ouvert" }} allLabel="Tous" />
         <FilterSelect label="Retard" value={s.late} onChange={(late) => set({ late })} options={{ true: "En retard" }} allLabel="Toutes" />
         <FilterDate label="Depuis" value={s.date_from} onChange={(date_from) => set({ date_from })} />
         <FilterDate label="Jusqu'au" value={s.date_to} onChange={(date_to) => set({ date_to })} />

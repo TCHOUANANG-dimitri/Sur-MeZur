@@ -19,15 +19,12 @@ from app.core.security import hash_password
 from app.models.acquisition import AcquisitionChannel, AcquisitionComment, Campaign, UserAcquisition
 from app.models.admin import AdminNote, LoginEvent, SupportTicket
 from app.models.measurements import Measurement, MeasurementSession
-from app.models.misc import Review
 from app.models.orders import Order
 from app.models.users import ClientProfile, TailorProfile, User
 from app.services import audit
 from app.services.account_tools import (
     cleanup_guests,
     export_user_data,
-    find_duplicates,
-    merge_clients,
     stale_guests,
     temporary_password,
 )
@@ -50,7 +47,6 @@ USER_COLUMNS = [
     ("city", "Ville"),
     ("platform", "Support"),
     ("channel", "Canal d'acquisition"),
-    ("verification_status", "Vérification"),
     ("created_at", "Inscription"),
     ("last_login_at", "Dernière connexion"),
     ("last_seen_at", "Dernière activité"),
@@ -147,7 +143,6 @@ def users_table(
             "city": u.city or (tp.city if tp else None),
             "platform": u.signup_platform or "app",
             "channel": channels.get(acq.channel_id) if acq and acq.channel_id else None,
-            "verification_status": getattr(tp.verification_status, "value", tp.verification_status) if tp else None,
             "tailor_id": tp.id if tp else None,
             "created_at": iso(u.created_at),
             "last_login_at": iso(u.last_login_at),
@@ -185,17 +180,6 @@ def user_dossier(user_id: str, db: Session = Depends(get_db), admin: User = Depe
         for s in db.query(MeasurementSession).filter(MeasurementSession.client_id == client.id).order_by(MeasurementSession.created_at.desc()).limit(20):
             sessions.append({"id": s.id, "status": getattr(s.status, "value", s.status), "error_message": s.error_message, "platform": s.platform, "created_at": iso(s.created_at)})
 
-    reviews_given = []
-    reviews_received = []
-    if client:
-        reviews_given = [r for r in db.query(Review).filter(Review.client_id == client.id)]
-    if tailor:
-        reviews_received = [r for r in db.query(Review).filter(Review.tailor_id == tailor.id)]
-
-    def review_out(r: Review) -> dict:
-        return {"id": r.id, "order_id": r.order_id, "stars": r.stars, "comment": r.comment,
-                "moderation_status": getattr(r.moderation_status, "value", r.moderation_status), "created_at": iso(r.created_at)}
-
     acq = db.query(UserAcquisition).filter(UserAcquisition.user_id == u.id).first()
     all_channels = db.query(AcquisitionChannel).all()
     channels = {c.id: c.name for c in all_channels}
@@ -217,16 +201,12 @@ def user_dossier(user_id: str, db: Session = Depends(get_db), admin: User = Depe
         "tailor_profile": {
             "id": tailor.id, "shop_name": tailor.shop_name, "tailor_type": getattr(tailor.tailor_type, "value", tailor.tailor_type),
             "city": tailor.city, "quartier": tailor.quartier, "bio": tailor.bio,
-            "verification_status": getattr(tailor.verification_status, "value", tailor.verification_status),
-            "rating_avg": float(tailor.rating_avg or 0), "completed_orders_count": tailor.completed_orders_count,
+            "completed_orders_count": tailor.completed_orders_count,
             "avg_response_minutes": tailor.avg_response_minutes, "is_featured": tailor.is_featured,
         } if tailor else None,
         "measurements": measurements,
         "measurement_sessions": sessions,
         "orders": [order_row(o, clients, tailors) for o in orders],
-        "disputes": [order_row(o, clients, tailors) for o in orders if o.dispute_status],
-        "reviews_given": [review_out(r) for r in reviews_given],
-        "reviews_received": [review_out(r) for r in reviews_received],
         "logins": [
             {"id": e.id, "success": e.success, "method": e.method, "platform": e.platform, "ip": e.ip,
              "user_agent": e.user_agent, "created_at": iso(e.created_at)}
@@ -407,32 +387,3 @@ def guests_cleanup(request: Request, db: Session = Depends(get_db), admin: User 
     audit.record(db, admin, "guests.cleanup", summary=f"{n} compte(s) invité(s) supprimé(s)", request=request)
     db.commit()
     return {"deleted": n}
-
-
-# --- 2.8 Doublons ---------------------------------------------------------------------------
-
-
-@router.get("/users-duplicates")
-def duplicates(db: Session = Depends(get_db), _=Depends(require_perm("users.read"))):
-    return {"pairs": find_duplicates(db)}
-
-
-class MergeIn(BaseModel):
-    primary_id: str
-    secondary_id: str
-
-
-@router.post("/users-merge")
-def merge(payload: MergeIn, request: Request, db: Session = Depends(get_db), admin: User = Depends(require_perm("users.delete"))):
-    if payload.primary_id == payload.secondary_id:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Choisissez deux comptes différents")
-    primary = get_or_404(db, User, payload.primary_id, "Compte conservé")
-    secondary = get_or_404(db, User, payload.secondary_id, "Compte fusionné")
-    try:
-        moved = merge_clients(db, primary, secondary)
-    except ValueError as exc:
-        db.rollback()
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
-    audit.record(db, admin, "user.merge", "user", primary.id, summary=f"fusion de {secondary.id}", details=moved, request=request)
-    db.commit()
-    return {"merged": True, "moved": moved}

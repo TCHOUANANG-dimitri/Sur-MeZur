@@ -11,7 +11,6 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Growth, Users, type AcquisitionComment, type UserDossier } from "@/lib/api/admin";
 import { Button } from "@/components/ui";
-import { useAdmin } from "@/components/admin/AdminContext";
 import { useFeedback } from "@/components/admin/Feedback";
 import { ErrorState, Loading, Notes, PageHead, Panel, StatusBadge, useLoad } from "@/components/admin/kit";
 import { ORDER_STATUS, ROLE_LABEL, USER_STATUS, ago, formatDate, formatDateTime, measureLabel } from "@/components/admin/format";
@@ -35,7 +34,6 @@ interface MeasureHistoryEntry {
 
 export default function UserDossierPage() {
   const { id } = useParams<{ id: string }>();
-  const { can, me } = useAdmin();
   const { confirm, toast } = useFeedback();
   const dossier = useLoad<UserDossier>(() => Users.dossier(id), [id]);
   const [pw, setPw] = useState<string | null>(null);
@@ -45,7 +43,6 @@ export default function UserDossierPage() {
   if (dossier.error) return <div className="adPage"><PageHead title="Fiche utilisateur" back={{ href: "/admin/utilisateurs", label: "Utilisateurs" }} /><ErrorState error={dossier.error} onRetry={dossier.reload} /></div>;
   if (!dossier.data) return <div className="adPage"><Loading /></div>;
   const d = dossier.data;
-  const isSuper = me?.admin_role === "super_admin";
 
   const doActive = async (active: boolean) => {
     const reason = await confirm({
@@ -132,7 +129,7 @@ export default function UserDossierPage() {
             )}
             {d.can.write && <Button variant="secondary" className="adBtnSm adNoPrint" onClick={doResetPw}>Mot de passe provisoire</Button>}
             {d.can.write && <Button variant="secondary" className="adBtnSm adNoPrint" onClick={() => Users.exportData(d.user.id)}>Exporter les données</Button>}
-            {d.can.delete && isSuper && <Button variant="danger" className="adBtnSm adNoPrint" onClick={doDelete}>Supprimer</Button>}
+            {d.can.delete && <Button variant="danger" className="adBtnSm adNoPrint" onClick={doDelete}>Supprimer</Button>}
           </>
         }
       />
@@ -173,7 +170,7 @@ export default function UserDossierPage() {
           ) : (
             <p className="adHint">Origine inconnue.</p>
           )}
-          {d.can.write && can("growth") && (
+          {d.can.write && (
             <Button variant="secondary" className="adBtnSm adNoPrint" onClick={() => setQualifyOpen((v) => !v)}>Qualifier l&apos;origine</Button>
           )}
           {qualifyOpen && (
@@ -260,29 +257,9 @@ export default function UserDossierPage() {
             </ul>
           )}
         </Panel>
-        <Panel title={`Litiges (${d.disputes.length})`}>
-          {d.disputes.length === 0 ? <p className="adHint">Aucun.</p> : (
-            <ul className="adList">
-              {d.disputes.map((o) => (
-                <li key={o.id}>
-                  <Link href={`/admin/litiges/${o.id}`}>Commande {o.id.slice(0, 8).toUpperCase()}</Link>{" "}
-                  <span className="adHint">{o.dispute_category ?? ""} · {formatDate(o.dispute_opened_at)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
       </div>
 
       <div className="adGrid2">
-        <Panel title={`Avis (${d.reviews_given.length + d.reviews_received.length})`}>
-          {d.reviews_given.length === 0 && d.reviews_received.length === 0 ? <p className="adHint">Aucun.</p> : (
-            <ul className="adList">
-              {d.reviews_given.map((r) => <li key={r.id}>Donné : {r.stars}★ — {r.comment ?? "sans commentaire"}</li>)}
-              {d.reviews_received.map((r) => <li key={r.id}>Reçu : {r.stars}★ — {r.comment ?? "sans commentaire"} ({r.moderation_status})</li>)}
-            </ul>
-          )}
-        </Panel>
         <Panel title={`Connexions (${d.logins.length})`}>
           {d.logins.length === 0 ? <p className="adHint">Aucune trace.</p> : (
             <ul className="adList">

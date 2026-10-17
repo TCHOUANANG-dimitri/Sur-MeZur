@@ -1,6 +1,7 @@
 """
-Support utilisateurs (M12) et routes publiques de l'administration (bandeau,
-maintenance, pages d'information, canaux d'acquisition).
+Support utilisateurs (M12), pages d'information (lecture publique et
+edition admin) et routes publiques de l'administration (maintenance,
+canaux d'acquisition).
 """
 
 from __future__ import annotations
@@ -314,3 +315,53 @@ def answer_ticket(ticket_id: str, payload: TicketMessageIn, request: Request, db
     audit.record(db, admin, "ticket.reply", "ticket", t.id, request=request)
     db.commit()
     return {"ok": True, "notified": bool(t.user_id)}
+
+
+# --- Pages d'information (conditions, confidentialite, FAQ) : edition admin ----------
+
+
+DEFAULT_PAGES = {
+    "faq": ("Questions fréquentes", "## Comment sont calculées mes mesures ?\n\nÀ partir de deux photos (face et profil) et de votre taille, notre chaîne d'analyse estime vos mensurations de couture.\n\n## Mes photos sont-elles conservées ?\n\nVos photos servent uniquement au calcul. Vous pouvez les effacer à tout moment depuis votre profil."),
+    "conditions": ("Conditions d'utilisation", "Les présentes conditions régissent l'utilisation de Sur-MeZur.\n\n(À compléter par l'équipe.)"),
+    "confidentialite": ("Politique de confidentialité", "Sur-MeZur collecte les données nécessaires à la prise de mesure et à la mise en relation avec les tailleurs.\n\n(À compléter par l'équipe.)"),
+}
+
+
+def seed_pages(db: Session) -> None:
+    existing = {slug for (slug,) in db.query(InfoPage.slug).all()}
+    for slug, (title, body) in DEFAULT_PAGES.items():
+        if slug not in existing:
+            db.add(InfoPage(slug=slug, title=title, body=body, published=True))
+    db.commit()
+
+
+class PageIn(BaseModel):
+    title: str = Field(min_length=2, max_length=200)
+    body: str = Field(max_length=100_000)
+    published: bool = True
+
+
+def _page_out(p: InfoPage) -> dict:
+    return {"slug": p.slug, "title": p.title, "body": p.body, "published": p.published, "updated_at": iso(p.updated_at)}
+
+
+@admin_router.get("/pages")
+def list_pages(db: Session = Depends(get_db), _=Depends(require_perm("support"))):
+    return [_page_out(p) for p in db.query(InfoPage).order_by(InfoPage.slug)]
+
+
+@admin_router.put("/pages/{slug}")
+def save_page(slug: str, payload: PageIn, request: Request, db: Session = Depends(get_db), admin: User = Depends(require_perm("support"))):
+    if not slug.replace("-", "").isalnum() or len(slug) > 64:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Adresse de page invalide (lettres, chiffres et tirets)")
+    p = db.get(InfoPage, slug)
+    if p is None:
+        p = InfoPage(slug=slug)
+        db.add(p)
+    p.title = payload.title
+    p.body = payload.body
+    p.published = payload.published
+    p.updated_by = admin.id
+    audit.record(db, admin, "page.save", "page", None, summary=slug, request=request)
+    db.commit()
+    return _page_out(p)

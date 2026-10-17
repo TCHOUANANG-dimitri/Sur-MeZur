@@ -3,13 +3,10 @@ from fastapi import APIRouter
 from app.api.v1 import (
     admin,
     admin_catalog,
-    admin_comms,
     admin_core,
     admin_growth,
     admin_measure,
     admin_orders,
-    admin_payments,
-    admin_reviews,
     admin_security,
     admin_tailors,
     admin_users,
@@ -62,10 +59,7 @@ api_router.include_router(admin_users.router)
 api_router.include_router(admin_tailors.router)
 api_router.include_router(admin_catalog.router)
 api_router.include_router(admin_orders.router)
-api_router.include_router(admin_payments.router)
-api_router.include_router(admin_reviews.router)
 api_router.include_router(admin_measure.router)
-api_router.include_router(admin_comms.router)
 api_router.include_router(admin_security.router)
 api_router.include_router(admin_growth.router)
 api_router.include_router(support.public_router)

@@ -20,14 +20,8 @@ import {
   IconMeasure,
   IconProfile,
   IconTailor,
-  IconDashboard,
-  IconVerify,
-  IconCatalog,
   IconUsers,
   IconOrders,
-  IconDisputes,
-  IconReviews,
-  IconCommission,
 } from "./icons";
 
 export interface NavItem {
@@ -61,16 +55,6 @@ export const TAILOR_NAV: NavItem[] = [
   { href: "/tailleur/travaux", label: "Travaux", Icon: IconOrders },
   { href: "/tailleur/patrons", label: "Patrons", Icon: IconTailor },
   { href: "/tailleur/profil", label: "Profil", Icon: IconProfile },
-];
-
-export const ADMIN_NAV: NavItem[] = [
-  { href: "/admin/vue-ensemble", label: "Vue d'ensemble", Icon: IconDashboard },
-  { href: "/admin/verifications", label: "Vérifications", Icon: IconVerify },
-  { href: "/admin/utilisateurs", label: "Utilisateurs", Icon: IconUsers },
-  { href: "/admin/commandes", label: "Commandes", Icon: IconOrders },
-  { href: "/admin/catalogue", label: "Catalogue", Icon: IconCatalog },
-  { href: "/admin/litiges", label: "Litiges", Icon: IconDisputes },
-  { href: "/admin/avis", label: "Avis", Icon: IconReviews },
 ];
 
 function NavList({ items }: { items: NavItem[] }) {

@@ -10,8 +10,9 @@ Couvre concretement :
   statique (403), le reste de /uploads reste public ;
 - protected_path() : ne sort jamais du stock prive (traversal coupe) ;
 - GET /measurements/session/{id}/photos/front : proprietaire seul ;
-- GET /admin/verification-documents/{id} : equipe seule, fichiers hors
-  /uploads.
+- GET /admin/verification-documents/{id} : route retiree avec la
+  verification des tailleurs ; les pieces deja deposees ne sont servies par
+  aucune route, ni par /uploads.
 
 Usage (depuis backend/) :
     ./venv/Scripts/python.exe -m tests.test_securite
@@ -184,7 +185,7 @@ def test_session_photo_owner() -> None:
 
 
 def test_verification_document_admin() -> None:
-    print("\n== A4.2 — piece de verification : equipe seule")
+    print("\n== A4.2 — piece de verification : plus servie par aucune route")
     with SessionLocal() as db:
         existing = db.query(User).filter(User.phone == "+237611110099").first()
         if not existing:
@@ -206,13 +207,13 @@ def test_verification_document_admin() -> None:
     _seed_client("+237611110005")
     other_h = _login("+237611110005")
     r = client.get(f"/api/admin/verification-documents/{doc_id}")
-    check(r.status_code == 401, "piece anonyme -> 401")
+    check(r.status_code in (401, 404), "piece anonyme -> refusee")
     r = client.get(f"/api/admin/verification-documents/{doc_id}", headers=other_h)
-    check(r.status_code in (401, 403), "piece par un client -> refuse")
+    check(r.status_code in (401, 403, 404), "piece par un client -> refusee")
     r = client.get(f"/api/admin/verification-documents/{doc_id}", headers=admin)
-    check(r.status_code == 200 and r.content == b"\xff\xd8carte-b", "piece par l'equipe -> 200, octets exacts")
-    r = client.get("/api/admin/verification-documents/absent", headers=admin)
-    check(r.status_code == 404, "piece inconnue -> 404")
+    check(r.status_code == 404, "route retiree, meme pour l'equipe")
+    r = client.get("/uploads/verification/carte-b.jpg")
+    check(r.status_code in (403, 404), "piece absente de /uploads")
 
 
 def main() -> None:

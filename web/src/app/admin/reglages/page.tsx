@@ -1,14 +1,16 @@
 "use client";
 
-// Reglages (13.7, 13.8) : formulaires lisibles, pas du JSON brut — dont les
-// nouvelles bascules `features` (verification, paiements, negociation,
-// patrons).
+// Reglages (13.7, 13.8) : formulaires lisibles, pas du JSON brut. Seuls les
+// reglages des fonctions actives sont proposes (le serveur ne renvoie que
+// ceux-la) ; s'y ajoutent les pages d'information du site (conditions,
+// confidentialite, FAQ).
 
 import { useState } from "react";
-import { Security } from "@/lib/api/admin";
+import { Security, Support, type InfoPage } from "@/lib/api/admin";
 import { Button } from "@/components/ui";
 import { useFeedback } from "@/components/admin/Feedback";
-import { ErrorState, Loading, PageHead, Panel, useLoad } from "@/components/admin/kit";
+import { ErrorState, Loading, PageHead, Panel, renderMarkdown, useLoad } from "@/components/admin/kit";
+import { formatDateTime } from "@/components/admin/format";
 
 type Values = Record<string, unknown>;
 
@@ -40,10 +42,15 @@ export default function SettingsPage() {
 
   return (
     <div className="adPage">
-      <PageHead title="Réglages" sub="Chaque changement est tracé au journal. Les valeurs prennent effet en quelques secondes." />
-      <Panel title={labels.features ?? "Fonctionnalités"}>
-        <FeatureToggles value={(values.features ?? {}) as Record<string, unknown>} onSave={(v) => void save("features", v)} saving={saving === "features"} />
-      </Panel>
+      <PageHead title="Réglages" sub="Les valeurs prennent effet en quelques secondes." />
+      <div className="adGrid2">
+        <Panel title={labels.features ?? "Génération de patrons"}>
+          <PatternsRow value={(values.features ?? {}) as Record<string, unknown>} onSave={(v) => void save("features", v)} saving={saving === "features"} />
+        </Panel>
+        <Panel title="Maintenance">
+          <MaintenanceRow value={(values.maintenance ?? {}) as Record<string, unknown>} onSave={(v) => void save("maintenance", v)} saving={saving === "maintenance"} />
+        </Panel>
+      </div>
       <div className="adGrid2">
         <Panel title="Comptes et sessions">
           <NumRow label={labels.guest_retention_days} value={values.guest_retention_days} onSave={(v) => void save("guest_retention_days", v)} saving={saving === "guest_retention_days"} />
@@ -51,20 +58,8 @@ export default function SettingsPage() {
           <NumRow label={labels.admin_idle_minutes} value={values.admin_idle_minutes} onSave={(v) => void save("admin_idle_minutes", v)} saving={saving === "admin_idle_minutes"} />
           <BoolRow label={labels.signup_source_question} value={values.signup_source_question} onSave={(v) => void save("signup_source_question", v)} saving={saving === "signup_source_question"} />
         </Panel>
-        <Panel title="Maintenance">
-          <MaintenanceRow value={(values.maintenance ?? {}) as Record<string, unknown>} onSave={(v) => void save("maintenance", v)} saving={saving === "maintenance"} />
-        </Panel>
-      </div>
-      <div className="adGrid2">
-        <Panel title="Commandes et litiges">
-          <NumRow label={labels.negotiation_max_rounds} value={values.negotiation_max_rounds} onSave={(v) => void save("negotiation_max_rounds", v)} saving={saving === "negotiation_max_rounds"} />
-          <NumRow label={labels.offer_expiry_days} value={values.offer_expiry_days} onSave={(v) => void save("offer_expiry_days", v)} saving={saving === "offer_expiry_days"} />
+        <Panel title="Alertes et collecte">
           <NumRow label={labels.order_no_response_days} value={values.order_no_response_days} onSave={(v) => void save("order_no_response_days", v)} saving={saving === "order_no_response_days"} />
-          <NumRow label={labels.dispute_alert_days} value={values.dispute_alert_days} onSave={(v) => void save("dispute_alert_days", v)} saving={saving === "dispute_alert_days"} />
-          <ShareRow label={labels.deposit_share} value={values.deposit_share} onSave={(v) => void save("deposit_share", v)} saving={saving === "deposit_share"} />
-          <ShareRow label={labels.tailor_immediate_share} value={values.tailor_immediate_share} onSave={(v) => void save("tailor_immediate_share", v)} saving={saving === "tailor_immediate_share"} />
-        </Panel>
-        <Panel title="Qualité tailleurs et collecte">
           <QualityRow value={(values.tailor_quality ?? {}) as Record<string, unknown>} onSave={(v) => void save("tailor_quality", v)} saving={saving === "tailor_quality"} />
           <TargetRow value={(values.collecte_target ?? {}) as Record<string, unknown>} onSave={(v) => void save("collecte_target", v)} saving={saving === "collecte_target"} />
         </Panel>
@@ -72,6 +67,7 @@ export default function SettingsPage() {
       <Panel title={labels.cities ?? "Villes et quartiers"}>
         <CitiesEditor value={Array.isArray(values.cities) ? (values.cities as { name: string; quartiers: string[] }[]) : []} onSave={(v) => void save("cities", v)} saving={saving === "cities"} />
       </Panel>
+      <InfoPages />
     </div>
   );
 }
@@ -81,17 +77,6 @@ function NumRow({ label, value, onSave, saving }: { label?: string; value: unkno
   return (
     <form className="adRow" onSubmit={(e) => { e.preventDefault(); onSave(Number(v ?? value)); setV(null); }}>
       <label className="adFilter"><span>{label}</span><input className="input" inputMode="numeric" value={v ?? String(value ?? "")} onChange={(e) => setV(e.target.value)} /></label>
-      <Button variant="secondary" className="adBtnSm" type="submit" disabled={saving}>Enregistrer</Button>
-    </form>
-  );
-}
-
-function ShareRow({ label, value, onSave, saving }: { label?: string; value: unknown; onSave: (v: number) => void; saving: boolean }) {
-  const [v, setV] = useState<string | null>(null);
-  const shown = v ?? String(Math.round(Number(value ?? 0) * 100));
-  return (
-    <form className="adRow" onSubmit={(e) => { e.preventDefault(); onSave(Number(shown) / 100); setV(null); }}>
-      <label className="adFilter"><span>{label} (%)</span><input className="input" inputMode="decimal" value={shown} onChange={(e) => setV(e.target.value)} /></label>
       <Button variant="secondary" className="adBtnSm" type="submit" disabled={saving}>Enregistrer</Button>
     </form>
   );
@@ -125,29 +110,27 @@ function MaintenanceRow({ value, onSave, saving }: { value: Record<string, unkno
   );
 }
 
-function FeatureToggles({ value, onSave, saving }: { value: Record<string, unknown>; onSave: (v: Record<string, unknown>) => void; saving: boolean }) {
-  const [v, setV] = useState({ ...value });
-  const set = (k: string, x: unknown) => setV((p) => ({ ...p, [k]: x }));
+/** Seul interrupteur qui reste : le moteur de patrons. Les autres cles de
+ *  `features` (verification, paiements, negociation) restent coupees. */
+function PatternsRow({ value, onSave, saving }: { value: Record<string, unknown>; onSave: (v: Record<string, unknown>) => void; saving: boolean }) {
+  const [mode, setMode] = useState<string | null>(null);
   return (
     <form
       className="adForm"
       onSubmit={(e) => {
         e.preventDefault();
-        onSave(v);
+        onSave({ ...value, pattern_generation: mode ?? value.pattern_generation ?? "preview" });
       }}
     >
-      <label className="adFilter"><span><input type="checkbox" checked={Boolean(v.tailor_verification)} onChange={(e) => set("tailor_verification", e.target.checked)} /> Vérification des tailleurs (badges et blocages)</span></label>
-      <label className="adFilter"><span><input type="checkbox" checked={Boolean(v.payments)} onChange={(e) => set("payments", e.target.checked)} /> Paiements (transactions, séquestre, commissions)</span></label>
-      <label className="adFilter"><span><input type="checkbox" checked={Boolean(v.negotiation)} onChange={(e) => set("negotiation", e.target.checked)} /> Négociation des prix (offres, devis)</span></label>
       <label className="adFilter">
-        <span>Génération de patrons</span>
-        <select className="input" value={String(v.pattern_generation ?? "preview")} onChange={(e) => set("pattern_generation", e.target.value)}>
+        <span>Moteur</span>
+        <select className="input" value={String(mode ?? value.pattern_generation ?? "preview")} onChange={(e) => setMode(e.target.value)}>
           <option value="off">Coupée</option>
           <option value="preview">Aperçu (moteur de démonstration)</option>
           <option value="on">Activée (GarmentCode : patrons cotés, PDF)</option>
         </select>
       </label>
-      <Button variant="primary" className="adBtnSm" type="submit" disabled={saving}>Enregistrer les fonctionnalités</Button>
+      <Button variant="primary" className="adBtnSm" type="submit" disabled={saving}>Enregistrer</Button>
     </form>
   );
 }
@@ -160,13 +143,9 @@ function QualityRow({ value, onSave, saving }: { value: Record<string, unknown>;
       className="adForm"
       onSubmit={(e) => {
         e.preventDefault();
-        onSave({ min_rating: num("min_rating"), max_dispute_rate: num("max_dispute_rate"), max_response_hours: num("max_response_hours"), max_late_rate: num("max_late_rate") });
+        onSave({ ...value, max_response_hours: num("max_response_hours"), max_late_rate: num("max_late_rate") });
       }}
     >
-      <div className="adRow">
-        <label className="adFilter"><span>Note min</span><input className="input" inputMode="decimal" value={String(v.min_rating ?? value.min_rating ?? "")} onChange={(e) => setV({ ...v, min_rating: e.target.value })} /></label>
-        <label className="adFilter"><span>Taux de litiges max</span><input className="input" inputMode="decimal" value={String(v.max_dispute_rate ?? value.max_dispute_rate ?? "")} onChange={(e) => setV({ ...v, max_dispute_rate: e.target.value })} /></label>
-      </div>
       <div className="adRow">
         <label className="adFilter"><span>Réponse max (h)</span><input className="input" inputMode="numeric" value={String(v.max_response_hours ?? value.max_response_hours ?? "")} onChange={(e) => setV({ ...v, max_response_hours: e.target.value })} /></label>
         <label className="adFilter"><span>Taux de retard max</span><input className="input" inputMode="decimal" value={String(v.max_late_rate ?? value.max_late_rate ?? "")} onChange={(e) => setV({ ...v, max_late_rate: e.target.value })} /></label>
@@ -247,5 +226,67 @@ function CitiesEditor({ value, onSave, saving }: { value: { name: string; quarti
         <Button variant="primary" className="adBtnSm" type="button" disabled={saving} onClick={() => onSave(cities)}>Enregistrer les villes</Button>
       </form>
     </div>
+  );
+}
+
+/** Pages d'information du site (/infos/<adresse>) : conditions, confidentialite, FAQ. */
+function InfoPages() {
+  const { toast } = useFeedback();
+  const list = useLoad(() => Support.pages(), []);
+  const [slug, setSlug] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [published, setPublished] = useState(true);
+
+  const open = (p: InfoPage) => {
+    setSlug(p.slug);
+    setTitle(p.title);
+    setBody(p.body);
+    setPublished(p.published);
+  };
+
+  return (
+    <>
+      <Panel title="Pages d'information du site">
+        {list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : !list.data ? <Loading /> : (
+          <ul className="adList">
+            {list.data.map((p) => (
+              <li key={p.slug}>
+                <button className="adLinkBtn" onClick={() => open(p)}><strong>{p.title}</strong></button>{" "}
+                <span className="adHint">/infos/{p.slug} · {p.published ? "publiée" : "brouillon"} · {formatDateTime(p.updated_at)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+      {slug && (
+        <Panel title={`Modifier — ${slug}`}>
+          <form
+            className="adForm"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await Support.savePage(slug, { title: title.trim(), body, published });
+                toast("Page enregistrée.");
+                list.reload();
+              } catch (err) {
+                toast((err as Error).message, { error: true });
+              }
+            }}
+          >
+            <label className="adFilter"><span>Titre</span><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required /></label>
+            <label className="adFilter"><span><input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} /> Publiée</span></label>
+            <div className="adGrid2">
+              <label className="adFilter"><span>Contenu (titres ##, listes -, **gras**, liens)</span><textarea className="input adTextarea" rows={12} value={body} onChange={(e) => setBody(e.target.value)} /></label>
+              <div><h4>Aperçu</h4><div className="adProse" dangerouslySetInnerHTML={{ __html: renderMarkdown(body) }} /></div>
+            </div>
+            <span className="adRow">
+              <Button variant="primary" className="adBtnSm" type="submit">Enregistrer</Button>
+              <Button variant="secondary" className="adBtnSm" type="button" onClick={() => setSlug(null)}>Fermer</Button>
+            </span>
+          </form>
+        </Panel>
+      )}
+    </>
   );
 }

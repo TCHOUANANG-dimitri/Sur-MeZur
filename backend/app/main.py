@@ -202,16 +202,15 @@ def _boot() -> None:
     except Exception:
         logger.exception("Création du schéma impossible au démarrage")
 
-    # Donnees de depart de l'administration web : canaux d'acquisition,
-    # modeles de messages, pages d'information. Sans effet si deja presentes.
+    # Donnees de depart de l'administration web : canaux d'acquisition et
+    # pages d'information. Sans effet si deja presentes.
     try:
-        from app.api.v1.admin_comms import seed_pages, seed_templates
+        from app.api.v1.support import seed_pages
         from app.db.base import SessionLocal
         from app.services.acquisition import seed_channels
 
         with SessionLocal() as db:
             seed_channels(db)
-            seed_templates(db)
             seed_pages(db)
     except Exception:
         logger.exception("Données de départ de l'administration non créées")

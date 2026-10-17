@@ -14,14 +14,11 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_db, require_roles
-from app.api.v1.admin_common import iso
 from app.models.catalog import Category, GarmentModel, GarmentModelLike
 from app.models.enums import ModerationStatus, VerificationStatus
 from app.models.measurements import TryonSession
 from app.models.misc import Review
-from app.models.operations import VerificationEvent
 from app.models.orders import Order
-from app.models.payments import CommissionTier
 from app.models.users import ClientProfile, TailorProfile, User, VerificationDocument
 from app.schemas.catalog import (
     CategoryCreateIn,
@@ -31,10 +28,8 @@ from app.schemas.catalog import (
     GarmentModelOut,
     GarmentModelUpdateIn,
 )
-from app.schemas.misc import DisputeResolveIn, ReviewOut, VerificationDecideIn
 from app.schemas.orders import OrderOut
-from app.schemas.payments import CommissionTierIn, CommissionTierOut
-from app.schemas.users import TailorProfileOut, UserOut
+from app.schemas.users import UserOut
 from app.services import audit
 from app.services.admin_perms import require_perm
 from app.services.notify import notify
@@ -212,197 +207,6 @@ def list_all_orders(
     if status_filter:
         query = query.filter(Order.status == status_filter)
     return query.order_by(Order.created_at.desc()).all()
-
-
-@router.get("/verifications", response_model=list[TailorProfileOut])
-def list_verifications(
-    status_filter: VerificationStatus | None = None,
-    db: Session = Depends(get_db),
-    _=Depends(require_perm("tailors")),
-):
-    """Tailleurs ayant soumis au moins un document, du plus récemment mis à
-    jour au plus ancien. Sans `status_filter` : toutes les décisions passées
-    restent consultables (un tailleur approuvé/refusé ne doit pas disparaître
-    de cet écran, seul son statut change). Exclut les tailleurs qui n'ont
-    encore rien soumis — ils sont `pending` par défaut dès l'inscription, ce
-    qui les rendrait indiscernables d'un vrai dossier en attente."""
-    submitted_user_ids = db.query(VerificationDocument.user_id).distinct()
-    query = db.query(TailorProfile).filter(TailorProfile.user_id.in_(submitted_user_ids))
-    if status_filter:
-        query = query.filter(TailorProfile.verification_status == status_filter)
-    return query.order_by(TailorProfile.updated_at.desc()).all()
-
-
-@router.get("/verifications/{tailor_id}/documents")
-def list_verification_documents(tailor_id: str, db: Session = Depends(get_db), _=Depends(require_perm("tailors"))):
-    tailor = db.get(TailorProfile, tailor_id)
-    if not tailor:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor not found")
-    docs = db.query(VerificationDocument).filter(VerificationDocument.user_id == tailor.user_id).all()
-    # `file_url` pointe vers la route controlee (voir admin_tailors.py) : le
-    # chemin disque des pieces d'identite ne sort jamais.
-    return [
-        {
-            "id": d.id, "user_id": d.user_id, "type": d.type,
-            "file_url": f"/api/admin/verification-documents/{d.id}",
-            "status": getattr(d.status, "value", d.status),
-            "created_at": iso(d.created_at),
-        }
-        for d in docs
-    ]
-
-
-@router.post("/verifications/{tailor_id}/decide", response_model=TailorProfileOut)
-def decide_verification(
-    tailor_id: str,
-    payload: VerificationDecideIn,
-    request: Request,
-    db: Session = Depends(get_db),
-    reviewer: User = Depends(require_perm("tailors")),
-):
-    tailor = db.get(TailorProfile, tailor_id)
-    if not tailor:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor not found")
-    if payload.status not in (VerificationStatus.approved, VerificationStatus.rejected):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Décision inconnue")
-    if payload.status == VerificationStatus.rejected and not (payload.reason or "").strip():
-        # 3.2 : le tailleur doit savoir quoi corriger.
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Le motif du refus est obligatoire")
-    tailor.verification_status = payload.status
-    # Les documents joints suivent la décision et tracent qui a statué :
-    # sans cela ils restaient "pending" indéfiniment.
-    for doc in (
-        db.query(VerificationDocument)
-        .filter(VerificationDocument.user_id == tailor.user_id)
-        .all()
-    ):
-        doc.status = payload.status
-        doc.reviewed_by = reviewer.id
-    db.add(VerificationEvent(
-        tailor_id=tailor.id,
-        action=payload.status.value,
-        reason=payload.reason,
-        actor_id=reviewer.id,
-        actor_name=reviewer.full_name,
-    ))
-    notify(db, tailor.user_id, "verification_decided", {
-        "status": payload.status.value,
-        "reason": payload.reason,
-    })
-    audit.record(
-        db, reviewer, f"verification.{payload.status.value}", "tailor", tailor.id,
-        summary=payload.reason, request=request,
-    )
-    db.commit()
-    db.refresh(tailor)
-    return tailor
-
-
-@router.get("/disputes", response_model=list[OrderOut])
-def list_disputes(db: Session = Depends(get_db), _=Depends(require_perm("disputes"))):
-    return db.query(Order).filter(Order.dispute_status == "open").all()
-
-
-@router.post("/disputes/{order_id}/resolve", response_model=OrderOut)
-def resolve_dispute(
-    order_id: str,
-    payload: DisputeResolveIn,
-    request: Request,
-    db: Session = Depends(get_db),
-    current: User = Depends(require_perm("disputes")),
-):
-    order = db.get(Order, order_id)
-    if not order:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
-    order.dispute_status = payload.resolution
-    order.dispute_note = payload.note
-    order.dispute_resolved_at = datetime.now(timezone.utc)
-    audit.record(db, current, "dispute.resolve", "order", order.id, summary=payload.resolution, request=request)
-    db.commit()
-    db.refresh(order)
-    return order
-
-
-@router.get("/reviews", response_model=list[ReviewOut])
-def list_reviews_for_moderation(db: Session = Depends(get_db), _=Depends(require_perm("reviews"))):
-    return db.query(Review).order_by(Review.created_at.desc()).all()
-
-
-@router.post("/reviews/{review_id}/moderate", response_model=ReviewOut)
-def moderate_review(
-    review_id: str,
-    status_: ModerationStatus,
-    request: Request,
-    db: Session = Depends(get_db),
-    current: User = Depends(require_perm("reviews")),
-):
-    review = db.get(Review, review_id)
-    if not review:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Review not found")
-    review.moderation_status = status_
-    audit.record(db, current, f"review.{status_.value}", "review", review.id, request=request)
-    db.commit()
-    db.refresh(review)
-    return review
-
-
-@router.get("/commission-tiers", response_model=list[CommissionTierOut])
-def list_commission_tiers(db: Session = Depends(get_db), _=Depends(require_perm("payments", "dashboard"))):
-    return db.query(CommissionTier).order_by(CommissionTier.min_price).all()
-
-
-@router.post("/commission-tiers", response_model=CommissionTierOut)
-def create_commission_tier(
-    payload: CommissionTierIn,
-    request: Request,
-    db: Session = Depends(get_db),
-    current: User = Depends(require_perm("payments")),
-):
-    tier = CommissionTier(**payload.model_dump())
-    db.add(tier)
-    db.flush()
-    audit.record(db, current, "commission.create", "commission_tier", tier.id, details=payload.model_dump(), request=request)
-    db.commit()
-    db.refresh(tier)
-    return tier
-
-
-@router.patch("/commission-tiers/{tier_id}", response_model=CommissionTierOut)
-def update_commission_tier(
-    tier_id: str,
-    payload: CommissionTierIn,
-    request: Request,
-    db: Session = Depends(get_db),
-    current: User = Depends(require_perm("payments")),
-):
-    tier = db.get(CommissionTier, tier_id)
-    if not tier:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tranche introuvable")
-    before = {"min_price": float(tier.min_price), "max_price": float(tier.max_price) if tier.max_price is not None else None, "rate": float(tier.rate)}
-    for field, value in payload.model_dump().items():
-        setattr(tier, field, value)
-    audit.record(
-        db, current, "commission.update", "commission_tier", tier.id,
-        details={"avant": before, "après": payload.model_dump()}, request=request,
-    )
-    db.commit()
-    db.refresh(tier)
-    return tier
-
-
-@router.delete("/commission-tiers/{tier_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_commission_tier(
-    tier_id: str,
-    request: Request,
-    db: Session = Depends(get_db),
-    current: User = Depends(require_perm("payments")),
-):
-    tier = db.get(CommissionTier, tier_id)
-    if not tier:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tranche introuvable")
-    audit.record(db, current, "commission.delete", "commission_tier", tier.id, details={"rate": float(tier.rate)}, request=request)
-    db.delete(tier)
-    db.commit()
 
 
 # ---------------------------------------------------------------------------

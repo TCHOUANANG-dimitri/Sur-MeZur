@@ -2,17 +2,16 @@
 
 // Tableau de bord (M1) : chiffres cles de la periode, les deux services mis
 // en avant (mesures par photo, patrons), objectifs, evolution, entonnoir,
-// villes et taches en attente.
+// villes, et les taches en attente (moderation, support, retards).
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Core, Growth } from "@/lib/api/admin";
 import { Chip } from "@/components/ui";
-import { useAdmin } from "@/components/admin/AdminContext";
 import { useUrlState } from "@/components/admin/DataTable";
 import { Funnel, HBars, LineChart } from "@/components/admin/Charts";
 import { ErrorState, Kpi, Loading, PageHead, Panel, Progress, useLoad } from "@/components/admin/kit";
-import { ORDER_STATUS, ago, formatDate, formatFcfa, formatNumber, formatPct } from "@/components/admin/format";
+import { ORDER_STATUS, ago, formatDate, formatNumber, formatPct } from "@/components/admin/format";
 
 const PERIODS = [
   { key: "day", label: "Aujourd'hui" },
@@ -27,12 +26,9 @@ const METRICS = [
   { key: "active_users", label: "Utilisateurs actifs" },
   { key: "measurements", label: "Mesures réalisées" },
   { key: "orders", label: "Commandes" },
-  { key: "gmv", label: "Encaissements" },
-  { key: "commission", label: "Commissions" },
 ];
 
 export default function Dashboard() {
-  const { can, features } = useAdmin();
   const [s, set] = useUrlState({ period: "month", start: "", end: "", metric: "measurements", granularity: "day" });
   const range = s.period === "custom" && s.start && s.end ? { start: s.start, end: s.end } : { period: s.period === "custom" ? "month" : s.period };
   const rangeKey = JSON.stringify(range);
@@ -41,14 +37,13 @@ export default function Dashboard() {
   const product = useLoad(() => Growth.product(30), []);
   const series = useLoad(() => Core.timeseries({ ...range, metric: s.metric, granularity: s.granularity }), [rangeKey, s.metric, s.granularity]);
   const funnel = useLoad(() => Core.funnel(range), [rangeKey]);
-  const health = useLoad(() => (can("measure") || can("dashboard") ? Core.measureHealth(7) : Promise.resolve(null)), []);
+  const health = useLoad(() => Core.measureHealth(7), []);
   const totals = useLoad(() => Growth.overview(), []);
   const cities = useLoad(() => Core.byCity(), []);
   const queue = useLoad(() => Core.queue(), []);
   const [showAllCities, setShowAllCities] = useState(false);
 
   const k = dash.data?.kpis;
-  const money = s.metric === "gmv" || s.metric === "commission";
   const chartLabels = useMemo(() => series.data?.series.map((p) => p.period) ?? [], [series.data]);
 
   return (
@@ -84,7 +79,7 @@ export default function Dashboard() {
         {product.error ? <ErrorState error={product.error} onRetry={product.reload} /> : !product.data ? <Loading /> : (
           <div className="adKpis">
             <Kpi label="Mesures par photo" value={formatNumber(product.data.guest_sessions + product.data.registered_sessions + product.data.tailor_sessions)} hint={`invités ${formatNumber(product.data.guest_sessions)} · inscrits ${formatNumber(product.data.registered_sessions)} · tailleurs ${formatNumber(product.data.tailor_sessions)}`} href="/admin/mesure" />
-            <Kpi label="Patrons générés (aperçu)" value={formatNumber(product.data.patterns_ready)} hint={`${formatNumber(product.data.patterns_total)} demandes · ${formatNumber(product.data.patterns_failed)} en échec`} />
+            <Kpi label="Patrons générés" value={formatNumber(product.data.patterns_ready)} hint={`${formatNumber(product.data.patterns_total)} demandes · ${formatNumber(product.data.patterns_failed)} en échec`} />
             <Kpi label="Inscriptions tailleurs" value={formatNumber(product.data.tailor_signups)} href="/admin/tailleurs" />
           </div>
         )}
@@ -103,9 +98,6 @@ export default function Dashboard() {
           <Kpi label="Mesures réalisées" value={formatNumber(k.measurements.value)} change={k.measurements.change_pct} href="/admin/mesure" />
           <Kpi label="Analyses en échec" value={formatNumber(k.measurement_failures.value)} change={k.measurement_failures.change_pct} invert />
           <Kpi label="Commandes" value={formatNumber(k.orders.value)} change={k.orders.change_pct} href="/admin/commandes" />
-          <Kpi label="Litiges ouverts" value={formatNumber(k.disputes.value)} change={k.disputes.change_pct} invert href="/admin/litiges" />
-          {features.payments && <Kpi label="Encaissements" value={formatFcfa(k.cash_in.value)} change={k.cash_in.change_pct} />}
-          {features.payments && <Kpi label="Commissions" value={formatFcfa(k.commission.value)} change={k.commission.change_pct} />}
         </div>
       )}
 
@@ -160,7 +152,6 @@ export default function Dashboard() {
                 granularity={s.granularity}
                 series={[{ label: METRICS.find((m) => m.key === s.metric)?.label ?? s.metric, values: series.data.series.map((p) => p.value) }]}
                 bars={s.granularity !== "day"}
-                format={money ? (v) => formatNumber(v / 1000, 0) + " k" : undefined}
               />
             )}
           </Panel>
@@ -178,7 +169,7 @@ export default function Dashboard() {
                       <tr>
                         <th>Ville</th>
                         <th style={{ textAlign: "right" }}>Clients</th>
-                        <th style={{ textAlign: "right" }}>Tailleurs{features.tailor_verification ? " (vérifiés)" : ""}</th>
+                        <th style={{ textAlign: "right" }}>Tailleurs</th>
                         <th style={{ textAlign: "right" }}>Commandes</th>
                         <th>Quartiers des tailleurs</th>
                       </tr>
@@ -189,7 +180,7 @@ export default function Dashboard() {
                           <td data-label="Ville">{c.city}</td>
                           <td data-label="Clients" className="adCellNum">{c.clients}</td>
                           <td data-label="Tailleurs" className="adCellNum">
-                            {c.tailors}{features.tailor_verification ? ` (${c.tailors_verified})` : ""}
+                            {c.tailors}
                           </td>
                           <td data-label="Commandes" className="adCellNum">{c.orders}</td>
                           <td data-label="Quartiers" className="adHint">
@@ -213,13 +204,13 @@ export default function Dashboard() {
         </div>
 
         <div>
-          <Panel title="À traiter" actions={<Link href="/admin/a-traiter" className="adHint">Tout voir ({queue.data?.total ?? "…"})</Link>}>
+          <Panel title={`À traiter (${queue.data?.total ?? "…"})`}>
             {!queue.data ? (
               <Loading />
             ) : queue.data.items.length === 0 ? (
               <p className="adHint">Rien en attente.</p>
             ) : (
-              queue.data.items.slice(0, 8).map((i, idx) => (
+              queue.data.items.slice(0, 15).map((i, idx) => (
                 <Link key={idx} href={i.href} className="adSearchItem" style={{ padding: "8px 4px" }}>
                   <span style={{ minWidth: 0, flex: 1 }}>
                     <strong style={{ fontSize: 13 }}>{i.label}</strong>

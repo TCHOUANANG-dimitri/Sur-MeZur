@@ -9,14 +9,12 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Orders, type OrderDossier } from "@/lib/api/admin";
 import { Button } from "@/components/ui";
-import { useAdmin } from "@/components/admin/AdminContext";
 import { useFeedback, Modal } from "@/components/admin/Feedback";
 import { ErrorState, Loading, Notes, PageHead, Panel, StatusBadge, useLoad } from "@/components/admin/kit";
-import { DISPUTE_STATUS, FIT_RESULT, ORDER_STATUS, formatDate, formatDateTime, formatFcfa, measureLabel } from "@/components/admin/format";
+import { FIT_RESULT, ORDER_STATUS, formatDate, formatDateTime, formatFcfa, measureLabel } from "@/components/admin/format";
 
 export default function OrderDossierPage() {
   const { id } = useParams<{ id: string }>();
-  const { features } = useAdmin();
   const { confirm, toast } = useFeedback();
   const dossier = useLoad<OrderDossier>(() => Orders.dossier(id), [id]);
   const [fitOpen, setFitOpen] = useState(false);
@@ -31,7 +29,6 @@ export default function OrderDossierPage() {
   const doCancel = async () => {
     const reason = await confirm({
       title: "Annuler cette commande ?",
-      body: features.payments ? "Un remboursement peut être créé en même temps." : undefined,
       danger: true,
       confirmLabel: "Annuler la commande",
       reason: { label: "Motif (communiqué aux parties)", required: true },
@@ -95,13 +92,13 @@ export default function OrderDossierPage() {
           <dl>
             <div className="adKv"><dt>Client</dt><dd>{d.client ? <Link href={`/admin/utilisateurs/${d.client.id}`}>{d.client.full_name}</Link> : "—"}</dd></div>
             <div className="adKv"><dt>Tailleur</dt><dd>{d.tailor ? <Link href={`/admin/utilisateurs/${d.tailor.id}`}>{d.tailor.shop_name} ({d.tailor.full_name})</Link> : "—"}</dd></div>
-            <div className="adKv"><dt>Modèle</dt><dd>{d.model ? d.model.name : d.ready_to_wear ? `Prêt-à-porter : ${d.ready_to_wear.name}` : "Sur mesure"}</dd></div>
+            <div className="adKv"><dt>Modèle</dt><dd>{d.model ? d.model.name : "Sur mesure"}</dd></div>
             <div className="adKv"><dt>Tissu</dt><dd>{d.fabric ? d.fabric.name : "—"}</dd></div>
             <div className="adKv"><dt>Notes du client</dt><dd>{o.client_notes ?? "—"}</dd></div>
             <div className="adKv"><dt>Date souhaitée</dt><dd>{formatDate(o.desired_date)}</dd></div>
             <div className="adKv"><dt>Budget indicatif</dt><dd>{formatFcfa(extra.budget_amount ?? null)}</dd></div>
-            <div className="adKv"><dt>Prix convenu</dt><dd>{formatFcfa(o.agreed_price)} {features.payments ? "" : "(information, sans encaissement)"}</dd></div>
-            <div className="adKv"><dt>Livraison</dt><dd>{o.reception_mode === "delivery" ? `Livraison${o.delivery_fee != null ? ` (${formatFcfa(o.delivery_fee)})` : ""}` : "Retrait à l'atelier"}</dd></div>
+            <div className="adKv"><dt>Prix convenu</dt><dd>{formatFcfa(o.agreed_price)} (information, sans encaissement)</dd></div>
+            <div className="adKv"><dt>Livraison</dt><dd>{o.reception_mode === "delivery" ? "Livraison" : "Retrait à l'atelier"}</dd></div>
             {extra.decline_reason ? <div className="adKv"><dt>Motif du refus</dt><dd>{extra.decline_reason}</dd></div> : null}
             {o.cancel_reason && <div className="adKv"><dt>Motif d&apos;annulation</dt><dd>{o.cancel_reason}</dd></div>}
           </dl>
@@ -132,25 +129,6 @@ export default function OrderDossierPage() {
         </ol>
       </Panel>
 
-      {d.offers.length > 0 && (
-        <Panel title={`Offres (${d.offers.length}) — inactives, négociation coupée`}>
-          <ul className="adList">
-            {d.offers.map((x) => (
-              <li key={x.id}>{x.actor === "client" ? "Client" : "Tailleur"} : {formatFcfa(x.amount)} · manche {x.round} · {x.status}</li>
-            ))}
-          </ul>
-        </Panel>
-      )}
-
-      {features.payments && (d.payments.length > 0 || d.split || d.refunds.length > 0) && (
-        <Panel title="Paiements (archives, fonction coupée)">
-          <ul className="adList">
-            {d.payments.map((p) => <li key={p.id}>{p.phase} : {formatFcfa(p.amount)} · {p.status} · {p.provider}</li>)}
-            {d.refunds.map((r) => <li key={r.id}>Remboursement : {formatFcfa(r.amount)} · {r.status}</li>)}
-          </ul>
-        </Panel>
-      )}
-
       <Panel title={`Retours d'essayage (${d.fit_feedbacks.length})`}>
         {d.fit_feedbacks.length === 0 ? <p className="adHint">Aucun retour saisi.</p> : (
           <ul className="adList">
@@ -166,25 +144,6 @@ export default function OrderDossierPage() {
           </ul>
         )}
       </Panel>
-
-      {d.review && (
-        <Panel title="Avis du client">
-          <p>{d.review.stars}★ — {d.review.comment ?? "sans commentaire"}</p>
-        </Panel>
-      )}
-
-      {d.dispute_messages.length > 0 && (
-        <Panel title="Échanges du litige">
-          <ul className="adList">
-            {d.dispute_messages.map((m) => (
-              <li key={m.id}>
-                <strong>{m.author_name}</strong> <span className="adHint">({m.author_role} → {m.audience}) · {formatDateTime(m.created_at)}</span>
-                <div>{m.body}</div>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      )}
 
       <Notes entityType="order" entityId={o.id} />
     </div>

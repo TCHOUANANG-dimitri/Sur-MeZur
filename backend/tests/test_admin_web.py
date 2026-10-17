@@ -33,10 +33,6 @@ from app.models import (  # noqa: E402
     Measurement,
     MeasurementSession,
     Order,
-    Payment,
-    PaymentSplit,
-    Quote,
-    Review,
     TailorProfile,
     User,
     UserActivityDay,
@@ -102,7 +98,7 @@ def main() -> None:
     tok = login.json()
     H = {"Authorization": f"Bearer {tok['access_token']}"}
     me = ok(client.get("/api/admin/me", headers=H), "admin/me").json()
-    check(me["admin_role"] == "super_admin" and "security" in me["permissions"], "super admin par defaut")
+    check(me["full_name"] == "Admin Test" and "admin_role" not in me, "profil admin, sans role")
     ok(client.get("/api/me", headers={"Authorization": f"Bearer {client_token}"}), "activite client")
 
     # Donnees d'activite et de commande pour les statistiques.
@@ -119,37 +115,29 @@ def main() -> None:
                   desired_date=date.today() - timedelta(days=3))
         db.add(o)
         db.flush()
-        db.add(Quote(order_id=o.id, line_items=[], total=50000, delay_days=7, commission_rate=0.08, commission_amount=4000,
-                     net_to_tailor=46000, accepted=True))
-        db.add(Payment(order_id=o.id, phase="deposit_70", provider="mtn_momo", amount=35000, status="paid", provider_txn_ref="SANDBOX-AAA"))
-        db.add(Payment(order_id=o.id, phase="balance_30", provider="orange_money", amount=15000, status="failed", provider_txn_ref="SANDBOX-BBB"))
-        db.add(PaymentSplit(order_id=o.id, total=50000, deposit_70=35000, tailor_immediate_40=20000, escrow_30=15000, balance_30=15000))
-        db.add(Review(order_id=o.id, client_id=cp.id, tailor_id=ids["tailor"], stars=2, comment="Pas terrible"))
         db.commit()
         ids["client_user"], ids["order"], ids["measurement"] = cl.id, o.id, m.id
-        ids["review"] = db.query(Review).first().id
-        ids["payment_failed"] = db.query(Payment).filter(Payment.status == "failed").first().id
 
     print("\n== M0 / M1")
     ok(client.get("/api/admin/counters", headers={**H, "X-SMZ-Background": "1"}), "compteurs")
     q = ok(client.get("/api/admin/queue", headers=H), "file des actions").json()
     check(q["total"] >= 1, f"file non vide ({q['total']})")
     # Orientation sans argent ni verification : la file ne propose plus ces taches.
-    check(not any(x["type"] in ("verification", "payment", "refund") for x in q["items"]),
-          "file sans verification ni paiements")
+    check({x["type"] for x in q["items"]} <= {"model", "ticket", "late_order"},
+          "file : moderation, support et retards seulement")
     s = ok(client.get("/api/admin/search?q=Clien", headers=H), "recherche globale").json()
     check(any(x["type"] == "user" for x in s["results"]), "recherche trouve l'utilisateur")
     ok(client.post("/api/admin/notes", headers=H, json={"entity_type": "user", "entity_id": ids["client_user"], "body": "Appelée le 3/10"}), "note", 201)
     check(len(client.get(f"/api/admin/notes?entity_type=user&entity_id={ids['client_user']}", headers=H).json()) == 1, "note relue")
     d = ok(client.get("/api/admin/dashboard?period=month", headers=H), "tableau de bord").json()
-    check(d["kpis"]["cash_in"]["value"] == 35000, f"encaissements {d['kpis']['cash_in']['value']}")
-    check(d["kpis"]["commission"]["value"] == 4000, f"commission {d['kpis']['commission']['value']}")
+    check(d["kpis"]["orders"]["value"] == 1, "commandes du mois")
+    check(not {"cash_in", "commission", "disputes"} & set(d["kpis"]), "ni argent ni litiges au tableau de bord")
     for metric in ("signups", "measurements", "orders", "gmv", "commission", "active_users"):
         ok(client.get(f"/api/admin/timeseries?metric={metric}&granularity=week", headers=H), f"serie {metric}")
     ok(client.get("/api/admin/funnel", headers=H), "entonnoir")
     ok(client.get("/api/admin/by-city", headers=H), "par ville")
     st = ok(client.get("/api/admin/stats", headers=H), "stats historiques (mobile)").json()
-    check(st["commission_earned"] == 4000, "commission corrigee dans /admin/stats")
+    check(st["orders_total"] == 1, "/admin/stats (mobile) toujours servi")
 
     print("\n== M2 Utilisateurs")
     t = ok(client.get("/api/admin/tables/users?role=client&sort=full_name&dir=asc", headers=H), "table utilisateurs").json()
@@ -169,21 +157,16 @@ def main() -> None:
     ok(client.get(f"/api/admin/users/{ids['client_user']}/export", headers=H), "export donnees")
     ok(client.get("/api/admin/guests/cleanup", headers=H), "apercu nettoyage invites")
     ok(client.post("/api/admin/guests/cleanup", headers=H), "nettoyage invites")
-    dup = ok(client.get("/api/admin/users-duplicates", headers=H), "doublons").json()
-    check(len(dup["pairs"]) >= 1, "doublon detecte")
+    ok(client.get("/api/admin/users-duplicates", headers=H), "doublons retires", 404)
 
     print("\n== M3 Tailleurs")
-    ok(client.post(f"/api/admin/verifications/{ids['tailor']}/request-info", headers=H,
-                   json={"missing_documents": ["atelier_photo"], "message": "Photo d'atelier manquante"}), "demande de complement")
-    vd = ok(client.get(f"/api/admin/verifications/{ids['tailor']}/dossier", headers=H), "dossier verification").json()
-    check(vd["history"][0]["action"] == "info_requested", "historique de verification")
-    ok(client.post(f"/api/admin/verifications/{ids['tailor']}/decide", headers=H, json={"status": "rejected"}), "refus sans motif refuse", 400)
-    ok(client.post(f"/api/admin/verifications/{ids['tailor']}/decide", headers=H, json={"status": "approved"}), "approbation")
+    ok(client.get("/api/admin/verifications-table", headers=H), "verifications retirees", 404)
     ok(client.post(f"/api/admin/tailors/{ids['tailor']}/featured", headers=H, json={"is_featured": True, "rank": 1}), "mise en avant")
     tt = ok(client.get("/api/admin/tables/tailors", headers=H), "qualite tailleurs").json()
     check(tt["items"][0]["orders"] == 1, "commandes par tailleur")
-    ok(client.get("/api/admin/tailors/map", headers=H), "carte tailleurs")
-    ok(client.get("/api/admin/verifications-table", headers=H), "file verifications")
+    check("dispute_rate" not in tt["items"][0] and "verification_status" not in tt["items"][0], "ni litiges ni verification")
+    mp = ok(client.get("/api/admin/tailors/map", headers=H), "carte tailleurs").json()
+    check(mp["cities"][0]["total"] == 1, "tailleurs par ville")
     search = client.get("/api/tailors").json()
     check(search and search[0]["is_featured"], "tailleur mis en avant en tete")
 
@@ -206,64 +189,19 @@ def main() -> None:
     imp = ok(client.post("/api/admin/models/import", headers=H, files=files, data={"category_id": ids["category"], "status": "pending"}), "import").json()
     check(imp["created"] == 1, "un modele importe")
 
-    print("\n== M5 / M7 Commandes et litiges")
+    print("\n== M5 Commandes")
     ot = ok(client.get("/api/admin/tables/orders?late=true", headers=H), "table commandes (retard)").json()
     check(ot["total"] == 1, "commande en retard detectee")
-    od = ok(client.get(f"/api/admin/orders/{ids['order']}/dossier", headers=H), "dossier commande").json()
-    check(len(od["timeline"]) >= 4, "chronologie")
     ok(client.get("/api/admin/orders-alerts", headers=H), "alertes")
     ok(client.post(f"/api/admin/orders/{ids['order']}/fit-feedback", headers=H,
                    json={"result": "alteration", "adjustments": [{"measure": "waist", "delta_cm": 2}]}), "retour d'essayage")
-    ok(client.post(f"/api/orders/{ids['order']}/dispute", headers=CH, json={"note": "Retard", "category": "retard"}), "ouverture litige (client)")
-    ok(client.post(f"/api/admin/disputes/{ids['order']}/messages", headers=H, json={"audience": "both", "body": "Merci d'envoyer une photo", "requests_photo": True}), "message litige")
-    pm = ok(client.get(f"/api/orders/{ids['order']}/dispute/messages", headers=CH), "messages vus par le client").json()
-    check(len(pm) == 1, "client voit le message")
-    ok(client.post(f"/api/orders/{ids['order']}/dispute/messages", headers=CH, data={"body": "Voici ma réponse"}), "reponse partie", 201)
-    ok(client.get("/api/admin/tables/disputes", headers=H), "table litiges")
-    # Paiements reactives pour ce passage : la decision « remboursement »
-    # cree un remboursement, comme avant l'orientation sans argent.
-    with SessionLocal() as db:
-        from app.services.platform_settings import set_setting as _set_features
-        _set_features(db, "features", {"payments": True}, None)
-        db.commit()
-    from app.services.platform_settings import invalidate as _invalidate_features
-    _invalidate_features()
-    ok(client.post(f"/api/admin/disputes/{ids['order']}/decide", headers=H,
-                   json={"decision": "refund_partial", "amount": 10000, "reason": "Retard avéré"}), "decision graduee")
-    with SessionLocal() as db:
-        _set_features(db, "features", {"payments": False}, None)
-        db.commit()
-    _invalidate_features()
-    ok(client.get("/api/admin/disputes-stats", headers=H), "stats litiges")
+    od = ok(client.get(f"/api/admin/orders/{ids['order']}/dossier", headers=H), "dossier commande").json()
+    check(len(od["timeline"]) >= 2 and not {"payments", "refunds", "review", "dispute_messages"} & set(od), "dossier sans argent ni litige")
 
-    print("\n== M6 Paiements")
-    ok(client.get("/api/admin/tables/payments?status=failed", headers=H), "paiements en echec")
-    ok(client.post(f"/api/admin/payments/{ids['payment_failed']}/remind", headers=H), "relance")
-    ps = ok(client.get("/api/admin/payouts/summary", headers=H), "versements").json()
-    check(ps["tailors"][0]["due_total"] == 16000, f"du au tailleur {ps['tailors'][0]['due_total']}")
-    ok(client.post("/api/admin/payouts", headers=H, json={"tailor_id": ids["tailor"], "amount": 16000, "reference": "MOMO-1"}), "versement")
-    rf = ok(client.get("/api/admin/tables/refunds", headers=H), "remboursements").json()
-    check(rf["total"] == 1, "remboursement cree par la decision de litige")
-    ok(client.post(f"/api/admin/refunds/{rf['items'][0]['id']}/status", headers=H, json={"status": "completed", "provider_ref": "R1"}), "remboursement effectue")
-    stmt = "reference;montant;date;statut\nSANDBOX-AAA;35000;05/10/2026;ok\nINCONNU-1;1000;05/10/2026;ok\n"
-    rec = ok(client.post("/api/admin/reconciliation", headers=H, files={"file": ("releve.csv", stmt.encode(), "text/csv")}), "rapprochement").json()
-    check(rec["matched"] == 1 and len(rec["unknown"]) == 1, "ecarts detectes")
-    with SessionLocal() as db:
-        pid = db.query(Payment).filter(Payment.status == "paid").first().id
-    ok(client.get(f"/api/admin/payments/{pid}/receipt", headers=H), "recu")
-    ok(client.get(f"/api/admin/statements/monthly?month={date.today():%Y-%m}", headers=H), "releve mensuel")
-    ok(client.patch(f"/api/admin/commission-tiers/{client.get('/api/admin/commission-tiers', headers=H).json()[0]['id']}" if client.get('/api/admin/commission-tiers', headers=H).json() else "/api/admin/commission-tiers/x",
-                    headers=H, json={"min_price": 0, "max_price": 15000, "rate": 0.1}), "bareme", 200 if client.get('/api/admin/commission-tiers', headers=H).json() else 404)
-
-    print("\n== M8 Avis")
-    tailor_login = client.post("/api/auth/login", json={"phone": "+237611111111", "password": "abc123"}).json()
-    TH = {"Authorization": f"Bearer {tailor_login['access_token']}"}
-    ok(client.post(f"/api/reviews/{ids['review']}/report", headers=TH, json={"reason": "Propos faux"}), "signalement", 201)
-    ok(client.post(f"/api/reviews/{ids['review']}/reply", headers=TH, json={"reply": "Le retard venait du tissu"}), "reponse tailleur")
-    ok(client.get("/api/admin/tables/reviews?reported=true", headers=H), "avis signales")
-    ok(client.get(f"/api/admin/reviews/{ids['review']}/reports", headers=H), "liste signalements")
-    ok(client.post(f"/api/admin/reviews/{ids['review']}/reports/decide", headers=H, json={"decision": "keep"}), "decision signalement")
-    ok(client.post(f"/api/admin/reviews/{ids['review']}/reply-status", headers=H, json={"status": "hidden"}), "moderation reponse")
+    print("\n== Rubriques retirees")
+    for path in ("tables/disputes", "tables/payments", "tables/reviews", "announcements", "message-templates",
+                 "tables/audit", "system", "commission-tiers"):
+        ok(client.get(f"/api/admin/{path}", headers=H), f"{path} retire", 404)
 
     print("\n== M9 / M10 Mesure et collecte")
     ok(client.get("/api/admin/tables/measurement-sessions", headers=H), "journal des analyses")
@@ -274,13 +212,11 @@ def main() -> None:
     ok(client.get("/api/admin/collecte/objectives", headers=H), "objectifs collecte")
     ok(client.get("/api/collecte/stats", headers=H), "collecte (existant)")
 
-    print("\n== M11 / M12 Communication et support")
-    ok(client.post("/api/admin/announcements/preview", headers=H, json={"role": "client"}), "apercu audience")
-    a = ok(client.post("/api/admin/announcements", headers=H, json={"title": "Nouveauté", "body": "La fiche patron arrive", "audience": {"role": "all"}}), "annonce", 201).json()
-    check(a["recipients"] >= 2, "annonce envoyee")
-    ok(client.get("/api/admin/message-templates", headers=H), "modeles de messages")
+    print("\n== M12 Support et pages d'information")
+    pages = ok(client.get("/api/admin/pages", headers=H), "pages d'information").json()
+    check({"faq", "conditions", "confidentialite"} <= {p["slug"] for p in pages}, "pages de depart creees")
     ok(client.put("/api/admin/pages/faq", headers=H, json={"title": "FAQ", "body": "## Q\nR", "published": True}), "page FAQ")
-    ok(client.get("/api/public/pages/faq"), "page publique")
+    check(ok(client.get("/api/public/pages/faq"), "page publique").json()["body"] == "## Q\nR", "page publique a jour")
     tk = ok(client.post("/api/support/tickets", json={"name": "Visiteur", "phone": "+237699", "subject": "Aide mesure", "body": "Je n'arrive pas à mesurer"}), "contact visiteur", 201).json()
     ok(client.get("/api/admin/tables/tickets", headers=H), "file support")
     ok(client.post(f"/api/admin/tickets/{tk['id']}/messages", headers=H, json={"body": "Rappel demain"}), "reponse support", 201)
@@ -288,15 +224,17 @@ def main() -> None:
     ok(client.get(f"/api/admin/tickets/{tk['id']}", headers=H), "detail demande")
 
     print("\n== M13 Securite")
-    team = ok(client.post("/api/admin/team", headers=H, json={"full_name": "Modo", "phone": "+237600000001", "admin_role": "moderator"}), "nouveau membre", 201).json()
-    mod_login = ok(client.post("/api/auth/login", json={"phone": "+237600000001", "password": team["temporary_password"]}), "connexion moderateur").json()
+    team = ok(client.post("/api/admin/team", headers=H, json={"full_name": "Modo", "phone": "+237600000001"}), "nouveau membre", 201).json()
+    check("admin_role" not in team["member"], "plus de role a choisir")
+    mod_login = ok(client.post("/api/auth/login", json={"phone": "+237600000001", "password": team["temporary_password"]}), "connexion nouveau membre").json()
     MH = {"Authorization": f"Bearer {mod_login['access_token']}"}
-    ok(client.get("/api/admin/tables/payments", headers=MH), "moderateur interdit aux paiements", 403)
-    ok(client.get("/api/admin/tables/models", headers=MH), "moderateur autorise au catalogue")
+    ok(client.get("/api/admin/me", headers=MH), "admin/me du nouveau membre")
+    ok(client.get("/api/admin/settings", headers=MH), "nouveau membre : acces aux reglages")
+    ok(client.get("/api/admin/team", headers=MH), "equipe visible par tout administrateur")
     fin = client.post("/api/auth/login", json={"phone": "+237600000009", "password": "abc123"}).json()
-    ok(client.delete(f"/api/admin/users/{ids['client_user']}", headers={"Authorization": f"Bearer {fin['access_token']}"}), "finance ne supprime pas", 403)
-    ok(client.get("/api/admin/tables/audit", headers=H), "journal")
-    check(client.get("/api/admin/tables/audit", headers=H).json()["total"] > 10, "actions journalisees")
+    ok(client.get("/api/admin/tables/models", headers={"Authorization": f"Bearer {fin['access_token']}"}), "ancien role finance : acces complet")
+    tm = ok(client.get("/api/admin/team", headers=H), "liste equipe").json()
+    check(len(tm["members"]) == 3 and "roles" not in tm, "trois administrateurs, sans roles")
     setup = ok(client.post("/api/admin/me/2fa/setup", headers=MH), "2FA preparation").json()
     ok(client.post("/api/admin/me/2fa/enable", headers=MH, json={"code": totp.current_code(setup["secret"])}), "2FA activee")
     step = ok(client.post("/api/auth/login", json={"phone": "+237600000001", "password": team["temporary_password"]}), "connexion 2FA etape 1").json()
@@ -311,12 +249,13 @@ def main() -> None:
     other = next(s for s in sess["sessions"] if s["id"] == mod_sid)
     ok(client.post(f"/api/admin/sessions/{other['id']}/revoke", headers=H), "revocation")
     ok(client.get("/api/admin/me", headers=MH), "session revoquee refusee", 401)
-    ok(client.get("/api/admin/settings", headers=H), "reglages")
-    ok(client.put("/api/admin/settings/negotiation_max_rounds", headers=H, json={"value": 5}), "reglage nombre d'offres")
-    ok(client.put("/api/admin/settings/deposit_share", headers=H, json={"value": 3}), "reglage invalide", 400)
-    ok(client.put("/api/admin/settings/banner", headers=H, json={"value": {"enabled": True, "message": "Promo"}}), "bandeau")
+    rg = ok(client.get("/api/admin/settings", headers=H), "reglages").json()
+    check("negotiation_max_rounds" not in rg["values"] and "banner" not in rg["values"], "reglages des fonctions coupees masques")
+    ok(client.put("/api/admin/settings/guest_retention_days", headers=H, json={"value": 45}), "reglage conservation invites")
+    ok(client.put("/api/admin/settings/admin_idle_minutes", headers=H, json={"value": -5}), "reglage invalide", 400)
+    ok(client.put("/api/admin/settings/negotiation_max_rounds", headers=H, json={"value": 5}), "reglage retire", 404)
     cfg = ok(client.get("/api/public/config"), "config publique").json()
-    check(cfg["banner"]["message"] == "Promo", "bandeau public")
+    check("banner" not in cfg, "plus de bandeau")
     ok(client.put("/api/admin/settings/maintenance", headers=H, json={"value": {"enabled": True, "message": "Pause"}}), "maintenance on")
     from app.services.platform_settings import invalidate
 
@@ -325,7 +264,6 @@ def main() -> None:
     ok(client.get("/api/admin/me", headers=H), "admin accessible en maintenance")
     ok(client.put("/api/admin/settings/maintenance", headers=H, json={"value": {"enabled": False}}), "maintenance off")
     invalidate()
-    ok(client.get("/api/admin/system", headers=H), "etat technique")
     ok(client.post("/api/auth/password/reset/request", json={"phone": "+237600000000"}), "reset OTP admin bloque", 403)
 
     print("\n== M14 Croissance")

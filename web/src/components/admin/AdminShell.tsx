@@ -19,22 +19,15 @@ import {
   IconAcquisition,
   IconCatalog,
   IconCollecte,
-  IconEnquete,
-  IconComms,
   IconDashboard,
-  IconDisputes,
-  IconJournal,
+  IconEnquete,
   IconLight,
   IconLogout,
   IconMeasure,
   IconMenu,
   IconMoon,
   IconOrders,
-  IconPayments,
-  IconQueue,
-  IconReviews,
   IconSearch,
-  IconServer,
   IconSettings,
   IconShield,
   IconStats,
@@ -42,7 +35,6 @@ import {
   IconTailor,
   IconTeam,
   IconUsers,
-  IconVerify,
 } from "@/components/icons";
 
 type IconType = React.ComponentType<{ size?: number; strokeWidth?: number }>;
@@ -51,70 +43,48 @@ interface Item {
   href: string;
   label: string;
   Icon: IconType;
-  /** Permission requise (au moins une). */
-  perm: string[];
   /** Cle du compteur renvoye par /admin/counters. */
   counter?: string;
-  /** Fonctionnalite requise : masquee quand elle est coupee (A2). */
-  feature?: "tailor_verification" | "payments";
 }
 
 const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: "Pilotage",
     items: [
-      { href: "/admin/vue-ensemble", label: "Tableau de bord", Icon: IconDashboard, perm: ["dashboard"] },
-      { href: "/admin/a-traiter", label: "À traiter", Icon: IconQueue, perm: ["dashboard"] },
-      { href: "/admin/statistiques", label: "Utilisateurs & croissance", Icon: IconStats, perm: ["growth"] },
-      { href: "/admin/acquisition", label: "Acquisition", Icon: IconAcquisition, perm: ["growth"], counter: "acquisition" },
+      { href: "/admin/vue-ensemble", label: "Tableau de bord", Icon: IconDashboard },
+      { href: "/admin/statistiques", label: "Statistiques", Icon: IconStats },
+      { href: "/admin/acquisition", label: "Acquisition", Icon: IconAcquisition, counter: "acquisition" },
     ],
   },
   {
-    title: "Comptes",
+    title: "Comptes et activité",
     items: [
-      { href: "/admin/utilisateurs", label: "Utilisateurs", Icon: IconUsers, perm: ["users.read"] },
-      { href: "/admin/verifications", label: "Vérifications", Icon: IconVerify, perm: ["tailors"], counter: "verifications", feature: "tailor_verification" },
-      { href: "/admin/tailleurs", label: "Tailleurs", Icon: IconTailor, perm: ["tailors"] },
-    ],
-  },
-  {
-    title: "Activité",
-    items: [
-      { href: "/admin/commandes", label: "Commandes", Icon: IconOrders, perm: ["orders.read"], counter: "orders" },
-      { href: "/admin/litiges", label: "Litiges", Icon: IconDisputes, perm: ["disputes"], counter: "disputes" },
-      { href: "/admin/paiements", label: "Paiements", Icon: IconPayments, perm: ["payments"], counter: "payments", feature: "payments" },
-      { href: "/admin/avis", label: "Avis", Icon: IconReviews, perm: ["reviews"], counter: "reviews" },
+      { href: "/admin/utilisateurs", label: "Utilisateurs", Icon: IconUsers },
+      { href: "/admin/tailleurs", label: "Tailleurs", Icon: IconTailor },
+      { href: "/admin/commandes", label: "Commandes", Icon: IconOrders, counter: "orders" },
+      { href: "/admin/support", label: "Support", Icon: IconSupport, counter: "support" },
     ],
   },
   {
     title: "Produit",
     items: [
-      { href: "/admin/catalogue", label: "Catalogue", Icon: IconCatalog, perm: ["catalog"], counter: "catalog" },
-      { href: "/admin/mesure", label: "Mesure par photo", Icon: IconMeasure, perm: ["measure"] },
-      { href: "/admin/collecte", label: "Campagne de collecte", Icon: IconCollecte, perm: ["collecte"], counter: "collecte" },
-      { href: "/admin/enquete", label: "Enquête patrons", Icon: IconEnquete, perm: ["enquete"] },
-    ],
-  },
-  {
-    title: "Relation",
-    items: [
-      { href: "/admin/communication", label: "Communication", Icon: IconComms, perm: ["comms"] },
-      { href: "/admin/support", label: "Support", Icon: IconSupport, perm: ["support"], counter: "support" },
+      { href: "/admin/catalogue", label: "Catalogue", Icon: IconCatalog, counter: "catalog" },
+      { href: "/admin/mesure", label: "Mesure par photo", Icon: IconMeasure },
+      { href: "/admin/collecte", label: "Campagne de collecte", Icon: IconCollecte, counter: "collecte" },
+      { href: "/admin/enquete", label: "Enquête patrons", Icon: IconEnquete },
     ],
   },
   {
     title: "Administration",
     items: [
-      { href: "/admin/equipe", label: "Équipe et rôles", Icon: IconTeam, perm: ["security"] },
-      { href: "/admin/journal", label: "Journal des actions", Icon: IconJournal, perm: ["security"] },
-      { href: "/admin/reglages", label: "Réglages", Icon: IconSettings, perm: ["security"] },
-      { href: "/admin/etat", label: "État technique", Icon: IconServer, perm: ["security"] },
-      { href: "/admin/securite", label: "Mon compte", Icon: IconShield, perm: [] },
+      { href: "/admin/equipe", label: "Équipe", Icon: IconTeam },
+      { href: "/admin/reglages", label: "Réglages", Icon: IconSettings },
+      { href: "/admin/securite", label: "Mon compte", Icon: IconShield },
     ],
   },
 ];
 
-const BOTTOM = ["/admin/vue-ensemble", "/admin/a-traiter", "/admin/utilisateurs", "/admin/commandes"];
+const BOTTOM = ["/admin/vue-ensemble", "/admin/utilisateurs", "/admin/commandes", "/admin/support"];
 
 function useTheme(): [string, () => void] {
   const [theme, setTheme] = useState("light");
@@ -177,7 +147,7 @@ function NavItems({ items, counters, onNavigate }: { items: Item[]; counters: Re
 }
 
 function Navigation({ onNavigate }: { onNavigate?: () => void }) {
-  const { me, counters, can, features, logout } = useAdmin();
+  const { me, counters, logout } = useAdmin();
   return (
     <>
       <div className="adBrand">
@@ -187,24 +157,16 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
           <div className="adBrandSub">Administration</div>
         </div>
       </div>
-      {GROUPS.map((g) => {
-        const items = g.items.filter(
-          (i) =>
-            (i.perm.length === 0 || i.perm.some((p) => can(p))) &&
-            (!i.feature || features[i.feature])
-        );
-        if (!items.length) return null;
-        return (
-          <nav key={g.title} className="adNavGroup" aria-label={g.title}>
-            <div className="adNavGroupTitle">{g.title}</div>
-            <NavItems items={items} counters={counters} onNavigate={onNavigate} />
-          </nav>
-        );
-      })}
+      {GROUPS.map((g) => (
+        <nav key={g.title} className="adNavGroup" aria-label={g.title}>
+          <div className="adNavGroupTitle">{g.title}</div>
+          <NavItems items={g.items} counters={counters} onNavigate={onNavigate} />
+        </nav>
+      ))}
       {me && (
         <div className="adUserBox">
           <strong>{me.full_name}</strong>
-          <div className="adHint">{me.admin_role_label}</div>
+          <div className="adHint">Administrateur</div>
           <button className="btn btnGhost adBtnSm" style={{ marginTop: 8, paddingLeft: 0 }} onClick={logout}>
             <IconLogout size={16} /> Se déconnecter
           </button>
@@ -304,7 +266,7 @@ function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => void })
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { counters, can } = useAdmin();
+  const { counters } = useAdmin();
   const [drawer, setDrawer] = useState(false);
   const [search, setSearch] = useState(false);
   const [theme, toggleTheme] = useTheme();
@@ -324,7 +286,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const all = GROUPS.flatMap((g) => g.items);
   const current = all.find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`));
-  const bottom = all.filter((i) => BOTTOM.includes(i.href) && i.perm.some((p) => can(p)));
+  const bottom = all.filter((i) => BOTTOM.includes(i.href));
   const closeSearch = useCallback(() => setSearch(false), []);
   const totalPending = Object.values(counters).reduce((a, b) => a + b, 0);
 

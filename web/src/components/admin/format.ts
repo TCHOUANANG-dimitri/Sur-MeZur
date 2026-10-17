@@ -102,49 +102,10 @@ export const ORDER_STATUS: Record<string, { label: string; tone: "success" | "er
   declined: { label: "Refusée", tone: "error" },
 };
 
-export const VERIFICATION_STATUS: Record<string, { label: string; tone: "success" | "error" | "neutral" | "pending" }> = {
-  pending: { label: "En attente", tone: "pending" },
-  approved: { label: "Vérifié", tone: "success" },
-  rejected: { label: "Refusé", tone: "error" },
-  info_requested: { label: "Complément demandé", tone: "neutral" },
-};
-
-export const DISPUTE_STATUS: Record<string, string> = {
-  open: "Ouvert",
-  resolved_client: "Tranché pour le client",
-  resolved_tailor: "Tranché pour le tailleur",
-  resolved_alteration: "Retouche demandée",
-  dismissed: "Réclamation rejetée",
-};
-
-export const DISPUTE_CATEGORY: Record<string, string> = {
-  retard: "Retard",
-  mesures: "Mesures",
-  qualite: "Qualité",
-  non_livraison: "Non livré",
-  paiement: "Paiement",
-  communication: "Communication",
-  autre: "Autre",
-};
-
-export const PAYMENT_STATUS: Record<string, { label: string; tone: "success" | "error" | "neutral" | "pending" }> = {
-  pending: { label: "En attente", tone: "pending" },
-  paid: { label: "Payé", tone: "success" },
-  released: { label: "Libéré", tone: "success" },
-  refunded: { label: "Remboursé", tone: "neutral" },
-  failed: { label: "Échec", tone: "error" },
-};
-
 export const MODEL_STATUS: Record<string, { label: string; tone: "success" | "error" | "neutral" | "pending" }> = {
   published: { label: "Publié", tone: "success" },
   pending: { label: "En attente", tone: "pending" },
   rejected: { label: "Refusé", tone: "error" },
-  hidden: { label: "Masqué", tone: "neutral" },
-};
-
-export const REVIEW_STATUS: Record<string, { label: string; tone: "success" | "error" | "neutral" | "pending" }> = {
-  visible: { label: "Visible", tone: "success" },
-  flagged: { label: "Signalé", tone: "pending" },
   hidden: { label: "Masqué", tone: "neutral" },
 };
 

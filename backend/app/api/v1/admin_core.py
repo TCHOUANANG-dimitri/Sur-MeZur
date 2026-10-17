@@ -20,16 +20,12 @@ from app.models.acquisition import UserAcquisition
 from app.models.admin import AdminNote, SupportTicket
 from app.models.catalog import GarmentModel
 from app.models.collecte import DatasetSubject
-from app.models.enums import ModerationStatus, VerificationStatus
 from app.models.measurements import Measurement, MeasurementSession
-from app.models.misc import Review
-from app.models.operations import Refund, ReviewReport
 from app.models.orders import Offer, Order
-from app.models.payments import Payment
-from app.models.users import ClientProfile, TailorProfile, User, VerificationDocument
+from app.models.users import ClientProfile, TailorProfile, User
 from app.services import audit
 from app.services.activity import as_utc, local_day, utcnow
-from app.services.admin_perms import ADMIN_ROLES, admin_role_of, has_perm, permissions_of, require_perm
+from app.services.admin_perms import has_perm, require_perm
 from app.services.platform_settings import get_setting
 from app.services.user_stats import (
     Segment,
@@ -38,7 +34,6 @@ from app.services.user_stats import (
     load_users,
     local_start_utc,
     metric_value,
-    money_between,
     pct_change,
     previous_range,
     resolve_range,
@@ -53,27 +48,16 @@ router = APIRouter(prefix="/admin", tags=["admin-web"], dependencies=[Depends(re
 
 @router.get("/me")
 def admin_me(user: User = Depends(require_roles("admin"))):
-    role = admin_role_of(user)
     return {
         "id": user.id,
         "full_name": user.full_name,
         "phone": user.phone,
-        "admin_role": role,
-        "admin_role_label": ADMIN_ROLES.get(role, role),
-        "permissions": permissions_of(user),
         "totp_enabled": bool(user.totp_enabled),
         "idle_minutes": int(get_setting("admin_idle_minutes") or 0),
     }
 
 
 # --- 0.2 Compteurs du menu, 1.2 file des actions -------------------------------------
-
-
-def _pending_verifications(db: Session):
-    submitted = db.query(VerificationDocument.user_id).distinct()
-    return db.query(TailorProfile).filter(
-        TailorProfile.user_id.in_(submitted), TailorProfile.verification_status == VerificationStatus.pending
-    )
 
 
 def _late_orders(db: Session) -> list[Order]:
@@ -97,26 +81,9 @@ def counters(user: User = Depends(require_roles("admin")), db: Session = Depends
     """Nombre d'elements en attente par entree du menu. Appele toutes les
     minutes par l'interface, avec l'en-tete X-SMZ-Background (ne prolonge
     pas la session)."""
-    from app.services.platform_settings import get_setting as get_platform_setting
-
-    features = get_platform_setting("features") or {}
-    verification_on = bool(features.get("tailor_verification", False))
-    payments_on = bool(features.get("payments", False))
     out: dict[str, int] = {}
-    if has_perm(user, "tailors") and verification_on:
-        out["verifications"] = _pending_verifications(db).count()
-    if has_perm(user, "disputes"):
-        out["disputes"] = db.query(func.count(Order.id)).filter(Order.dispute_status == "open").scalar() or 0
-    if has_perm(user, "reviews"):
-        out["reviews"] = (
-            db.query(func.count(Review.id)).filter(Review.moderation_status == ModerationStatus.flagged).scalar() or 0
-        )
     if has_perm(user, "catalog"):
         out["catalog"] = db.query(func.count(GarmentModel.id)).filter(GarmentModel.status == "pending").scalar() or 0
-    if has_perm(user, "payments") and payments_on:
-        out["payments"] = (
-            db.query(func.count(Payment.id)).filter(Payment.status == "failed").scalar() or 0
-        ) + (db.query(func.count(Refund.id)).filter(Refund.status == "pending").scalar() or 0)
     if has_perm(user, "support"):
         out["support"] = db.query(func.count(SupportTicket.id)).filter(SupportTicket.status == "new").scalar() or 0
     if has_perm(user, "growth"):
@@ -144,48 +111,14 @@ def counters(user: User = Depends(require_roles("admin")), db: Session = Depends
 
 @router.get("/queue")
 def action_queue(user: User = Depends(require_roles("admin")), db: Session = Depends(get_db)):
-    """1.2 — toutes les taches en attente, de la plus ancienne a la plus
-    recente, avec un lien vers chacune."""
-    from app.services.platform_settings import get_setting as get_platform_setting
-
-    features = get_platform_setting("features") or {}
-    verification_on = bool(features.get("tailor_verification", False))
-    payments_on = bool(features.get("payments", False))
+    """Taches en attente (panneau du tableau de bord), de la plus ancienne a
+    la plus recente, avec un lien vers chacune."""
     items: list[dict] = []
-    if has_perm(user, "tailors") and verification_on:
-        for tp in _pending_verifications(db).all():
-            items.append({
-                "type": "verification", "label": "Vérification de tailleur", "title": tp.shop_name,
-                "since": iso(tp.updated_at), "href": f"/admin/verifications?id={tp.id}",
-            })
-    if has_perm(user, "disputes"):
-        for o in db.query(Order).filter(Order.dispute_status == "open").all():
-            items.append({
-                "type": "dispute", "label": "Litige ouvert", "title": f"Commande {o.id[:8].upper()}",
-                "since": iso(o.dispute_opened_at or o.updated_at), "href": f"/admin/litiges/{o.id}",
-            })
-    if has_perm(user, "reviews"):
-        for r in db.query(Review).filter(Review.moderation_status == ModerationStatus.flagged).all():
-            items.append({
-                "type": "review", "label": "Avis signalé", "title": f"{r.stars}★ — {(r.comment or '')[:60]}",
-                "since": iso(r.updated_at), "href": "/admin/avis?statut=flagged",
-            })
     if has_perm(user, "catalog"):
         for m in db.query(GarmentModel).filter(GarmentModel.status == "pending").all():
             items.append({
                 "type": "model", "label": "Modèle à modérer", "title": m.name,
                 "since": iso(m.created_at), "href": "/admin/catalogue?onglet=moderation",
-            })
-    if has_perm(user, "payments") and payments_on:
-        for p in db.query(Payment).filter(Payment.status == "failed").all():
-            items.append({
-                "type": "payment", "label": "Paiement en échec", "title": f"{float(p.amount):,.0f} FCFA".replace(",", " "),
-                "since": iso(p.updated_at), "href": "/admin/paiements?onglet=echecs",
-            })
-        for r in db.query(Refund).filter(Refund.status == "pending").all():
-            items.append({
-                "type": "refund", "label": "Remboursement à effectuer", "title": f"{float(r.amount):,.0f} FCFA".replace(",", " "),
-                "since": iso(r.created_at), "href": "/admin/paiements?onglet=remboursements",
             })
     if has_perm(user, "support"):
         for t in db.query(SupportTicket).filter(SupportTicket.status == "new").all():
@@ -232,10 +165,10 @@ def global_search(
         for o in orders:
             row = order_row(o, clients, tailors)
             results.append({
-                "type": "dispute" if o.dispute_status == "open" else "order",
+                "type": "order",
                 "title": f"Commande {row['ref']}",
                 "subtitle": f"{row['client_name'] or '?'} → {row['tailor_name'] or '?'}",
-                "href": f"/admin/litiges/{o.id}" if o.dispute_status == "open" else f"/admin/commandes/{o.id}",
+                "href": f"/admin/commandes/{o.id}",
             })
     if has_perm(user, "catalog"):
         for m in db.query(GarmentModel).filter(GarmentModel.name.ilike(like)).limit(5):
@@ -316,7 +249,6 @@ def _kpis(db: Session, start: date, end: date) -> dict:
 
     sessions = db.query(MeasurementSession.status, MeasurementSession.created_at).all()
     measured = [s for s in sessions if between(s[1])]
-    cash, commission = money_between(db, start, end)
     return {
         "new_users": sum(1 for u in users if in_range(u.created, start, end)),
         "new_clients": sum(1 for u in users if u.role == "client" and in_range(u.created, start, end)),
@@ -325,9 +257,6 @@ def _kpis(db: Session, start: date, end: date) -> dict:
         "measurements": sum(1 for s in measured if str(getattr(s[0], "value", s[0])) == "ready"),
         "measurement_failures": sum(1 for s in measured if str(getattr(s[0], "value", s[0])) == "failed"),
         "orders": sum(1 for (c,) in db.query(Order.created_at).all() if between(c)),
-        "disputes": sum(1 for (c,) in db.query(Order.dispute_opened_at).filter(Order.dispute_opened_at.isnot(None)).all() if between(c)),
-        "cash_in": cash,
-        "commission": commission,
     }
 
 

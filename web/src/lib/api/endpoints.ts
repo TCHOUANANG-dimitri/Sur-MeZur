@@ -24,7 +24,6 @@ import type {
   TokenResponse,
   TryonSession,
   User,
-  VerificationDocument,
 } from "./types";
 
 // --- Auth --------------------------------------------------------------
@@ -97,9 +96,8 @@ export const UsersApi = {
     api.post<{ changed: boolean }>("/me/password", { current_password, new_password }),
 };
 
-// --- Pages publiques : bandeau, maintenance, pages d'information, contact ---
+// --- Pages publiques : maintenance, pages d'information, contact ---
 export interface PublicConfig {
-  banner: { enabled: boolean; message: string; tone: string; link_url?: string; link_label?: string; ends_at?: string | null };
   maintenance: { enabled: boolean; message: string };
   cities: { name: string; quartiers: string[] }[];
   signup_source_question: boolean;
@@ -277,79 +275,4 @@ export const DeliveriesApi = {
 export const NotificationsApi = {
   list: () => api.get<Notification[]>("/notifications"),
   markAllRead: () => api.post<{ marked_read: boolean }>("/notifications/read"),
-};
-
-// --- Admin ---------------------------------------------------------------
-// --- Admin ---------------------------------------------------------------
-/** Compteurs de la vue d'ensemble. Meme forme que `AdminStatsOut` cote
- *  backend (app/api/v1/admin.py) et que le type du mobile. */
-export interface AdminStats {
-  clients: number;
-  tailors: number;
-  tailors_pending: number;
-  suspended: number;
-  orders_total: number;
-  orders_by_status: Record<string, number>;
-  open_disputes: number;
-  pending_reviews: number;
-  gmv: number;
-  commission_earned: number;
-}
-
-export const AdminApi = {
-  pendingVerifications: (status?: string) => {
-    const qs = status ? `?status_filter=${status}` : "";
-    return api.get<TailorProfile[]>(`/admin/verifications${qs}`);
-  },
-  getVerificationDocuments: (tailorId: string) =>
-    api.get<VerificationDocument[]>(`/admin/verifications/${tailorId}/documents`),
-  decideVerification: (tailorId: string, status: "approved" | "rejected", reason?: string) =>
-    api.post<TailorProfile>(`/admin/verifications/${tailorId}/decide`, { status, reason }),
-  disputes: () => api.get<Order[]>("/admin/disputes"),
-  resolveDispute: (orderId: string, resolution: string, note?: string) =>
-    api.post<Order>(`/admin/disputes/${orderId}/resolve`, { resolution, note }),
-  reviews: () => api.get<Review[]>("/admin/reviews"),
-  moderateReview: (reviewId: string, status_: string) =>
-    api.post<Review>(`/admin/reviews/${reviewId}/moderate?status_=${status_}`),
-  commissionTiers: () =>
-    api.get<{ id: string; min_price: number; max_price: number | null; rate: number }[]>(
-      "/admin/commission-tiers"
-    ),
-  categories: () => api.get<Category[]>("/categories"),
-  createCategory: (body: { name: string; gender: string }) =>
-    api.post<Category>("/admin/categories", body),
-  updateCategory: (catId: string, body: { name?: string; gender?: string }) =>
-    api.patch<Category>(`/admin/categories/${catId}`, body),
-  deleteCategory: (catId: string) =>
-    api.delete(`/admin/categories/${catId}`),
-  models: (params: { category_id?: string } = {}) => {
-    const qs = new URLSearchParams();
-    if (params.category_id) qs.set("category_id", params.category_id);
-    return api.get<GarmentModel[]>(`/models?${qs.toString()}`);
-  },
-  createModel: (body: { name: string; description?: string; category_id: string; base_price?: number; style_tags?: string[]; thumbnail_color?: string }) =>
-    api.post<GarmentModel>("/admin/models", body),
-  updateModel: (modelId: string, body: { name?: string; description?: string; category_id?: string; base_price?: number; style_tags?: string[]; thumbnail_color?: string }) =>
-    api.patch<GarmentModel>(`/admin/models/${modelId}`, body),
-  uploadModelPhotos: (modelId: string, files: File[]) => {
-    const fd = new FormData();
-    files.forEach((f) => fd.append("files", f));
-    // postForm et non post : post serialise le corps en JSON, ce qui
-    // envoyait un objet vide au lieu des fichiers.
-    return api.postForm<GarmentModel>(`/admin/models/${modelId}/photos`, fd);
-  },
-  // --- Reprises du mobile : absentes de l'ancien frontend Vite, necessaires
-  // pour que l'admin web offre les memes ecrans que l'admin mobile.
-  stats: () => api.get<AdminStats>("/admin/stats"),
-  users: (params: { role?: string; q?: string; active?: boolean } = {}) => {
-    const qs = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => v !== undefined && v !== "" && qs.set(k, String(v)));
-    return api.get<User[]>(`/admin/users?${qs.toString()}`);
-  },
-  setUserActive: (userId: string, is_active: boolean) =>
-    api.post<User>(`/admin/users/${userId}/active`, { is_active }),
-  allOrders: (status_filter?: string) =>
-    api.get<Order[]>(`/admin/orders${status_filter ? `?status_filter=${status_filter}` : ""}`),
-  deleteModel: (modelId: string) =>
-    api.delete(`/admin/models/${modelId}`),
 };

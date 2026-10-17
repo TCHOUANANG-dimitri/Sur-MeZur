@@ -97,7 +97,8 @@ def main() -> None:
         "/api/auth/login", json={"phone": "+237600000009", "password": "abc123"}).json()["access_token"]}
 
     print("\n== Liens (admin)")
-    ok(client.post("/api/admin/enquete/invites", json={"label": "X"}, headers=F), "finance n'a pas l'enquete", 403)
+    # Chaque administrateur a tous les droits, quel que soit son ancien role.
+    ok(client.get("/api/admin/enquete/invites", headers=F), "ancien role finance : acces a l'enquete")
     a = ok(client.post("/api/admin/enquete/invites", json={"label": "Maman Rose"}, headers=H), "lien A", 201).json()
     b = ok(client.post("/api/admin/enquete/invites", json={"label": "Atelier B"}, headers=H), "lien B", 201).json()
     ta, tb = a["token"], b["token"]

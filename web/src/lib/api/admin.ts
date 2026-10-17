@@ -39,9 +39,6 @@ export interface AdminMe {
   id: string;
   full_name: string;
   phone: string;
-  admin_role: string;
-  admin_role_label: string;
-  permissions: string[];
   totp_enabled: boolean;
   idle_minutes: number;
 }
@@ -193,15 +190,6 @@ export interface MeasurementItem {
   updated_at: string;
 }
 
-export interface ReviewItem {
-  id: string;
-  order_id: string;
-  stars: number;
-  comment: string | null;
-  moderation_status: string;
-  created_at: string;
-}
-
 export interface UserDossier {
   user: {
     id: string;
@@ -232,8 +220,6 @@ export interface UserDossier {
     city: string | null;
     quartier: string | null;
     bio: string | null;
-    verification_status: string;
-    rating_avg: number;
     completed_orders_count: number;
     avg_response_minutes: number;
     is_featured: boolean;
@@ -241,9 +227,6 @@ export interface UserDossier {
   measurements: MeasurementItem[];
   measurement_sessions: { id: string; status: string; error_message: string | null; platform: string | null; created_at: string }[];
   orders: OrderRow[];
-  disputes: OrderRow[];
-  reviews_given: ReviewItem[];
-  reviews_received: ReviewItem[];
   logins: { id: string; success: boolean; method: string; platform: string | null; ip: string | null; user_agent: string | null; created_at: string }[];
   tickets: { id: string; number: number; subject: string; status: string; created_at: string }[];
   acquisition: {
@@ -267,12 +250,6 @@ export interface UserDossier {
   can: { write: boolean; delete: boolean; acquisition: boolean };
 }
 
-export interface DuplicatePair {
-  score: number;
-  reasons: string[];
-  users: { id: string; full_name: string; phone: string; role: string; created_at: string; is_active: boolean }[];
-}
-
 export const Users = {
   table: (p: Params) => table<UserRow>("/admin/tables/users", p),
   dossier: (id: string) => api.get<UserDossier>(`/admin/users/${id}`),
@@ -293,43 +270,9 @@ export const Users = {
     ),
   guestsPreview: () => api.get<{ retention_days: number; guests_total: number; to_delete: number }>("/admin/guests/cleanup"),
   guestsCleanup: () => api.post<{ deleted: number }>("/admin/guests/cleanup"),
-  duplicates: () => api.get<{ pairs: DuplicatePair[] }>("/admin/users-duplicates"),
-  merge: (primary_id: string, secondary_id: string) =>
-    api.post<{ merged: boolean }>("/admin/users-merge", { primary_id, secondary_id }),
 };
 
 // --- M3 Tailleurs ------------------------------------------------------------------
-
-export interface VerificationRow {
-  id: string;
-  user_id: string;
-  shop_name: string;
-  full_name: string;
-  phone: string;
-  city: string | null;
-  quartier: string | null;
-  verification_status: string;
-  updated_at: string;
-}
-
-export interface VerificationDossier {
-  tailor: {
-    id: string;
-    user_id: string;
-    shop_name: string;
-    tailor_type: string;
-    bio: string | null;
-    city: string | null;
-    quartier: string | null;
-    lat: number | null;
-    lng: number | null;
-    verification_status: string;
-    updated_at: string;
-  };
-  user: { id: string; full_name: string; phone: string; created_at: string } | null;
-  documents: { id: string; type: string; label: string; file_url: string; status: string; created_at: string }[];
-  history: { id: string; action: string; reason: string | null; missing_documents: string[]; actor_name: string | null; created_at: string }[];
-}
 
 export interface TailorRow {
   id: string;
@@ -339,11 +282,8 @@ export interface TailorRow {
   phone: string;
   city: string | null;
   quartier: string | null;
-  verification_status: string;
-  rating_avg: number;
   orders: number;
   delivered: number;
-  dispute_rate: number;
   late_rate: number;
   avg_response_minutes: number;
   is_active: boolean;
@@ -353,19 +293,13 @@ export interface TailorRow {
 }
 
 export const Tailors = {
-  verifications: (status?: string) => api.get<VerificationRow[]>(`/admin/verifications-table${qs({ status })}`),
-  dossier: (id: string) => api.get<VerificationDossier>(`/admin/verifications/${id}/dossier`),
-  decide: (id: string, status: "approved" | "rejected", reason?: string) =>
-    api.post<unknown>(`/admin/verifications/${id}/decide`, { status, reason }),
-  requestInfo: (id: string, missing_documents: string[], message: string) =>
-    api.post<unknown>(`/admin/verifications/${id}/request-info`, { missing_documents, message }),
   table: (p: Params) => table<TailorRow>("/admin/tables/tailors", p),
   featured: (id: string, is_featured: boolean, rank?: number | null) =>
     api.post<unknown>(`/admin/tailors/${id}/featured`, { is_featured, rank }),
   map: () =>
     api.get<{
-      cities: { city: string; total: number; verified: number; quartiers: { name: string; verified: number }[] }[];
-      points: { id: string; shop_name: string; lat: number; lng: number; verified: boolean; city: string | null }[];
+      cities: { city: string; total: number; quartiers: { name: string; total: number }[] }[];
+      points: { id: string; shop_name: string; lat: number; lng: number; city: string | null }[];
     }>("/admin/tailors/map"),
 };
 
@@ -487,208 +421,36 @@ export const Catalog = {
   deleteCategory: (id: string) => api.delete<void>(`/admin/categories/${id}`),
 };
 
-// --- M5 / M7 Commandes et litiges -------------------------------------------------------
+// --- M5 Commandes -------------------------------------------------------------------------
 
 export interface OrderDossier {
   order: OrderRow & {
     client_notes: string | null;
     reception_mode: string;
     priority: string;
-    delivery_fee: number | null;
-    current_offer_round: number;
-    dispute_note: string | null;
-    dispute_opened_by: string | null;
-    dispute_resolved_at: string | null;
-    dispute_refund_amount: number | null;
     cancel_reason: string | null;
     accessories: unknown[];
   };
   client: { id: string; full_name: string; phone: string | null; role: string; is_active: boolean } | null;
   tailor: { id: string; full_name: string; phone: string | null; tailor_id: string; shop_name: string; city: string | null } | null;
   model: { id: string; name: string; photo_url: string | null } | null;
-  ready_to_wear: { id: string; name: string; photo_url: string | null } | null;
   fabric: { id: string; name: string; color_hex: string } | null;
   measurement: { id: string; height_cm: number; gender: string | null; source: string; version: number; data: Record<string, number>; created_at: string } | null;
-  offers: { id: string; actor: string; round: number; amount: number; delay_days: number | null; status: string; created_at: string }[];
-  quotes: { id: string; line_items: { label: string; amount: number }[]; total: number; delay_days: number; commission_rate: number; commission_amount: number; net_to_tailor: number; accepted: boolean; created_at: string }[];
-  payments: { id: string; phase: string; provider: string; amount: number; status: string; provider_txn_ref: string; created_at: string }[];
-  split: { total: number; deposit: number; tailor_immediate: number; escrow: number; balance: number; escrow_status: string; released_at: string | null } | null;
-  refunds: { id: string; amount: number; reason: string; status: string; origin: string; created_at: string; completed_at: string | null }[];
-  delivery: { mode: string; fee: number; confirmed_by_client: boolean; confirmed_at: string | null } | null;
+  delivery: { mode: string; confirmed_by_client: boolean; confirmed_at: string | null } | null;
   pattern: { svg_url: string | null; pdf_url: string | null; sent_at: string | null } | null;
-  review: { id: string; stars: number; comment: string | null } | null;
   fit_feedbacks: { id: string; result: string; adjustments: { measure: string; delta_cm: number; note?: string }[]; comment: string | null; source: string; created_at: string }[];
-  dispute_messages: { id: string; author_name: string; author_role: string; audience: string; body: string; attachment_url: string | null; requests_photo: boolean; created_at: string }[];
   timeline: { at: string | null; kind: string; title: string; detail: string | null }[];
-}
-
-export interface DisputeStats {
-  open: number;
-  overdue: number;
-  alert_days: number;
-  avg_open_age_days: number | null;
-  avg_resolution_days: number | null;
-  by_category: Record<string, number>;
-  by_outcome: Record<string, number>;
-  opened_by: Record<string, number>;
 }
 
 export const Orders = {
   table: (p: Params) => table<OrderRow>("/admin/tables/orders", p),
   dossier: (id: string) => api.get<OrderDossier>(`/admin/orders/${id}/dossier`),
-  cancel: (id: string, reason: string, refund_amount?: number | null) =>
-    api.post<unknown>(`/admin/orders/${id}/cancel`, { reason, refund_amount }),
+  cancel: (id: string, reason: string) => api.post<unknown>(`/admin/orders/${id}/cancel`, { reason }),
   forceStatus: (id: string, status: string, reason: string) =>
     api.post<unknown>(`/admin/orders/${id}/force-status`, { status, reason }),
-  resetNegotiation: (id: string, reason: string) => api.post<unknown>(`/admin/orders/${id}/reset-negotiation`, { reason }),
   alerts: () => api.get<{ items: OrderRow[]; no_response_days: number }>("/admin/orders-alerts"),
   fitFeedback: (id: string, body: { result: string; adjustments: { measure: string; delta_cm: number; note?: string }[]; comment?: string }) =>
     api.post<unknown>(`/admin/orders/${id}/fit-feedback`, body),
-  disputes: (p: Params) => table<OrderRow>("/admin/tables/disputes", p),
-  disputeMessage: (id: string, audience: string, body: string, requests_photo: boolean) =>
-    api.post<unknown>(`/admin/disputes/${id}/messages`, { audience, body, requests_photo }),
-  decide: (id: string, decision: string, reason: string, amount?: number | null) =>
-    api.post<{ dispute_status: string; refund_amount: number | null }>(`/admin/disputes/${id}/decide`, { decision, reason, amount }),
-  disputeStats: () => api.get<DisputeStats>("/admin/disputes-stats"),
-};
-
-// --- M6 Paiements -------------------------------------------------------------------------
-
-export interface PaymentRow {
-  id: string;
-  order_id: string;
-  order_ref: string;
-  client_name: string | null;
-  client_user_id: string | null;
-  tailor_name: string | null;
-  phase: string;
-  phase_label: string;
-  provider: string;
-  provider_label: string;
-  amount: number;
-  status: string;
-  provider_txn_ref: string;
-  psp_ref: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PayoutSummaryRow {
-  tailor_id: string;
-  shop_name: string;
-  user_id: string | null;
-  orders: number;
-  due_total: number;
-  paid: number;
-  balance: number;
-  held_in_escrow: number;
-  commission: number;
-  refunded: number;
-}
-
-export interface RefundRow {
-  id: string;
-  order_id: string;
-  order_ref: string;
-  amount: number;
-  origin: string;
-  reason: string;
-  status: string;
-  provider_ref: string | null;
-  created_at: string;
-  completed_at: string | null;
-}
-
-export interface ReconciliationReport {
-  lines: number;
-  matched: number;
-  mismatched: { reference: string; platform_amount: number; operator_amount: number; payment_id: string; order_id: string }[];
-  unknown: { reference: string; amount: number | null; date: string | null; status: string }[];
-  missing_in_statement: { reference: string; amount: number; payment_id: string; order_id: string; date: string }[];
-  period: [string, string] | null;
-}
-
-export interface Receipt {
-  number: string;
-  date: string;
-  status: string;
-  amount: number;
-  phase: string;
-  provider: string;
-  provider_txn_ref: string;
-  order_ref: string;
-  order_total: number | null;
-  client: { name: string; phone: string } | null;
-  tailor: { name: string; city: string | null } | null;
-}
-
-export interface Statement {
-  summary: { month: string; cash_in: number; commission: number; operator_fees: number; payouts: number; refunds: number; net: number };
-  lines: { date: string; type: string; reference: string; order_ref: string; amount: number; operator_fee: number }[];
-}
-
-export const Payments = {
-  table: (p: Params) => table<PaymentRow>("/admin/tables/payments", p),
-  remind: (id: string) => api.post<unknown>(`/admin/payments/${id}/remind`),
-  setStatus: (id: string, status: "paid" | "failed", reason: string) =>
-    api.post<unknown>(`/admin/payments/${id}/status`, { status, reason }),
-  payoutSummary: () =>
-    api.get<{ tailors: PayoutSummaryRow[]; totals: Record<string, number> }>("/admin/payouts/summary"),
-  recordPayout: (body: { tailor_id: string; amount: number; reference?: string; note?: string; order_id?: string; kind?: string }) =>
-    api.post<{ id: string }>("/admin/payouts", body),
-  payouts: (p: Params) =>
-    table<{ id: string; tailor_id: string; shop_name: string; amount: number; kind: string; reference: string | null; order_ref: string | null; note: string | null; paid_at: string }>(
-      "/admin/tables/payouts",
-      p
-    ),
-  refunds: (p: Params) => table<RefundRow>("/admin/tables/refunds", p),
-  createRefund: (order_id: string, amount: number, reason: string) =>
-    api.post<{ id: string }>("/admin/refunds", { order_id, amount, reason }),
-  refundStatus: (id: string, status: "completed" | "failed" | "cancelled", provider_ref?: string) =>
-    api.post<unknown>(`/admin/refunds/${id}/status`, { status, provider_ref }),
-  reconcile: (file: File) => {
-    const fd = new FormData();
-    fd.append("file", file);
-    return api.postForm<ReconciliationReport>("/admin/reconciliation", fd);
-  },
-  receipt: (id: string) => api.get<Receipt>(`/admin/payments/${id}/receipt`),
-  statement: (month: string, operator_fee_rate: number) =>
-    api.get<Statement>(`/admin/statements/monthly${qs({ month, operator_fee_rate })}`),
-  statementCsv: (month: string, operator_fee_rate: number) =>
-    downloadFile(`/admin/statements/monthly${qs({ month, operator_fee_rate, format: "csv" })}`, `releve-${month}.csv`),
-  tiers: () => api.get<{ id: string; min_price: number; max_price: number | null; rate: number }[]>("/admin/commission-tiers"),
-  createTier: (body: { min_price: number; max_price: number | null; rate: number }) => api.post<unknown>("/admin/commission-tiers", body),
-  updateTier: (id: string, body: { min_price: number; max_price: number | null; rate: number }) =>
-    api.patch<unknown>(`/admin/commission-tiers/${id}`, body),
-  deleteTier: (id: string) => api.delete<void>(`/admin/commission-tiers/${id}`),
-};
-
-// --- M8 Avis --------------------------------------------------------------------------------
-
-export interface ReviewRow {
-  id: string;
-  order_id: string;
-  stars: number;
-  comment: string | null;
-  client_name: string | null;
-  tailor_id: string;
-  tailor_name: string | null;
-  moderation_status: string;
-  reports: number;
-  tailor_reply: string | null;
-  tailor_reply_at: string | null;
-  reply_status: string | null;
-  created_at: string;
-}
-
-export const Reviews = {
-  table: (p: Params) => table<ReviewRow>("/admin/tables/reviews", p),
-  moderate: (id: string, status: string) => api.post<unknown>(`/admin/reviews/${id}/moderate?status_=${status}`),
-  reports: (id: string) => api.get<{ id: string; reporter: string | null; reason: string; status: string; created_at: string }[]>(`/admin/reviews/${id}/reports`),
-  decideReports: (id: string, decision: "hide" | "keep", reason?: string) =>
-    api.post<unknown>(`/admin/reviews/${id}/reports/decide`, { decision, reason }),
-  replyStatus: (id: string, status: "visible" | "hidden") => api.post<unknown>(`/admin/reviews/${id}/reply-status`, { status }),
-  bulk: (ids: string[], status: string) => api.post<unknown>("/admin/reviews/bulk", { ids, status }),
 };
 
 // --- M9 / M10 Mesure et collecte ----------------------------------------------------------------
@@ -898,23 +660,7 @@ export const Enquete = {
   lien: (token: string) => `${(process.env.NEXT_PUBLIC_ENQUETE_URL ?? "").replace(/\/$/, "")}/${token}`,
 };
 
-// --- M11 Communication -------------------------------------------------------------------------
-
-export interface Audience {
-  role: "all" | "client" | "tailor";
-  city?: string | null;
-  active_days?: number | null;
-  verified_only?: boolean;
-}
-
-export interface Template {
-  id: string;
-  category: string;
-  category_label: string;
-  title: string;
-  body: string;
-  updated_at: string;
-}
+// --- M12 Support et pages d'information -------------------------------------------------
 
 export interface InfoPage {
   slug: string;
@@ -924,25 +670,6 @@ export interface InfoPage {
   updated_at: string;
 }
 
-export const Comms = {
-  preview: (a: Audience) => api.post<{ recipients: number }>("/admin/announcements/preview", a),
-  send: (title: string, body: string, audience: Audience) =>
-    api.post<{ id: string; recipients: number }>("/admin/announcements", { title, body, audience }),
-  announcements: () =>
-    api.get<{ id: string; title: string; body: string; audience: Audience; recipients_count: number; author_name: string; created_at: string }[]>(
-      "/admin/announcements"
-    ),
-  templates: (category?: string) =>
-    api.get<{ categories: Record<string, string>; items: Template[] }>(`/admin/message-templates${qs({ category })}`),
-  createTemplate: (body: { category: string; title: string; body: string }) => api.post<Template>("/admin/message-templates", body),
-  updateTemplate: (id: string, body: { category: string; title: string; body: string }) =>
-    api.patch<Template>(`/admin/message-templates/${id}`, body),
-  deleteTemplate: (id: string) => api.delete<void>(`/admin/message-templates/${id}`),
-  pages: () => api.get<InfoPage[]>("/admin/pages"),
-  savePage: (slug: string, body: { title: string; body: string; published: boolean }) => api.put<InfoPage>(`/admin/pages/${slug}`, body),
-};
-
-// --- M12 Support ---------------------------------------------------------------------------------
 
 export interface TicketRow {
   id: string;
@@ -978,36 +705,23 @@ export const Support = {
   update: (id: string, body: { status?: string; assigned_to?: string | null; order_id?: string | null; user_id?: string | null; category?: string }) =>
     api.patch<unknown>(`/admin/tickets/${id}`, body),
   reply: (id: string, body: string) => api.post<{ ok: boolean; notified: boolean }>(`/admin/tickets/${id}/messages`, { body }),
+  pages: () => api.get<InfoPage[]>("/admin/pages"),
+  savePage: (slug: string, body: { title: string; body: string; published: boolean }) => api.put<InfoPage>(`/admin/pages/${slug}`, body),
 };
 
-// --- M13 Securite ----------------------------------------------------------------------------------
+// --- M13 Equipe, compte et reglages ---------------------------------------------------------------
 
 export interface TeamMember {
   id: string;
   full_name: string;
   phone: string;
   email: string | null;
-  admin_role: string;
-  admin_role_label: string;
   is_active: boolean;
   totp_enabled: boolean;
   last_login_at: string | null;
   last_seen_at: string | null;
   created_at: string;
   open_sessions: number;
-}
-
-export interface AuditRow {
-  id: string;
-  created_at: string;
-  actor_id: string | null;
-  actor_name: string | null;
-  action: string;
-  entity_type: string | null;
-  entity_id: string | null;
-  summary: string | null;
-  details: Record<string, unknown>;
-  ip: string | null;
 }
 
 export interface SessionItem {
@@ -1021,24 +735,12 @@ export interface SessionItem {
   current: boolean;
 }
 
-export interface SystemState {
-  app_version: string;
-  server_time: string;
-  database: { dialect: string; ok: boolean; size_bytes?: number | null; error?: string };
-  disks: { label: string; path: string; total_bytes: number; free_bytes: number; used_pct: number }[];
-  backup: { folder: string; last: string | null; file?: string; size_bytes?: number; age_hours?: number; count?: number } | null;
-  measurement_chain: Record<string, unknown>;
-  counts: Record<string, number>;
-}
-
 export const Security = {
-  team: () => api.get<{ roles: Record<string, string>; members: TeamMember[] }>("/admin/team"),
-  createMember: (body: { full_name: string; phone: string; email?: string; admin_role: string }) =>
+  team: () => api.get<{ members: TeamMember[] }>("/admin/team"),
+  createMember: (body: { full_name: string; phone: string; email?: string }) =>
     api.post<{ member: TeamMember; temporary_password: string }>("/admin/team", body),
-  updateMember: (id: string, body: { admin_role?: string; is_active?: boolean }) => api.patch<TeamMember>(`/admin/team/${id}`, body),
+  updateMember: (id: string, body: { is_active: boolean }) => api.patch<TeamMember>(`/admin/team/${id}`, body),
   resetMember2fa: (id: string) => api.post<unknown>(`/admin/team/${id}/reset-2fa`),
-  audit: (p: Params) => table<AuditRow>("/admin/tables/audit", p),
-  auditActions: () => api.get<string[]>("/admin/audit/actions"),
   setup2fa: () => api.post<{ secret: string; otpauth_uri: string }>("/admin/me/2fa/setup"),
   enable2fa: (code: string) => api.post<unknown>("/admin/me/2fa/enable", { code }),
   disable2fa: (code: string) => api.post<unknown>("/admin/me/2fa/disable", { code }),
@@ -1048,7 +750,6 @@ export const Security = {
   settings: () =>
     api.get<{ values: Record<string, unknown>; defaults: Record<string, unknown>; labels: Record<string, string> }>("/admin/settings"),
   saveSetting: (key: string, value: unknown) => api.put<{ key: string; value: unknown }>(`/admin/settings/${key}`, { value }),
-  system: () => api.get<SystemState>("/admin/system"),
 };
 
 // --- M14 Croissance -----------------------------------------------------------------------------------

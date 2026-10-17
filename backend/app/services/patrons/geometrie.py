@@ -351,7 +351,7 @@ def reunir_manches(pieces: list[Piece], coutures) -> list[Piece]:
         chevauche, f = meilleur
         if chevauche > 0.5:
             continue  # pas de mise a plat propre : on garde les deux demi-manches
-        P, Q = A.pts[0], A.pts[-1]
+        P = A.pts[0]
         aretes_b = [Arete(f(a.pts), a.courbe, a.src, a.role, a.lettre) for a in b.aretes]
         suite_b = aretes_b[eb + 1:] + aretes_b[:eb]  # de la fin de B au debut de B
         if np.linalg.norm(suite_b[0].pts[0] - P) > 1e-6:  # doit partir de P pour fermer le contour

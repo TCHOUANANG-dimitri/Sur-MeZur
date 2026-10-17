@@ -1,7 +1,8 @@
 "use client";
 
-// Equipe et roles (13.1, 13.2) : membres, creation avec mot de passe
-// provisoire, activation, reinitialisation de la double authentification.
+// Equipe (13.2) : les administrateurs, tous avec les memes droits (acces
+// complet) ; creation avec mot de passe provisoire, desactivation,
+// reinitialisation de la double authentification.
 
 import { useState } from "react";
 import { Security, type TeamMember } from "@/lib/api/admin";
@@ -15,7 +16,7 @@ export default function TeamPage() {
   const { me } = useAdmin();
   const { confirm, toast } = useFeedback();
   const team = useLoad(() => Security.team(), []);
-  const [form, setForm] = useState({ full_name: "", phone: "", email: "", admin_role: "support" });
+  const [form, setForm] = useState({ full_name: "", phone: "", email: "" });
   const [tempPw, setTempPw] = useState<{ name: string; pw: string } | null>(null);
 
   const create = async (e: React.FormEvent) => {
@@ -25,10 +26,9 @@ export default function TeamPage() {
         full_name: form.full_name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim() || undefined,
-        admin_role: form.admin_role,
       });
       setTempPw({ name: r.member.full_name, pw: r.temporary_password });
-      setForm({ full_name: "", phone: "", email: "", admin_role: "support" });
+      setForm({ full_name: "", phone: "", email: "" });
       toast("Membre créé.");
       team.reload();
     } catch (err) {
@@ -71,7 +71,7 @@ export default function TeamPage() {
 
   return (
     <div className="adPage">
-      <PageHead title="Équipe et rôles" sub="Comptes administrateurs, rôles et accès." />
+      <PageHead title="Équipe" sub="Les administrateurs de Sur-MeZur. Chacun a accès à toute l'administration." />
       {tempPw && (
         <Panel title="Mot de passe provisoire">
           <p>Communiquez-le <strong>une seule fois</strong> à {tempPw.name}, qui devra le changer à sa première connexion.</p>
@@ -84,7 +84,7 @@ export default function TeamPage() {
           <ul className="adList">
             {team.data.members.map((m) => (
               <li key={m.id}>
-                <strong>{m.full_name}</strong> <span className="adHint">· {m.phone} · {m.admin_role_label}{!m.is_active && " · désactivé"}{m.totp_enabled ? " · 2FA" : ""}{m.open_sessions > 0 && ` · ${m.open_sessions} session(s)`} · vu {m.last_seen_at ? formatDate(m.last_seen_at) : "jamais"}</span>{" "}
+                <strong>{m.full_name}</strong> <span className="adHint">· {m.phone}{!m.is_active && " · désactivé"}{m.totp_enabled ? " · 2FA" : ""}{m.open_sessions > 0 && ` · ${m.open_sessions} session(s)`} · vu {m.last_seen_at ? formatDate(m.last_seen_at) : "jamais"}</span>{" "}
                 {m.id !== me?.id && (
                   <>
                     <button className="adLinkBtn" onClick={() => void toggle(m)}>{m.is_active ? "désactiver" : "réactiver"}</button>{" "}
@@ -94,7 +94,6 @@ export default function TeamPage() {
               </li>
             ))}
           </ul>
-          <p className="adHint">Rôles : {Object.values(team.data.roles).join(", ")}.</p>
         </Panel>
       )}
       <Panel title="Nouveau membre">
@@ -105,14 +104,8 @@ export default function TeamPage() {
           </div>
           <div className="adRow">
             <label className="adFilter"><span>E-mail (facultatif)</span><input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-            <label className="adFilter">
-              <span>Rôle</span>
-              <select className="input" value={form.admin_role} onChange={(e) => setForm({ ...form, admin_role: e.target.value })}>
-                {(team.data ? Object.entries(team.data.roles) : [["support", "Support"]]).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </label>
           </div>
-          <Button variant="primary" className="adBtnSm" type="submit">Créer le membre</Button>
+          <Button variant="primary" className="adBtnSm" type="submit">Créer l&apos;administrateur</Button>
         </form>
       </Panel>
     </div>

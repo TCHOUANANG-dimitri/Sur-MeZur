@@ -29,7 +29,6 @@ DEFAULTS: dict[str, Any] = {
     # 13.8 — mode maintenance.
     "maintenance": {"enabled": False, "message": "Sur-MeZur est en maintenance. Merci de revenir dans quelques minutes."},
     # 11.2 — bandeau en haut du site.
-    "banner": {"enabled": False, "message": "", "tone": "info", "link_url": "", "link_label": "", "ends_at": None},
     # 13.7 — villes et quartiers proposes.
     "cities": [
         {"name": "Douala", "quartiers": ["Akwa", "Bonanjo", "Bonapriso", "Deido", "Bali", "Makepe", "Bonamoussadi", "Logpom", "PK8", "Ndokoti", "New Bell", "Bepanda"]},
@@ -69,7 +68,7 @@ DEFAULTS: dict[str, Any] = {
     },
 }
 
-PUBLIC_KEYS = {"banner", "maintenance", "cities", "signup_source_question", "features"}
+PUBLIC_KEYS = {"maintenance", "cities", "signup_source_question", "features"}
 
 _TTL = 10.0
 _cache: dict[str, tuple[float, Any]] = {}
