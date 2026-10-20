@@ -44,7 +44,7 @@ const fr: Dictionary = {
     cardTitle: "Fiche de mesures",
     cardExample: "Exemple",
     cardFooter: "12 mesures · prête à imprimer ou partager",
-    photoAlt: "Les mains d'un tailleur posent un patron en papier sur la table de coupe, à côté d'un téléphone.",
+    photoAlt: "Dans son atelier, une couturière photographie avec son téléphone un client debout contre le mur, cadré sur une silhouette.",
   },
 
   proof: {

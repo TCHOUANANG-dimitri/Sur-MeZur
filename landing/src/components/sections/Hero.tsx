@@ -88,7 +88,7 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           <MeasureCard
             dict={dict}
             keys={["chest", "waist", "hips", "shoulder"]}
-            className="absolute -bottom-8 left-3 w-[13.5rem] sm:-bottom-10 sm:left-[-1.5rem] sm:w-[17rem]"
+            className="absolute -bottom-8 right-3 w-[13.5rem] sm:-bottom-10 sm:right-[-1.5rem] sm:w-[17rem]"
           />
         </Reveal>
       </div>

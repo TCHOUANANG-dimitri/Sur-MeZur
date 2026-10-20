@@ -39,7 +39,7 @@ const en = {
     cardTitle: "Measurement sheet",
     cardExample: "Example",
     cardFooter: "12 measurements · ready to print or share",
-    photoAlt: "A tailor's hands lay a paper pattern on the cutting table, next to a phone.",
+    photoAlt: "In her workshop, a tailor photographs a client standing against the wall with her phone, framed on a body outline.",
   },
 
   proof: {
