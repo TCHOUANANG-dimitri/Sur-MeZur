@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * Fiche d'un client du carnet (B3.2) : appeler, WhatsApp, notes, historique
+ * Fiche d'un client du carnet (B3.2) : appeler, WhatsApp, enregistrer dans
+ * les contacts du telephone (numero copie au passage), notes, historique
  * des mesures et des travaux, nouvelle mesure (photo ou metre), fiche
  * imprimable et partageable par WhatsApp (lien public en lecture seule,
  * qui expire).
@@ -14,12 +15,9 @@ import { TailorApi } from "@/lib/api/tailor";
 import type { ClientMeasurement, TailorClient, TailorJob } from "@/lib/api/tailor";
 import { formatCm, presentableGroups } from "@/lib/measurements";
 import { Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, Textarea } from "@/components/ui";
-import { IconMeasure, IconPhone, IconPrint } from "@/components/icons";
+import { IconCall, IconChat, IconContact, IconMeasure, IconPrint } from "@/components/icons";
+import { copyText, openNewContact, whatsappHref } from "@/lib/contact";
 import { JobBadge, ManualMeasureForm, dueLabel, formatDateFR } from "../../_components";
-
-function waNumber(phone: string): string {
-  return phone.replace(/[^0-9]/g, "");
-}
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +32,7 @@ export default function ClientDetail() {
   const [savingManual, setSavingManual] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -96,6 +95,13 @@ export default function ClientDetail() {
     }
   }
 
+  async function saveContact() {
+    if (!client) return;
+    const copied = await copyText(client.phone);
+    setNotice(copied ? `Numéro ${client.phone} copié.` : "");
+    openNewContact(client.name, client.phone);
+  }
+
   async function remove() {
     if (!id) return;
     if (!window.confirm(`Retirer ${client?.name} du carnet ? Ses mesures et travaux restent enregistrés.`)) return;
@@ -126,17 +132,16 @@ export default function ClientDetail() {
 
       <div className="tActionRow no-print">
         <a className="btn btnSecondary" href={`tel:${client.phone}`}>
-          <IconPhone size={18} aria-hidden /> Appeler
+          <IconCall size={18} aria-hidden /> Appeler
         </a>
-        <a
-          className="btn btnSecondary"
-          href={`https://wa.me/${waNumber(client.phone)}`}
-          target="_blank"
-          rel="noopener"
-        >
-          WhatsApp
+        <a className="btn btnWhatsapp" href={whatsappHref(client.phone)}>
+          <IconChat size={18} aria-hidden /> WhatsApp
         </a>
+        <button type="button" className="btn btnSecondary" onClick={() => void saveContact()}>
+          <IconContact size={18} aria-hidden /> Enregistrer dans mes contacts
+        </button>
       </div>
+      {notice && <p className="tNotice no-print" role="status">{notice}</p>}
 
       <Card>
         <p className="tRowSub" style={{ margin: 0 }}>
@@ -196,13 +201,8 @@ export default function ClientDetail() {
                 )}
                 {i === 0 && shareUrl && (
                   <p className="no-print">
-                    <a
-                      href={`https://wa.me/?text=${encodeURIComponent(`Mes mesures Sur-MeZur : ${shareUrl}`)}`}
-                      target="_blank"
-                      rel="noopener"
-                      className="authLink"
-                    >
-                      Envoyer par WhatsApp (lien public, expire)
+                    <a href={whatsappHref(client.phone, `Vos mesures Sur-MeZur : ${shareUrl}`)} className="authLink">
+                      Envoyer à {client.name} par WhatsApp (lien public, expire)
                     </a>
                   </p>
                 )}

@@ -80,11 +80,14 @@ export function MeasureFlow({
   guest = false,
   onDone,
   sessionApi,
+  forClient = false,
 }: {
   /** Visiteur sans compte : un compte invite est cree avant l'envoi. */
   guest?: boolean;
   onDone: (measurementId: string) => void;
   sessionApi?: MeasureSessionApi;
+  /** Un tailleur mesure son client : les textes parlent du client, pas de « vous ». */
+  forClient?: boolean;
 }) {
   const { refresh } = useAuth();
   const [step, setStep] = useState<Step>("infos");
@@ -176,12 +179,12 @@ export function MeasureFlow({
         <div className="flowForm">
           <h2>Quelques informations</h2>
           <p className="muted">
-            Votre taille et votre poids servent à convertir ce que voient les photos en
-            centimètres. Sans eux, aucune mesure n&apos;est possible.
+            {forClient ? "La taille et le poids du client" : "Votre taille et votre poids"} servent à convertir ce que
+            voient les photos en centimètres. Sans eux, aucune mesure n&apos;est possible.
           </p>
 
           <div className="fieldRow" style={{ marginTop: 20 }}>
-            <Field label="Votre taille (cm)">
+            <Field label={forClient ? "Taille du client (cm)" : "Votre taille (cm)"}>
               <Input
                 type="number"
                 inputMode="numeric"
@@ -192,7 +195,7 @@ export function MeasureFlow({
                 onChange={(e) => setHeight(e.target.value)}
               />
             </Field>
-            <Field label="Votre poids (kg)">
+            <Field label={forClient ? "Poids du client (kg)" : "Votre poids (kg)"}>
               <Input
                 type="number"
                 inputMode="numeric"
@@ -206,7 +209,7 @@ export function MeasureFlow({
           </div>
 
           <Field
-            label="Vous êtes"
+            label={forClient ? "Le client est" : "Vous êtes"}
             hint="Les proportions du corps diffèrent ; la mesure en tient compte."
           >
             <Select value={gender} onChange={(e) => setGender(e.target.value)}>
@@ -226,9 +229,9 @@ export function MeasureFlow({
 
       {step === "consignes" && (
         <>
-          <h2>Avant vos photos</h2>
+          <h2>{forClient ? "Avant les photos" : "Avant vos photos"}</h2>
           <p className="muted flowLead">
-            La précision de vos mesures dépend presque entièrement de ces quelques règles.
+            La précision {forClient ? "des" : "de vos"} mesures dépend presque entièrement de ces quelques règles.
             Prenez un instant pour les lire.
           </p>
 
@@ -236,12 +239,12 @@ export function MeasureFlow({
             <Rule
               Icon={IconModels}
               title="Tenue ajustée"
-              body="Un vêtement ample fausse la mesure : portez une tenue près du corps."
+              body={forClient ? "Un vêtement ample fausse la mesure : le client porte une tenue près du corps." : "Un vêtement ample fausse la mesure : portez une tenue près du corps."}
             />
             <Rule
               Icon={IconPhone}
               title="Téléphone posé"
-              body="À 2,5–3 m de vous, à hauteur de poitrine. Faites-vous aider ou utilisez un support."
+              body={forClient ? "À 2,5–3 m du client, à hauteur de poitrine, bien droit." : "À 2,5–3 m de vous, à hauteur de poitrine. Faites-vous aider ou utilisez un support."}
             />
             <Rule
               Icon={IconFrame}

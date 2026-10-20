@@ -53,7 +53,8 @@ function MesurerInner() {
     <div className="tPage">
       <PageHeader title="Mesurer un client" back />
       <ErrorBanner message={error} />
-      <Steps total={3} current={!clientId ? 1 : mode === null ? 2 : 3} />
+      {/* Le parcours photo a sa propre barre d'etapes : pas de double barre. */}
+      {mode !== "photo" && <Steps total={3} current={!clientId ? 1 : mode === null ? 2 : 3} />}
 
       {!clientId || mode === null ? (
         <>
@@ -75,7 +76,7 @@ function MesurerInner() {
           <div className="no-print">
             <Button variant="ghost" onClick={() => setMode(null)}>← Changer de méthode</Button>
           </div>
-          <MeasureFlow sessionApi={sessionApi} onDone={() => router.replace(`/tailleur/clients/${clientId}`)} />
+          <MeasureFlow forClient sessionApi={sessionApi} onDone={() => router.replace(`/tailleur/clients/${clientId}`)} />
         </>
       ) : (
         <Spinner label="Chargement…" />

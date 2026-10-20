@@ -231,8 +231,6 @@ const fr: Dictionary = {
     blurb: "Les mesures de couture en deux photos, et bientôt le patron. Conçu à Douala pour les tailleurs et leurs clients.",
     product: "Produit",
     help: "Aide",
-    company: "Entreprise",
-    social: "Réseaux",
     how: "Comment ça marche",
     clients: "Pour les clients",
     tailors: "Pour les tailleurs",
@@ -242,9 +240,8 @@ const fr: Dictionary = {
     contact: "Nous contacter",
     privacy: "Confidentialité",
     terms: "Conditions d'utilisation",
-    about: "KORAH",
     rights: "Tous droits réservés.",
-    built: "Un produit KORAH, conçu à",
+    built: "Conçu à",
   },
 };
 

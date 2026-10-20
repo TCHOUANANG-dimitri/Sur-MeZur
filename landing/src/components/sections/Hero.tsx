@@ -82,13 +82,13 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
               priority
               placeholder="blur"
               sizes="(min-width: 1024px) 52vw, 100vw"
-              className="aspect-[4/3] h-auto w-full object-cover sm:aspect-[3/2]"
+              className="aspect-[4/5] h-auto w-full object-cover sm:aspect-[3/2]"
             />
           </div>
           <MeasureCard
             dict={dict}
             keys={["chest", "waist", "hips", "shoulder"]}
-            className="absolute -bottom-8 left-3 w-[15rem] sm:-bottom-10 sm:left-[-1.5rem] sm:w-[17rem]"
+            className="absolute -bottom-8 left-3 w-[13.5rem] sm:-bottom-10 sm:left-[-1.5rem] sm:w-[17rem]"
           />
         </Reveal>
       </div>

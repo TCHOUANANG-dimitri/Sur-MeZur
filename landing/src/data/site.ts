@@ -15,14 +15,9 @@ export const siteConfig = {
     size: process.env.NEXT_PUBLIC_APK_SIZE || "",
     version: process.env.NEXT_PUBLIC_APK_VERSION || "",
   },
-  email: "contact@korah.tech",
   location: {
     city: "Douala",
     country: { en: "Cameroon", fr: "Cameroun" } as const,
-  },
-  parent: {
-    name: "KORAH",
-    url: "https://korah.tech",
   },
   /** Couleurs relevées sur le logo (public/brand/Sur-MeZur.png). */
   brand: {
@@ -32,11 +27,6 @@ export const siteConfig = {
     bright: "#8C29FB",
     paper: "#FFFFFF",
   },
-  socials: [
-    { label: "Instagram", href: "https://www.instagram.com/korah.tech" },
-    { label: "Facebook", href: "https://www.facebook.com/techkorah" },
-    { label: "LinkedIn", href: "https://www.linkedin.com/company/korah-tech" },
-  ],
 } as const;
 
 /** Pages de l'application vers lesquelles pointe le site. */

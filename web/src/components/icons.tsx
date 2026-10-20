@@ -53,6 +53,9 @@ export {
   Lock as IconLock,
   UserPlus as IconUserPlus,
   Smartphone as IconPhone,
+  Phone as IconCall,
+  MessageCircle as IconChat,
+  BookUser as IconContact,
   ScanLine as IconFrame,
   Sun as IconLight,
 

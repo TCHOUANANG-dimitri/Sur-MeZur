@@ -4,14 +4,33 @@
    de mesures.css, pour un rendu papier identique a l'espace client.
    ========================================================================== */
 
-.tPage { display: grid; gap: 14px; }
+/* Les pages tailleur sont posees directement dans .shellMain, sans
+   .container : c'est donc .tPage qui porte la marge laterale (sinon tout le
+   contenu touche les bords du telephone) et la largeur maximale. L'en-tete
+   de page, lui, reste d'un bord a l'autre. */
+.tPage {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 var(--gutter) 28px;
+}
+.tPage > .header { margin: 0 calc(-1 * var(--gutter)); }
+.tPage > .header + * { margin-top: 4px; }
 .tHeader { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .tHeader h1 { margin: 0; font-size: 22px; flex: 1; }
+/* Telephone : le titre de section prend sa ligne, les boutons se partagent
+   la suivante (plus de bouton renvoye seul sous le titre). */
+@media (max-width: 480px) {
+  .tHeader > h2 { flex: 1 1 100% !important; }
+  .tHeader > .btn { flex: 1 1 0; }
+}
 
 /* Statistiques d'accueil */
 .tStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .tStat {
-  background: var(--surface);
+  background: linear-gradient(180deg, #fff, var(--bg-alt));
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   padding: 12px;
@@ -31,7 +50,9 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  background: var(--violet-primary);
+  background: var(--gradient);
+  box-shadow: 0 8px 22px rgba(91, 33, 182, 0.22);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
   color: #fff;
   border-radius: var(--radius-card);
   padding: 14px 16px;
@@ -40,8 +61,9 @@
   font-weight: 600;
   text-decoration: none;
 }
-.tBigBtn:hover { background: var(--violet-deep); }
-.tBigBtnSecondary { background: var(--surface); color: var(--violet-deep); border: 1.5px solid var(--violet-primary); }
+.tBigBtn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(91, 33, 182, 0.28); }
+.tBigBtn:active { transform: translateY(0); }
+.tBigBtnSecondary { background: var(--surface); color: var(--violet-deep); border: 1.5px solid var(--violet-primary); box-shadow: var(--shadow-sm); }
 .tBigBtnSecondary:hover { background: var(--violet-tint); }
 .tBigBtnIcon {
   flex: none;
@@ -70,7 +92,13 @@
   text-decoration: none;
   color: inherit;
   min-height: 56px;
+  /* Aussi utilise sur des <button> (choix d'un client) : texte a gauche. */
+  font: inherit;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+a.tRow:hover, button.tRow:hover { border-color: var(--violet-vivid); }
+.tRowActive { box-shadow: 0 0 0 3px var(--violet-tint); }
 .tRowMain { flex: 1; min-width: 0; }
 .tRowTitle { font-weight: 600; font-size: 15px; }
 .tRowSub { font-size: 13px; color: var(--text-secondary); }
@@ -89,11 +117,28 @@
 /* Ligne d'actions (appeler, WhatsApp, partager, imprimer) */
 .tActionRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .tActionRow .btn { min-height: 52px; text-decoration: none; }
+/* Un bouton seul (ou un nombre impair) prend toute la largeur : pas de
+   libelle coupe sur deux lignes dans une demi-colonne. */
+.btnWhatsapp { background: #25d366; color: #fff; border: 0; font-weight: 600; }
+.btnWhatsapp:hover { background: #1ebe5b; }
+.tNotice {
+  margin: -4px 0 0;
+  font-size: 14px;
+  color: var(--success);
+  font-weight: 500;
+}
+.tActionRow > :only-child,
+.tActionRow > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 
 /* Mesures : saisie manuelle des 12 mensurations */
-.tMeasureGrid { display: grid; gap: 10px; }
-@media (min-width: 560px) {
+/* Deux colonnes des 340 px : douze mesures tiennent en six lignes au lieu de
+   douze. Les libelles longs passent a la ligne, les champs restent alignes. */
+.tMeasureGrid { display: grid; gap: 10px 12px; align-items: end; }
+@media (min-width: 340px) {
   .tMeasureGrid { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 720px) {
+  .tMeasureGrid { grid-template-columns: repeat(3, 1fr); }
 }
 
 /* Messagerie commande */

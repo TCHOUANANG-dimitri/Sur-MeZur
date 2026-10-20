@@ -31,7 +31,7 @@ export function Footer({ locale, dict }: FooterProps) {
   return (
     <footer className="border-t border-violet-950/[0.09] bg-ink-950 pb-24 md:pb-0">
       <div className="container-smz pb-10 pt-16 lg:pt-20">
-        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))] lg:gap-10">
+        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.6fr)_repeat(2,minmax(0,1fr))] lg:gap-10">
           <div className="flex flex-col gap-5">
             <Link href={localizedPath(locale, "/")} aria-label="Sur-MeZur" className="w-fit">
               <Logo size={52} />
@@ -67,31 +67,8 @@ export function Footer({ locale, dict }: FooterProps) {
                   </a>
                 </li>
               ))}
-              <li>
-                <a href={`mailto:${siteConfig.email}`} className={linkClass}>
-                  {siteConfig.email}
-                </a>
-              </li>
             </ul>
           </nav>
-
-          <div className="flex flex-col gap-4">
-            <h2 className={titleClass}>{f.social}</h2>
-            <ul className="flex flex-col gap-3">
-              {siteConfig.socials.map((social) => (
-                <li key={social.label}>
-                  <a href={social.href} target="_blank" rel="noreferrer noopener" className={linkClass}>
-                    {social.label}
-                  </a>
-                </li>
-              ))}
-              <li>
-                <a href={siteConfig.parent.url} target="_blank" rel="noreferrer noopener" className={linkClass}>
-                  {f.about}
-                </a>
-              </li>
-            </ul>
-          </div>
         </div>
 
         <div className="rule-smz my-8 opacity-60" />

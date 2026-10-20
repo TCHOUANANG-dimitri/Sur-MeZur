@@ -223,8 +223,6 @@ const en = {
     blurb: "Tailoring measurements from two photos, and soon the pattern. Built in Douala for tailors and their clients.",
     product: "Product",
     help: "Help",
-    company: "Company",
-    social: "Social",
     how: "How it works",
     clients: "For clients",
     tailors: "For tailors",
@@ -234,9 +232,8 @@ const en = {
     contact: "Contact us",
     privacy: "Privacy",
     terms: "Terms of use",
-    about: "KORAH",
     rights: "All rights reserved.",
-    built: "A KORAH product, built in",
+    built: "Built in",
   },
 } as const;
 

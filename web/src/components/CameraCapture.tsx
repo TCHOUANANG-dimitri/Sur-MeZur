@@ -116,7 +116,15 @@ export function CameraCapture({
 
     navigator.mediaDevices
       .getUserMedia({
-        video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1920 } },
+        // Portrait d'abord (9:16) : sur un telephone tenu droit, l'image remplit
+        // l'ecran et cadre la personne en pied. Valeurs « ideales » seulement :
+        // une webcam de bureau, en paysage, reste acceptee.
+        video: {
+          facingMode: { ideal: facing },
+          width: { ideal: 1080 },
+          height: { ideal: 1920 },
+          aspectRatio: { ideal: 9 / 16 },
+        },
         audio: false,
       })
       .then(async (stream) => {

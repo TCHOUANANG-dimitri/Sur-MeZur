@@ -51,12 +51,14 @@ export default function TailleurAccueil() {
           icon={<IconPlus size={24} aria-hidden />}
           title="Nouveau travail"
           sub="Commande directe"
+          secondary
         />
         <BigAction
           href="/tailleur/patrons/nouveau"
           icon={<IconTailor size={24} aria-hidden />}
-          title="Patron sur photo"
-          sub="Version d'aperçu"
+          title="Patron"
+          sub="Jupe, robe, kaba… à partir des mesures"
+          secondary
         />
       </div>
 
