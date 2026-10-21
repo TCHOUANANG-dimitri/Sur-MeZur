@@ -472,27 +472,34 @@
 }
 
 /* Fiche modele : passage au modele voisin par balayage. `pan-y` laisse le
-   defilement vertical au navigateur et nous donne le geste horizontal. */
+   defilement vertical au navigateur et nous donne le geste horizontal ; la
+   position pendant le geste est posee par la page (style en ligne). */
+.modelSwipeViewport {
+  /* La fiche qui sort ne cree pas de defilement horizontal ; `clip` (et non
+     `hidden`) garde la photo collante sur ordinateur. */
+  overflow-x: clip;
+}
+
 .modelSwipe {
   touch-action: pan-y;
-  transition: transform 0.22s ease, opacity 0.22s ease;
+  will-change: transform;
 }
 
 .modelEnterNext {
-  animation: modelEnterNext 0.28s ease-out;
+  animation: modelEnterNext 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .modelEnterPrev {
-  animation: modelEnterPrev 0.28s ease-out;
+  animation: modelEnterPrev 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @keyframes modelEnterNext {
-  from { transform: translateX(48px); opacity: 0; }
+  from { transform: translate3d(40%, 0, 0); opacity: 0.2; }
   to { transform: none; opacity: 1; }
 }
 
 @keyframes modelEnterPrev {
-  from { transform: translateX(-48px); opacity: 0; }
+  from { transform: translate3d(-40%, 0, 0); opacity: 0.2; }
   to { transform: none; opacity: 1; }
 }
 

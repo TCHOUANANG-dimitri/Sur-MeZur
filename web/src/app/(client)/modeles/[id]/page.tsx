@@ -9,13 +9,18 @@
  *
  * Balayer la fiche vers la gauche ou la droite (ou les fleches, ou le
  * clavier) passe au modele suivant ou precedent de la liste d'ou l'on vient
- * (voir lib/modelSuite). `router.replace` : le retour ramene a la liste, pas
- * a chaque modele parcouru.
+ * (voir lib/modelSuite).
+ *
+ * FLUIDITE. Pendant le geste, la fiche est deplacee directement dans le DOM
+ * (une image par rafraichissement d'ecran), sans rendu React a chaque
+ * mouvement du doigt. Le changement de modele se fait sur place : l'adresse
+ * est remplacee (`history.replaceState`, le retour ramene a la liste) sans
+ * nouvelle navigation, et le modele voisin, deja en cache, s'affiche aussitot.
  */
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CatalogApi } from "@/lib/api/endpoints";
 import type { GarmentModel } from "@/lib/api/types";
 import { useAuth } from "@/components/AuthProvider";
@@ -24,18 +29,30 @@ import { cacheModels, modelCache, readSuite, rememberSuite, setDirection, takeDi
 import { Badge, Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { IconBack, IconCheck, IconChevronRight, IconHeart, IconModels, IconSearch } from "@/components/icons";
 
-/** Distance (px) au-dela de laquelle un balayage change de modele. */
+/** Distance (px) au-dela de laquelle un balayage change de modele... */
 const SEUIL = 70;
+/** ...ou vitesse (px/ms) d'un coup de doigt rapide, meme court. */
+const VITESSE = 0.45;
+/** Duree de sortie de la fiche, en ms (voir aussi catalog.css). */
+const SORTIE = 180;
 
 export default function ModelePage() {
   const { id } = useParams<{ id: string }>();
+  const [current, setCurrent] = useState(id);
+  // Navigation venue d'ailleurs (lien vers un autre modele) : on la suit.
+  useEffect(() => setCurrent(id), [id]);
+
+  const navigate = useCallback((next: string) => {
+    window.history.replaceState(window.history.state, "", `/modeles/${next}`);
+    setCurrent(next);
+  }, []);
+
   // Une fiche neuve par modele : etat, photo et animation d'entree repartent
   // de zero a chaque balayage.
-  return <ModeleDetail key={id} id={id} />;
+  return <ModeleDetail key={current} id={current} onNavigate={navigate} />;
 }
 
-function ModeleDetail({ id }: { id: string }) {
-  const router = useRouter();
+function ModeleDetail({ id, onNavigate }: { id: string; onNavigate: (id: string) => void }) {
   const { user } = useAuth();
   const [model, setModel] = useState<GarmentModel | null | undefined>(() => modelCache.get(id));
   const [shot, setShot] = useState(0);
@@ -43,8 +60,10 @@ function ModeleDetail({ id }: { id: string }) {
   const [error, setError] = useState("");
   const [suite, setSuite] = useState<string[]>([]);
   const [entree] = useState(takeDirection);
-  const [drag, setDrag] = useState(0);
-  const touch = useRef<{ x: number; y: number; axe: "h" | "v" | null } | null>(null);
+  const swipeRef = useRef<HTMLDivElement>(null);
+  const touch = useRef<{ x: number; y: number; t: number; dx: number; axe: "h" | "v" | null } | null>(null);
+  const raf = useRef(0);
+  const sortie = useRef(false);
 
   useEffect(() => {
     if (!id) return;
@@ -102,11 +121,26 @@ function ModeleDetail({ id }: { id: string }) {
     }
   }, [prevId, nextId]);
 
+  /** Position de la fiche ; `anime` pour un retour ou une sortie en douceur. */
+  function placer(dx: number, anime: boolean) {
+    const el = swipeRef.current;
+    if (!el) return;
+    el.style.transition = anime ? `transform ${SORTIE}ms ease-out, opacity ${SORTIE}ms ease-out` : "none";
+    el.style.transform = dx ? `translate3d(${dx}px, 0, 0)` : "";
+    el.style.opacity = dx ? String(1 - Math.min(Math.abs(dx) / (el.clientWidth * 1.4), 0.6)) : "";
+  }
+
   function go(sens: "next" | "prev") {
     const cible = sens === "next" ? nextId : prevId;
-    if (!cible) return;
-    setDirection(sens);
-    router.replace(`/modeles/${cible}`);
+    if (!cible || sortie.current) return;
+    sortie.current = true;
+    // La fiche sort du cote du geste, la suivante entre par l'autre.
+    const largeur = swipeRef.current?.clientWidth ?? window.innerWidth;
+    placer(sens === "next" ? -largeur : largeur, true);
+    window.setTimeout(() => {
+      setDirection(sens);
+      onNavigate(cible);
+    }, SORTIE);
   }
 
   useEffect(() => {
@@ -121,8 +155,9 @@ function ModeleDetail({ id }: { id: string }) {
   });
 
   function onTouchStart(e: React.TouchEvent) {
+    if (sortie.current) return;
     const t = e.touches[0];
-    touch.current = { x: t.clientX, y: t.clientY, axe: null };
+    touch.current = { x: t.clientX, y: t.clientY, t: performance.now(), dx: 0, axe: null };
   }
 
   function onTouchMove(e: React.TouchEvent) {
@@ -137,17 +172,21 @@ function ModeleDetail({ id }: { id: string }) {
     if (s.axe !== "h") return;
     // Au bout de la liste, la fiche resiste.
     const bout = (dx < 0 && !nextId) || (dx > 0 && !prevId);
-    setDrag(bout ? dx * 0.25 : dx);
+    s.dx = bout ? dx * 0.25 : dx;
+    cancelAnimationFrame(raf.current);
+    raf.current = requestAnimationFrame(() => placer(s.dx, false));
   }
 
   function onTouchEnd() {
     const s = touch.current;
     touch.current = null;
-    if (s?.axe === "h" && Math.abs(drag) > SEUIL) {
-      if (drag < 0 && nextId) return go("next");
-      if (drag > 0 && prevId) return go("prev");
-    }
-    setDrag(0);
+    cancelAnimationFrame(raf.current);
+    if (!s || s.axe !== "h") return;
+    const vitesse = Math.abs(s.dx) / Math.max(1, performance.now() - s.t);
+    const franchi = Math.abs(s.dx) > SEUIL || (Math.abs(s.dx) > 24 && vitesse > VITESSE);
+    if (franchi && s.dx < 0 && nextId) return go("next");
+    if (franchi && s.dx > 0 && prevId) return go("prev");
+    placer(0, true);
   }
 
   async function toggleLike() {
@@ -206,104 +245,102 @@ function ModeleDetail({ id }: { id: string }) {
   return (
     <>
       <PageHeader title={model.name} back />
-      <div
-        className={`container section modelSwipe ${entree === "next" ? "modelEnterNext" : entree === "prev" ? "modelEnterPrev" : ""}`}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onTouchCancel={onTouchEnd}
-        style={
-          drag
-            ? { transform: `translateX(${drag}px)`, opacity: 1 - Math.min(Math.abs(drag) / 700, 0.4), transition: "none" }
-            : undefined
-        }
-      >
-        <div className="modelDetail">
-          <div>
-            <div
-              className="modelHero"
-              style={cover ? { backgroundImage: `url(${cover})` } : { background: model.thumbnail_color }}
-              role="img"
-              aria-label={model.name}
-            />
-            {gallery.length > 1 && (
-              <div className="modelThumbs">
-                {gallery.map((src, i) => (
-                  <button
-                    key={src}
-                    className={`modelThumb ${i === shot ? "modelThumbActive" : ""}`}
-                    style={{ backgroundImage: `url(${src})` }}
-                    onClick={() => setShot(i)}
-                    aria-label={`Photo ${i + 1}`}
-                  />
+      <div className="modelSwipeViewport">
+        <div
+          ref={swipeRef}
+          className={`container section modelSwipe ${entree === "next" ? "modelEnterNext" : entree === "prev" ? "modelEnterPrev" : ""}`}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
+        >
+          <div className="modelDetail">
+            <div>
+              <div
+                className="modelHero"
+                style={cover ? { backgroundImage: `url(${cover})` } : { background: model.thumbnail_color }}
+                role="img"
+                aria-label={model.name}
+              />
+              {gallery.length > 1 && (
+                <div className="modelThumbs">
+                  {gallery.map((src, i) => (
+                    <button
+                      key={src}
+                      className={`modelThumb ${i === shot ? "modelThumbActive" : ""}`}
+                      style={{ backgroundImage: `url(${src})` }}
+                      onClick={() => setShot(i)}
+                      aria-label={`Photo ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+              {suite.length > 1 && index >= 0 && (
+                <div className="modelSuiteNav">
+                  <button type="button" onClick={() => go("prev")} disabled={!prevId} aria-label="Modèle précédent">
+                    <IconBack size={20} aria-hidden />
+                  </button>
+                  <span>
+                    {index + 1} / {suite.length}
+                    <small>Glissez pour changer de modèle</small>
+                  </span>
+                  <button type="button" onClick={() => go("next")} disabled={!nextId} aria-label="Modèle suivant">
+                    <IconChevronRight size={20} aria-hidden />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="modelTitleRow">
+                <h2>{model.name}</h2>
+                <button
+                  className={`likeBtn ${model.liked_by_me ? "likeBtnActive" : ""}`}
+                  onClick={toggleLike}
+                  aria-pressed={model.liked_by_me}
+                  aria-label={model.liked_by_me ? "Retirer des modèles enregistrés" : "Enregistrer ce modèle"}
+                >
+                  <IconHeart size={20} strokeWidth={2} />
+                  <span>{model.liked_by_me ? "Enregistré" : "Enregistrer"} · {model.like_count}</span>
+                </button>
+              </div>
+
+              <div className="tagRow">
+                <Badge>{model.category?.name}</Badge>
+                {model.created_by && (
+                  <Badge tone="success">{mine ? "Votre proposition" : "Modèle de la communauté"}</Badge>
+                )}
+                {model.style_tags?.map((tag) => (
+                  <Badge key={tag}>{tag}</Badge>
                 ))}
               </div>
-            )}
-            {suite.length > 1 && index >= 0 && (
-              <div className="modelSuiteNav">
-                <button type="button" onClick={() => go("prev")} disabled={!prevId} aria-label="Modèle précédent">
-                  <IconBack size={20} aria-hidden />
-                </button>
-                <span>
-                  {index + 1} / {suite.length}
-                  <small>Glissez pour changer de modèle</small>
-                </span>
-                <button type="button" onClick={() => go("next")} disabled={!nextId} aria-label="Modèle suivant">
-                  <IconChevronRight size={20} aria-hidden />
-                </button>
+
+              {model.description && <p className="muted modelDescription">{model.description}</p>}
+
+              <div className="card cardFlat modelNext">
+                <h3>Et maintenant ?</h3>
+                <p className="muted">
+                  Ajoutez ce modèle à votre sélection, puis prenez vos mesures. Votre fiche à
+                  télécharger réunira vos mensurations et les modèles retenus.
+                </p>
               </div>
-            )}
-          </div>
 
-          <div>
-            <div className="modelTitleRow">
-              <h2>{model.name}</h2>
-              <button
-                className={`likeBtn ${model.liked_by_me ? "likeBtnActive" : ""}`}
-                onClick={toggleLike}
-                aria-pressed={model.liked_by_me}
-                aria-label={model.liked_by_me ? "Retirer des modèles enregistrés" : "Enregistrer ce modèle"}
-              >
-                <IconHeart size={20} strokeWidth={2} />
-                <span>{model.liked_by_me ? "Enregistré" : "Enregistrer"} · {model.like_count}</span>
-              </button>
-            </div>
-
-            <div className="tagRow">
-              <Badge>{model.category?.name}</Badge>
-              {model.created_by && (
-                <Badge tone="success">{mine ? "Votre proposition" : "Modèle de la communauté"}</Badge>
-              )}
-              {model.style_tags?.map((tag) => (
-                <Badge key={tag}>{tag}</Badge>
-              ))}
-            </div>
-
-            {model.description && <p className="muted modelDescription">{model.description}</p>}
-
-            <div className="card cardFlat modelNext">
-              <h3>Et maintenant ?</h3>
-              <p className="muted">
-                Ajoutez ce modèle à votre sélection, puis prenez vos mesures. Votre fiche à
-                télécharger réunira vos mensurations et les modèles retenus.
-              </p>
-            </div>
-
-            <div className="actionBar">
-              <Button variant={selected ? "secondary" : "ghost"} onClick={toggleSelection}>
-                {selected ? (
-                  <>
-                    <IconCheck size={17} strokeWidth={2.6} aria-hidden /> Dans ma sélection
-                  </>
-                ) : (
-                  <>
-                    <IconModels size={17} strokeWidth={2} aria-hidden /> Ajouter à ma sélection
-                  </>
-                )}
-              </Button>
-              <Link href={`/mesures/nouvelle?modele=${model.id}`} style={{ display: "contents" }}>
-                <Button block>Prendre mes mesures</Button>
-              </Link>
+              <div className="actionBar">
+                <Button variant={selected ? "secondary" : "ghost"} onClick={toggleSelection}>
+                  {selected ? (
+                    <>
+                      <IconCheck size={17} strokeWidth={2.6} aria-hidden /> Dans ma sélection
+                    </>
+                  ) : (
+                    <>
+                      <IconModels size={17} strokeWidth={2} aria-hidden /> Ajouter à ma sélection
+                    </>
+                  )}
+                </Button>
+                <Link href={`/mesures/nouvelle?modele=${model.id}`} style={{ display: "contents" }}>
+                  <Button block>Prendre mes mesures</Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
