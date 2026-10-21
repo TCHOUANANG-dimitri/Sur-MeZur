@@ -183,6 +183,13 @@ textarea.input {
   }
 }
 
+/* Filtres du catalogue : toujours a la ligne. En defilement horizontal, la
+   derniere puce visible etait coupee au bord (« Les p… ») et semblait cassee. */
+.chipRow.galleryFilters {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
 .chip {
   flex: none;
   min-height: 36px;

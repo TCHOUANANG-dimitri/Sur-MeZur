@@ -543,10 +543,11 @@
   background: #000;
 }
 
+/* Plein ecran : la photo est recadree sur cette meme zone (CameraCapture). */
 .cameraVideo {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 /* Apercu en miroir pour la camera frontale, comme un miroir de salle de
@@ -555,9 +556,8 @@
   transform: scaleX(-1);
 }
 
-/* Calque aligne sur l'image reellement affichee : sa taille est fixee en
-   JavaScript (CameraCapture::measureFrame), faute de quoi la silhouette
-   deborderait des bandes noires d'un flux en paysage. */
+/* Calque sur toute la zone d'apercu (= zone photographiee). Le haut est
+   laisse libre pour la barre de titre. */
 .cameraGuide {
   position: absolute;
   top: 50%;
@@ -571,9 +571,10 @@
 }
 
 .cameraSilhouette {
-  height: 90%;
+  height: 86%;
+  margin-top: 8%;
   width: auto;
-  max-width: 80%;
+  max-width: 94%;
   color: rgba(255, 255, 255, 0.92);
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
 }

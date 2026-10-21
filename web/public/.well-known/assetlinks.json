@@ -1,10 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.surmezur.app",
-      "sha256_cert_fingerprints": ["REPLACE_ME_AFTER_KEY_GENERATION"]
+      "sha256_cert_fingerprints": [
+        "6F:95:83:66:BB:A7:EF:0C:FD:FC:AB:A4:68:D5:54:F1:68:45:C4:20:27:73:59:63:D8:B3:BE:33:00:45:87:BB"
+      ]
     }
   }
 ]

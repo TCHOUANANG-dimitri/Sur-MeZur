@@ -25,6 +25,16 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // APK Android : type reconnu par Android, telecharge (pas ouvert), et
+        // jamais garde en cache longtemps (une nouvelle version garde le meme nom).
+        source: "/android/:file*",
+        headers: [
+          { key: "Content-Type", value: "application/vnd.android.package-archive" },
+          { key: "Content-Disposition", value: 'attachment; filename="sur-mezur.apk"' },
+          { key: "Cache-Control", value: "public, max-age=300, must-revalidate" },
+        ],
+      },
+      {
         source: "/brand/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },

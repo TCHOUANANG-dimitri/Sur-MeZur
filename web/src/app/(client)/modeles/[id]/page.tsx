@@ -16,7 +16,7 @@ import type { GarmentModel } from "@/lib/api/types";
 import { useAuth } from "@/components/AuthProvider";
 import { addToSelection, isSelected, removeFromSelection } from "@/lib/selection";
 import { Badge, Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
-import { IconCheck, IconModels, IconReviews, IconSearch } from "@/components/icons";
+import { IconCheck, IconHeart, IconModels, IconSearch } from "@/components/icons";
 
 export default function ModeleDetail() {
   const { id } = useParams<{ id: string }>();
@@ -119,10 +119,10 @@ export default function ModeleDetail() {
                 className={`likeBtn ${model.liked_by_me ? "likeBtnActive" : ""}`}
                 onClick={toggleLike}
                 aria-pressed={model.liked_by_me}
-                aria-label={model.liked_by_me ? "Retirer des favoris" : "Ajouter aux favoris"}
+                aria-label={model.liked_by_me ? "Retirer des modèles enregistrés" : "Enregistrer ce modèle"}
               >
-                <IconReviews size={20} strokeWidth={2} />
-                <span>{model.like_count}</span>
+                <IconHeart size={20} strokeWidth={2} />
+                <span>{model.liked_by_me ? "Enregistré" : "Enregistrer"} · {model.like_count}</span>
               </button>
             </div>
 

@@ -1,4 +1,20 @@
 /** Sur-MeZur — configuration du site vitrine. */
+import apkBuild from "./apk.json";
+
+/**
+ * L'APK Android est servi par le site lui-même (public/android/sur-mezur.apk).
+ * Version et taille sont écrites par `app-mobile/scripts/compiler.ps1 -Publier`
+ * dans `apk.json` ; les variables NEXT_PUBLIC_APK_* restent prioritaires (APK
+ * hébergé ailleurs).
+ */
+function apkSize(locale: "fr" | "en"): string {
+  if (process.env.NEXT_PUBLIC_APK_SIZE) return process.env.NEXT_PUBLIC_APK_SIZE;
+  const b = apkBuild.bytes;
+  if (!b) return "";
+  const unit = locale === "fr" ? ["Ko", "Mo"] : ["KB", "MB"];
+  const fmt = (n: number) => n.toLocaleString(locale === "fr" ? "fr-FR" : "en-US", { maximumFractionDigits: 1 });
+  return b < 1024 * 1024 ? `${fmt(Math.round(b / 1024))} ${unit[0]}` : `${fmt(b / (1024 * 1024))} ${unit[1]}`;
+}
 export const siteConfig = {
   name: "Sur-MeZur",
   tagline: "Mesurez plus juste. Cousez mieux.",
@@ -9,11 +25,11 @@ export const siteConfig = {
    * `Attribution` y ajoute ensuite l'origine de la visite (utm_*, code).
    */
   appUrl: process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://sur-me-zur.vercel.app",
-  /** APK Android (page /telecharger). Vide tant qu'aucune version n'est publiée. */
+  /** APK Android (page /telecharger, section « Application »). Vide tant qu'aucune version n'est publiée. */
   apk: {
-    url: process.env.NEXT_PUBLIC_APK_URL || "",
-    size: process.env.NEXT_PUBLIC_APK_SIZE || "",
-    version: process.env.NEXT_PUBLIC_APK_VERSION || "",
+    url: process.env.NEXT_PUBLIC_APK_URL || apkBuild.file || "",
+    size: apkSize,
+    version: process.env.NEXT_PUBLIC_APK_VERSION || apkBuild.version || "",
   },
   location: {
     city: "Douala",

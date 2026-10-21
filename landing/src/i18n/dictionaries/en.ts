@@ -194,6 +194,25 @@ const en = {
     cta: "Take my measurements — free",
   },
 
+  app: {
+    eyebrow: "Android app",
+    title: "Sur-MeZur in your pocket.",
+    sub: "A real app without the weight: it opens full screen, keeps you signed in and updates itself.",
+    f1t: "Ultra light",
+    f1b: "to download: it works even on a small data plan.",
+    f1bNoSize: "Less than 1 MB to download: it works even on a small data plan.",
+    f2t: "Always up to date",
+    f2b: "New features arrive on their own, no reinstall needed.",
+    f3t: "Feels like an app",
+    f3b: "Full screen, camera, WhatsApp and phone contacts.",
+    cta: "Download the app",
+    how: "How to install it",
+    note: "Android 7 or newer · free",
+    screenTitle: "Your measurements in 2 photos",
+    screenBody: "One front photo, one side photo.",
+    screenCta: "Next",
+  },
+
   download: {
     metaTitle: "Download the Android app",
     metaDescription: "Install the Sur-MeZur app on your Android phone: light, free and always up to date.",

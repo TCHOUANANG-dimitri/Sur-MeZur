@@ -32,7 +32,6 @@ ml/data/collecte/
 # dans le depot public (ni cles, ni mots de passe).
 *.keystore
 *.jks
-android-twa/app/build/
 
 # Stockages runtime du backend : jamais versionnes, ignorent les photos.
 backend/uploads/
@@ -44,3 +43,10 @@ backend/dataset_store/
 # nouveaux_sujets_reels.json) : donnees personnelles, jamais dans le depot
 # public. Sauvegarde hors machine : voir ml/bench/eval_production.py.
 ml/bench/photos/
+
+# Application mobile (app-mobile/) : sorties de compilation et chemins locaux.
+app-mobile/android/.gradle/
+app-mobile/android/app/build/
+app-mobile/android/build/
+app-mobile/android/local.properties
+app-mobile/dist/

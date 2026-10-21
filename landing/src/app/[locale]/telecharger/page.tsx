@@ -19,15 +19,16 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 /**
- * Téléchargement de l'application Android (APK). L'adresse du fichier vient
- * de NEXT_PUBLIC_APK_URL : tant qu'elle est vide, la page propose
- * l'application web et l'ajout à l'écran d'accueil.
+ * Téléchargement de l'application Android (APK), servi par le site
+ * (public/android/sur-mezur.apk, voir data/site.ts). Tant qu'aucun APK n'est
+ * publié, la page propose l'application web et l'ajout à l'écran d'accueil.
  */
 export default async function DownloadPage({ params }: Params) {
   const { locale } = await params;
   const active: Locale = isLocale(locale) ? locale : defaultLocale;
   const d = getDictionary(active).download;
-  const { url, size, version } = siteConfig.apk;
+  const { url, version } = siteConfig.apk;
+  const size = siteConfig.apk.size(active);
   const steps = [d.s1, d.s2, d.s3];
 
   return (

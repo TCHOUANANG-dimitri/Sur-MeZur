@@ -27,6 +27,7 @@ import { IconChevronRight, IconSearch } from "@/components/icons";
 export default function Accueil() {
   const { user } = useAuth();
   const [popular, setPopular] = useState<GarmentModel[] | null>(null);
+  const [saved, setSaved] = useState<GarmentModel[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [byCategory, setByCategory] = useState<Record<string, GarmentModel[]>>({});
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
@@ -36,6 +37,10 @@ export default function Accueil() {
     CatalogApi.models({ sort: "popular", limit: 10 })
       .then(setPopular)
       .catch(() => setPopular([]));
+
+    CatalogApi.models({ liked_only: true, limit: 10 })
+      .then(setSaved)
+      .catch(() => setSaved([]));
 
     CatalogApi.categories()
       .then((cats) => {
@@ -93,6 +98,10 @@ export default function Accueil() {
           <Button block>{latest ? "Voir mes mesures" : "Commencer"}</Button>
         </Link>
       </section>
+
+      {/* Les modeles enregistres (coeur) d'abord : c'est ce que la personne
+          a deja choisi, il doit etre a portee de main. */}
+      <ModelSection title="Mes modèles enregistrés" models={saved} href="/modeles?favoris=1" selection={selection} />
 
       <ModelSection title="Les plus aimés" models={popular} href="/modeles?tri=populaire" selection={selection} />
 

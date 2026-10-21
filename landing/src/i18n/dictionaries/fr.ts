@@ -200,6 +200,25 @@ const fr: Dictionary = {
     cta: "Prendre mes mesures — gratuit",
   },
 
+  app: {
+    eyebrow: "Application Android",
+    title: "Sur-MeZur dans votre poche.",
+    sub: "Une vraie application, sans le poids : elle s'ouvre en plein écran, garde votre session et se met à jour toute seule.",
+    f1t: "Ultra légère",
+    f1b: "à télécharger : elle passe même avec peu de données mobiles.",
+    f1bNoSize: "Moins d'1 Mo à télécharger : elle passe même avec peu de données mobiles.",
+    f2t: "Toujours à jour",
+    f2b: "Les nouveautés arrivent d'elles-mêmes, sans réinstaller.",
+    f3t: "Comme une application",
+    f3b: "Plein écran, caméra, WhatsApp et contacts du téléphone.",
+    cta: "Télécharger l'application",
+    how: "Comment l'installer",
+    note: "Android 7 ou plus récent · gratuit",
+    screenTitle: "Vos mesures en 2 photos",
+    screenBody: "Une photo de face, une de profil.",
+    screenCta: "Suivant",
+  },
+
   download: {
     metaTitle: "Télécharger l'application Android",
     metaDescription: "Installez l'application Sur-MeZur sur votre téléphone Android : légère, gratuite, et toujours à jour.",

@@ -1,6 +1,6 @@
 /**
  * Manifeste PWA (B4, Next 15) : servi en `/manifest.webmanifest`.
- * Nom « Sur-MeZur », `start_url: "/"`, `display: "standalone"`, couleurs
+ * Nom « Sur-MeZur », `start_url: "/bienvenue"`, `display: "standalone"`, couleurs
  * `#5b21b6`, icones 192 et 512 px + maskable generees depuis
  * `public/logo-mark.png`.
  */
@@ -14,7 +14,9 @@ export default function manifest(): MetadataRoute.Manifest {
     description:
       "Vos mesures de couture en 2 photos, gratuitement. Carnet tailleur et patrons.",
     lang: "fr",
-    start_url: "/",
+    // Application installee (APK, PWA) : presentation au premier lancement,
+    // puis connexion ou espace personnel (voir app/bienvenue).
+    start_url: "/bienvenue",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#5b21b6",

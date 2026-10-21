@@ -26,6 +26,7 @@ export {
   Users as IconUsers,
   Package as IconOrders,
   Star as IconReviews,
+  Heart as IconHeart,
 
   // Actions et etats
   ChevronLeft as IconBack,

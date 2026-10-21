@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AppDownload } from "@/components/sections/AppDownload";
 import { Audiences } from "@/components/sections/Audiences";
 import { Faq } from "@/components/sections/Faq";
 import { FinalCta } from "@/components/sections/FinalCta";
@@ -44,6 +45,7 @@ export default async function Home({ params }: Params) {
       <Audiences dict={dict} />
       <Measures dict={dict} />
       <PatternTeaser dict={dict} />
+      <AppDownload locale={active} dict={dict} />
       <Testimonials locale={active} dict={dict} />
       <Faq dict={dict} />
       <FinalCta locale={active} dict={dict} />

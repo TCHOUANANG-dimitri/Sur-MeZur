@@ -15,7 +15,7 @@ import type { Category, GarmentModel } from "@/lib/api/types";
 import { ModelCard } from "@/components/ModelCard";
 import { getSelection, onSelectionChange } from "@/lib/selection";
 import { Button, Chip, EmptyState, ErrorBanner, Input, PageHeader, Spinner } from "@/components/ui";
-import { IconModels, IconSearch } from "@/components/icons";
+import { IconHeart, IconModels, IconSearch } from "@/components/icons";
 
 function GalerieInner() {
   const router = useRouter();
@@ -82,7 +82,7 @@ function GalerieInner() {
 
   return (
     <>
-      <PageHeader title={likedOnly ? "Mes favoris" : "Modèles"} />
+      <PageHeader title={likedOnly ? "Modèles enregistrés" : "Modèles"} />
       <div className="container section">
         <Input
           type="search"
@@ -97,7 +97,7 @@ function GalerieInner() {
             Tous
           </Chip>
           <Chip active={likedOnly} onClick={() => setParam("favoris", "1")}>
-            Mes favoris
+            <IconHeart size={14} aria-hidden /> Enregistrés
           </Chip>
           <span className="filterDivider" aria-hidden />
           <Chip active={sort === "recent"} onClick={() => setParam("tri", null)}>
@@ -141,12 +141,12 @@ function GalerieInner() {
         ) : shown.length === 0 ? (
           <EmptyState
             icon={<IconSearch size={30} strokeWidth={1.6} />}
-            title={likedOnly ? "Aucun favori" : "Aucun modèle"}
+            title={likedOnly ? "Aucun modèle enregistré" : "Aucun modèle"}
             body={
               query
                 ? "Aucun modèle ne correspond à votre recherche."
                 : likedOnly
-                  ? "Ajoutez des modèles à vos favoris depuis leur fiche."
+                  ? "Touchez le cœur d'un modèle pour l'enregistrer : il apparaîtra ici et sur votre accueil."
                   : "Le catalogue est vide pour ce filtre."
             }
             action={
