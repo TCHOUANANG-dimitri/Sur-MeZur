@@ -158,7 +158,7 @@ function ModelSection({
       ) : (
         <div className="homeRail">
           {models.map((m) => (
-            <ModelCard key={m.id} model={m} selected={selection.includes(m.id)} />
+            <ModelCard key={m.id} model={m} selected={selection.includes(m.id)} suite={models.map((x) => x.id)} />
           ))}
         </div>
       )}

@@ -158,7 +158,7 @@ function GalerieInner() {
         ) : (
           <div className="grid">
             {shown.map((m) => (
-              <ModelCard key={m.id} model={m} selected={selection.includes(m.id)} />
+              <ModelCard key={m.id} model={m} selected={selection.includes(m.id)} suite={shown.map((x) => x.id)} />
             ))}
           </div>
         )}

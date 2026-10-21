@@ -9,6 +9,9 @@
  * enregistres »), dans le catalogue (filtre « Enregistrés ») et dans le
  * profil.
  *
+ * `suite` : identifiants de la liste affichee, dans l'ordre. Toucher la carte
+ * les retient pour passer d'un modele a l'autre par balayage sur la fiche.
+ *
  * Aucun prix n'est affiche : les modeles sont confectionnes sur mesure et le
  * tarif se negocie avec le tailleur. Montrer un prix de catalogue laisserait
  * croire a un tarif ferme.
@@ -17,6 +20,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { CatalogApi } from "@/lib/api/endpoints";
+import { cacheModels, rememberSuite } from "@/lib/modelSuite";
 import type { GarmentModel } from "@/lib/api/types";
 import { IconCheck, IconHeart } from "./icons";
 
@@ -26,6 +30,7 @@ export function ModelCard({
   href,
   saveable = true,
   onSavedChange,
+  suite,
 }: {
   model: GarmentModel;
   /** Marque les modeles deja dans la selection a coudre. */
@@ -34,6 +39,7 @@ export function ModelCard({
   /** Affiche le coeur « Enregistrer » (faux pour un visiteur sans compte). */
   saveable?: boolean;
   onSavedChange?: (model: GarmentModel, saved: boolean) => void;
+  suite?: string[];
 }) {
   const photo = model.photo_url ?? model.photos?.[0] ?? null;
   const [saved, setSaved] = useState(model.liked_by_me);
@@ -59,7 +65,14 @@ export function ModelCard({
   }
 
   return (
-    <Link href={href ?? `/modeles/${model.id}`} className="modelCard">
+    <Link
+      href={href ?? `/modeles/${model.id}`}
+      className="modelCard"
+      onClick={() => {
+        if (suite) rememberSuite(suite);
+        cacheModels([{ ...model, liked_by_me: saved }]);
+      }}
+    >
       <div
         className="modelCardImage"
         style={

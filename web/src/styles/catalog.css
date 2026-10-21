@@ -470,3 +470,76 @@
   flex: 1;
   min-width: 0;
 }
+
+/* Fiche modele : passage au modele voisin par balayage. `pan-y` laisse le
+   defilement vertical au navigateur et nous donne le geste horizontal. */
+.modelSwipe {
+  touch-action: pan-y;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+.modelEnterNext {
+  animation: modelEnterNext 0.28s ease-out;
+}
+
+.modelEnterPrev {
+  animation: modelEnterPrev 0.28s ease-out;
+}
+
+@keyframes modelEnterNext {
+  from { transform: translateX(48px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@keyframes modelEnterPrev {
+  from { transform: translateX(-48px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modelEnterNext,
+  .modelEnterPrev {
+    animation: none;
+  }
+}
+
+.modelSuiteNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.modelSuiteNav span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--indigo-text);
+}
+
+.modelSuiteNav small {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.modelSuiteNav button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--indigo-text);
+  cursor: pointer;
+}
+
+.modelSuiteNav button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
