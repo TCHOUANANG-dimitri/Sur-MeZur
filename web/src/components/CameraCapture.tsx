@@ -17,15 +17,23 @@
  * RETARDATEUR. Les consignes demandent de poser le telephone a 2,5–3 m : seul,
  * impossible d'appuyer sur le declencheur en etant deja en position.
  *
- * PLEIN ECRAN. L'apercu remplit tout l'ecran (`cover`), quel que soit le
- * format du flux : beaucoup de telephones livrent un flux en paysage meme
- * tenus droits, et un apercu en `contain` ne montrait alors qu'une bande au
- * milieu. Pour que ce que la personne voit soit EXACTEMENT ce qui est
- * photographie, la photo est recadree sur la partie visible de l'image
- * (`cropRef`) : aucun bord cache qui lui ferait croire etre dans le cadre.
+ * CHAMP COMPLET, SANS ZOOM. Le flux demande est le format natif du capteur
+ * (4:3, sans recadrage par le navigateur) : demander du 9:16 en portrait
+ * faisait decouper par Chrome une petite zone au centre du capteur, et
+ * l'image paraissait zoomee par rapport a l'appareil photo du telephone (il
+ * fallait reculer bien plus pour entrer dans le cadre). Pour la meme raison,
+ * le zoom de la camera est ramene a 1x quand le telephone le permet.
  *
- * SILHOUETTE. La meme que dans les consignes, en surimpression sur toute la
- * hauteur de l'ecran, pour se cadrer de la tete aux pieds.
+ * HAUTEUR ENTIERE. Pour une personne debout, c'est la hauteur du champ qui
+ * compte : l'apercu la montre toujours en entier, sur toute la hauteur de
+ * l'ecran. Si l'image est plus large que l'ecran (flux en paysage, ou 4:3 sur
+ * un ecran etroit), seuls les cotes sont rognes — et la photo l'est de la
+ * meme facon (`visible`) ; si elle est plus etroite, des bandes noires
+ * l'encadrent. Ce que la personne voit est exactement ce qui est
+ * photographie, sans rien perdre en hauteur.
+ *
+ * SILHOUETTE. La meme que dans les consignes, calee sur la zone visible de
+ * l'image (`frame`), pour se cadrer de la tete aux pieds.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -45,7 +53,7 @@ export function cameraSupported(): boolean {
   );
 }
 
-const DELAYS = [0, 3, 10] as const;
+const DELAYS = [0, 3, 5] as const;
 
 export function CameraCapture({
   target,
@@ -71,29 +79,35 @@ export function CameraCapture({
   const [canSwitch, setCanSwitch] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
-  const [delay, setDelay] = useState<number>(10);
+  const [delay, setDelay] = useState<number>(5);
   const [count, setCount] = useState<number | null>(null);
 
   const stageRef = useRef<HTMLDivElement>(null);
-  // Partie de l'image du flux visible a l'ecran (en pixels du flux). La video
-  // est en `cover` : ce qui deborde de l'ecran est rogne a l'affichage, et la
-  // photo est recadree de la meme facon au declenchement.
-  const cropRef = useRef<{ sx: number; sy: number; sw: number; sh: number } | null>(null);
-
-  const measureFrame = useCallback(() => {
+  // Zone visible de l'image : a l'ecran (`frame`, ou se cale la silhouette)
+  // et dans le flux (`visible`, ce que la photo garde). L'image est mise a la
+  // hauteur de la scene ; `cover` rogne alors les cotes, `contain` ajoute des
+  // bandes (`fit`).
+  const [frame, setFrame] = useState<{ w: number; h: number; fit: "cover" | "contain" } | null>(null);
+  const visible = useCallback(() => {
     const video = videoRef.current;
     const stage = stageRef.current;
-    if (!video || !stage || !video.videoWidth || !video.videoHeight || !stage.clientWidth || !stage.clientHeight) return;
-    const scale = Math.max(stage.clientWidth / video.videoWidth, stage.clientHeight / video.videoHeight);
-    const sw = Math.min(video.videoWidth, stage.clientWidth / scale);
-    const sh = Math.min(video.videoHeight, stage.clientHeight / scale);
-    cropRef.current = {
+    if (!video || !stage || !video.videoWidth || !video.videoHeight || !stage.clientWidth || !stage.clientHeight) return null;
+    const scale = stage.clientHeight / video.videoHeight;
+    const sw = Math.min(video.videoWidth, Math.round(stage.clientWidth / scale));
+    return {
       sx: Math.round((video.videoWidth - sw) / 2),
-      sy: Math.round((video.videoHeight - sh) / 2),
-      sw: Math.round(sw),
-      sh: Math.round(sh),
+      sw,
+      sh: video.videoHeight,
+      w: Math.round(sw * scale),
+      h: stage.clientHeight,
+      fit: video.videoWidth * scale > stage.clientWidth ? ("cover" as const) : ("contain" as const),
     };
   }, []);
+
+  const measureFrame = useCallback(() => {
+    const v = visible();
+    if (v) setFrame({ w: v.w, h: v.h, fit: v.fit });
+  }, [visible]);
 
   // Recalcul a chaque changement de taille : rotation du telephone,
   // redimensionnement de la fenetre sur ordinateur.
@@ -124,15 +138,17 @@ export function CameraCapture({
 
     navigator.mediaDevices
       .getUserMedia({
-        // Portrait d'abord (9:16) : sur un telephone tenu droit, l'image remplit
-        // l'ecran et cadre la personne en pied. Valeurs « ideales » seulement :
-        // une webcam de bureau, en paysage, reste acceptee.
+        // Format natif du capteur, sans recadrage (`resizeMode: none`). Les
+        // dimensions s'entendent dans le sens du capteur (paysage) : le
+        // navigateur tourne l'image quand le telephone est tenu droit.
+        // Valeurs « ideales » seulement : toute webcam reste acceptee.
         video: {
           facingMode: { ideal: facing },
-          width: { ideal: 1080 },
-          height: { ideal: 1920 },
-          aspectRatio: { ideal: 9 / 16 },
-        },
+          width: { ideal: 1920 },
+          height: { ideal: 1440 },
+          aspectRatio: { ideal: 4 / 3 },
+          resizeMode: { ideal: "none" },
+        } as MediaTrackConstraints,
         audio: false,
       })
       .then(async (stream) => {
@@ -141,6 +157,14 @@ export function CameraCapture({
           return;
         }
         streamRef.current = stream;
+        // Zoom ramene a 1x : certains telephones demarrent la camera du
+        // navigateur deja zoomee. Jamais en dessous (grand-angle deformant).
+        const [track] = stream.getVideoTracks();
+        const zoom = (track?.getCapabilities?.() as { zoom?: { min: number; max: number } } | undefined)?.zoom;
+        if (track && zoom) {
+          const value = Math.min(Math.max(1, zoom.min), zoom.max);
+          await track.applyConstraints({ advanced: [{ zoom: value } as MediaTrackConstraintSet] }).catch(() => {});
+        }
         const video = videoRef.current;
         if (video) {
           video.srcObject = stream;
@@ -186,18 +210,17 @@ export function CameraCapture({
   const shoot = useCallback(() => {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
-    // Image a la resolution reelle du flux, recadree sur ce qui etait visible,
-    // et NON en miroir meme si l'apercu l'est : une photo de profil inversee
-    // resterait mesurable, mais une photo retournee derouterait la personne a
-    // la relecture. Le recadrage est centre, donc identique en miroir.
-    measureFrame();
-    const c = cropRef.current ?? { sx: 0, sy: 0, sw: video.videoWidth, sh: video.videoHeight };
+    // Zone visible de l'image, a la resolution reelle du flux, et NON en
+    // miroir meme si l'apercu l'est : une photo de profil inversee resterait
+    // mesurable, mais une photo retournee derouterait la personne a la
+    // relecture. Le rognage est centre, donc identique en miroir.
+    const v = visible() ?? { sx: 0, sw: video.videoWidth, sh: video.videoHeight };
     const canvas = document.createElement("canvas");
-    canvas.width = c.sw;
-    canvas.height = c.sh;
+    canvas.width = v.sw;
+    canvas.height = v.sh;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.drawImage(video, c.sx, c.sy, c.sw, c.sh, 0, 0, c.sw, c.sh);
+    ctx.drawImage(video, v.sx, 0, v.sw, v.sh, 0, 0, v.sw, v.sh);
     canvas.toBlob(
       (blob) => {
         if (!blob) {
@@ -211,7 +234,7 @@ export function CameraCapture({
       "image/jpeg",
       0.92
     );
-  }, [target, stop, measureFrame]);
+  }, [target, stop, visible]);
 
   // Decompte du retardateur, une seconde a la fois.
   useEffect(() => {
@@ -243,6 +266,7 @@ export function CameraCapture({
         <video
           ref={videoRef}
           className={`cameraVideo ${facing === "user" ? "cameraMirror" : ""}`}
+          style={{ objectFit: frame?.fit ?? "contain" }}
           playsInline
           muted
           autoPlay
@@ -250,10 +274,12 @@ export function CameraCapture({
             setReady(true);
             measureFrame();
           }}
+          // Le flux change de format quand le telephone pivote.
+          onResize={measureFrame}
         />
 
         {!error && (
-          <div className="cameraGuide" aria-hidden>
+          <div className="cameraGuide" aria-hidden style={frame ? { width: frame.w, height: frame.h } : undefined}>
             {target === "front" ? (
               <SilhouetteFace className="cameraSilhouette" />
             ) : (
@@ -293,7 +319,7 @@ export function CameraCapture({
               : "De profil dans la silhouette, bras collés le long du corps."}
           </p>
 
-          {/* Libelle commun devant des choix courts : « Retardateur 10 s »
+          {/* Libelle commun devant des choix courts : « Retardateur 5 s »
               repete trois fois passait sur deux lignes au telephone. */}
           <div className="cameraDelays" role="group" aria-label="Retardateur">
             <span className="cameraDelaysLabel">

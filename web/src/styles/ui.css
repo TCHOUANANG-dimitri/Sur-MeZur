@@ -183,11 +183,60 @@ textarea.input {
   }
 }
 
-/* Filtres du catalogue : toujours a la ligne. En defilement horizontal, la
-   derniere puce visible etait coupee au bord (« Les p… ») et semblait cassee. */
-.chipRow.galleryFilters {
-  flex-wrap: wrap;
-  overflow-x: visible;
+/* Filtres du catalogue : menus deroulants, categorie sur toute la largeur
+   au telephone, les trois sur une ligne des qu'il y a la place. */
+.galleryFilterBar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+
+.filterSelectWide {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 640px) {
+  .galleryFilterBar {
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+
+  .filterSelectWide {
+    grid-column: auto;
+  }
+}
+
+.filterSelect {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.filterSelect > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.filterSelect .input {
+  min-height: 44px;
+  padding: 9px 38px 9px 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.filterSelectOn .input {
+  border-color: var(--violet-vivid);
+  background-color: var(--violet-tint);
+  color: var(--violet-deep);
 }
 
 .chip {

@@ -14,8 +14,17 @@ import { CatalogApi } from "@/lib/api/endpoints";
 import type { Category, GarmentModel } from "@/lib/api/types";
 import { ModelCard } from "@/components/ModelCard";
 import { getSelection, onSelectionChange } from "@/lib/selection";
-import { Button, Chip, EmptyState, ErrorBanner, Input, PageHeader, Spinner } from "@/components/ui";
-import { IconHeart, IconModels, IconSearch } from "@/components/icons";
+import { Button, EmptyState, ErrorBanner, Input, PageHeader, Select, Spinner } from "@/components/ui";
+import { IconModels, IconSearch } from "@/components/icons";
+
+const GENRES: Record<string, string> = { female: "Femme", male: "Homme", unisex: "Mixte" };
+
+/** Nom de categorie, precise du genre quand deux categories portent le meme
+ *  nom (« Haut » femme et « Haut » homme). */
+function categoryLabel(c: Category, all: Category[]): string {
+  const homonyme = all.some((o) => o.id !== c.id && o.name === c.name);
+  return homonyme && GENRES[c.gender] ? `${c.name} · ${GENRES[c.gender]}` : c.name;
+}
 
 function GalerieInner() {
   const router = useRouter();
@@ -92,38 +101,36 @@ function GalerieInner() {
           aria-label="Rechercher un modèle"
         />
 
-        <div className="chipRow galleryFilters">
-          <Chip active={!likedOnly} onClick={() => setParam("favoris", null)}>
-            Tous
-          </Chip>
-          <Chip active={likedOnly} onClick={() => setParam("favoris", "1")}>
-            <IconHeart size={14} aria-hidden /> Enregistrés
-          </Chip>
-          <span className="filterDivider" aria-hidden />
-          <Chip active={sort === "recent"} onClick={() => setParam("tri", null)}>
-            Récents
-          </Chip>
-          <Chip active={sort === "popular"} onClick={() => setParam("tri", "populaire")}>
-            Les plus aimés
-          </Chip>
+        {/* Menus deroulants : la place des filtres reste la meme quel que
+            soit le nombre de categories (en puces, elles s'empilaient sur
+            plusieurs lignes). Un filtre actif est mis en couleur. */}
+        <div className="galleryFilterBar">
+          <label className={`filterSelect filterSelectWide ${categoryId ? "filterSelectOn" : ""}`}>
+            <span>Catégorie</span>
+            <Select value={categoryId ?? ""} onChange={(e) => setParam("categorie", e.target.value || null)}>
+              <option value="">Toutes catégories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {categoryLabel(c, categories)}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label className={`filterSelect ${likedOnly ? "filterSelectOn" : ""}`}>
+            <span>Afficher</span>
+            <Select value={likedOnly ? "1" : ""} onChange={(e) => setParam("favoris", e.target.value || null)}>
+              <option value="">Tous</option>
+              <option value="1">Enregistrés</option>
+            </Select>
+          </label>
+          <label className={`filterSelect ${sort === "popular" ? "filterSelectOn" : ""}`}>
+            <span>Trier par</span>
+            <Select value={sort === "popular" ? "populaire" : ""} onChange={(e) => setParam("tri", e.target.value || null)}>
+              <option value="">Récents</option>
+              <option value="populaire">Plus aimés</option>
+            </Select>
+          </label>
         </div>
-
-        {categories.length > 0 && (
-          <div className="chipRow galleryFilters">
-            <Chip active={!categoryId} onClick={() => setParam("categorie", null)}>
-              Toutes catégories
-            </Chip>
-            {categories.map((c) => (
-              <Chip
-                key={c.id}
-                active={categoryId === c.id}
-                onClick={() => setParam("categorie", c.id)}
-              >
-                {c.name}
-              </Chip>
-            ))}
-          </div>
-        )}
 
         {selection.length > 0 && (
           <div className="selectionBar">

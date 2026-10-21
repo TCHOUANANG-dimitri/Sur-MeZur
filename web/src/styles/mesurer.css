@@ -543,11 +543,12 @@
   background: #000;
 }
 
-/* Plein ecran : la photo est recadree sur cette meme zone (CameraCapture). */
+/* Image a la hauteur de l'ecran ; `object-fit` (cover ou contain) est
+   choisi par CameraCapture, qui rogne la photo de la meme facon. */
 .cameraVideo {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 /* Apercu en miroir pour la camera frontale, comme un miroir de salle de
@@ -556,8 +557,8 @@
   transform: scaleX(-1);
 }
 
-/* Calque sur toute la zone d'apercu (= zone photographiee). Le haut est
-   laisse libre pour la barre de titre. */
+/* Calque sur l'image du flux (= zone photographiee), dimensionne par
+   CameraCapture ; toute la scene tant que le flux n'est pas pret. */
 .cameraGuide {
   position: absolute;
   top: 50%;

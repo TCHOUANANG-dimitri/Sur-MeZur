@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from sqlalchemy import func, or_
+from sqlalchemy import String, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.deps import get_current_user_optional, get_db, require_roles
@@ -109,23 +109,32 @@ def list_models(
             or_(
                 GarmentModel.name.ilike(f"%{q}%"),
                 GarmentModel.description.ilike(f"%{q}%"),
-                GarmentModel.style_tags.cast(db.String).ilike(f"%{q}%"),
+                GarmentModel.style_tags.cast(String).ilike(f"%{q}%"),
                 GarmentModel.category.has(Category.name.ilike(f"%{q}%")),
             )
         )
     if liked_only:
         if not client:
             return []
-        query = query.join(GarmentModelLike, GarmentModelLike.garment_model_id == GarmentModel.id).filter(
-            GarmentModelLike.client_id == client.id
+        # Sous-requete plutot qu'une jointure : le tri « popular » joint deja
+        # la table des likes, et deux jointures sans alias faisaient echouer
+        # la requete (« Enregistres » + « Les plus aimes »).
+        query = query.filter(
+            GarmentModel.id.in_(
+                db.query(GarmentModelLike.garment_model_id).filter(GarmentModelLike.client_id == client.id)
+            )
         )
 
     if sort == "popular":
-        query = (
-            query.outerjoin(GarmentModelLike, GarmentModelLike.garment_model_id == GarmentModel.id)
-            .group_by(GarmentModel.id)
-            .order_by(func.count(GarmentModelLike.id).desc())
+        # Nombre de likes en sous-requete correlee : pas de GROUP BY, que
+        # PostgreSQL refuse avec la categorie chargee dans la meme requete.
+        likes = (
+            db.query(func.count(GarmentModelLike.id))
+            .filter(GarmentModelLike.garment_model_id == GarmentModel.id)
+            .correlate(GarmentModel)
+            .scalar_subquery()
         )
+        query = query.order_by(likes.desc(), GarmentModel.created_at.desc())
     elif sort == "curated":
         # 4.7 : ordre choisi par l'equipe, puis les plus recents.
         query = query.order_by(GarmentModel.sort_order.asc(), GarmentModel.created_at.desc())
