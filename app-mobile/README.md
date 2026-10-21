@@ -34,7 +34,9 @@ L'ancienne application React Native / Expo est mise de côté dans
 - textes des bibliothèques limités au français et à l'anglais ;
 - écran de démarrage en 2 densités au lieu de 5, toutes les images en
   palette (les ressources passent de 988 Ko à 228 Ko) ;
-- ni notifications, ni raccourcis, ni raccourci « Paramètres du site ».
+- ni notifications ni raccourcis. Le raccourci « Paramètres du site » reste
+  actif : sans lui, la bibliothèque plante au lancement (elle configure
+  au démarrage une activité que Bubblewrap ne déclare alors pas).
 
 ## Compiler
 

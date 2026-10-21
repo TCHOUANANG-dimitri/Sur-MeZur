@@ -18,7 +18,7 @@
   "webManifestUrl": "https://sur-me-zur.vercel.app/manifest.webmanifest",
   "splashScreenFadeOutDuration": 300,
   "enableNotifications": false,
-  "enableSiteSettingsShortcut": false,
+  "enableSiteSettingsShortcut": true,
   "fallbackType": "customtabs",
   "shortcuts": [],
   "minSdkVersion": 24,
@@ -26,8 +26,8 @@
     "path": "%USERPROFILE%/.surmezur/android.keystore",
     "alias": "surmezur"
   },
-  "appVersion": "1.0.0",
-  "appVersionCode": 1,
+  "appVersion": "1.0.1",
+  "appVersionCode": 2,
   "fingerprints": [
     {
       "name": "surmezur",
