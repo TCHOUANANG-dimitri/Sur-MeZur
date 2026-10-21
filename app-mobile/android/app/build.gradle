@@ -57,11 +57,11 @@ android {
         applicationId "com.surmezur.app"
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 2
+        versionCode 3
         // Seulement les langues du site : les bibliotheques AndroidX embarquent
         // sinon leurs textes dans plus de 80 langues.
         resourceConfigurations += ["fr", "en"]
-        versionName "1.0.1"
+        versionName "1.0.2"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

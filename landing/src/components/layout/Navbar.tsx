@@ -9,7 +9,7 @@ import { localizePath, localizedPath, type Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 import { AppLink } from "@/components/ui/AppLink";
 import { Logo } from "@/components/ui/Logo";
-import { ArrowRight } from "@/components/ui/Icons";
+import { ArrowRight, Download } from "@/components/ui/Icons";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
 const LINKS = [
@@ -84,7 +84,7 @@ export function Navbar({ locale, dict }: NavbarProps) {
               <li key={item.key}>
                 <a
                   href={localizePath(locale, item.hash)}
-                  className="relative rounded-full px-4 py-2 text-sm font-medium text-mist-300 transition-colors duration-300 hover:text-mist-50 after:absolute after:inset-x-4 after:-bottom-0.5 after:h-px after:origin-left after:scale-x-0 after:bg-gradient-to-r after:from-violet-800 after:to-violet-500 after:transition-transform after:duration-500 after:content-[''] hover:after:scale-x-100"
+                  className="relative whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium text-mist-300 transition-colors duration-300 hover:text-mist-50 after:absolute after:inset-x-3 after:-bottom-0.5 after:h-px after:origin-left after:scale-x-0 after:bg-gradient-to-r after:from-violet-800 after:to-violet-500 after:transition-transform after:duration-500 after:content-[''] hover:after:scale-x-100"
                 >
                   {dict.nav[item.key]}
                 </a>
@@ -102,12 +102,25 @@ export function Navbar({ locale, dict }: NavbarProps) {
             <AppLink
               path={appPaths.login}
               cta="nav-login"
-              className="hidden text-sm font-medium text-mist-300 transition-colors hover:text-violet-700 xl:inline"
+              className="hidden whitespace-nowrap text-sm font-medium text-mist-300 transition-colors hover:text-violet-700 xl:inline"
             >
               {dict.nav.login}
             </AppLink>
 
-            <AppLink path={appPaths.measure} cta="nav" className="btn btn-primary btn-sm hidden md:inline-flex">
+            {/* Application Android : texte complet quand la place le permet
+                (tablette, sans les liens de section, ou tres grand ecran), icone
+                seule sinon. */}
+            <Link
+              href={localizedPath(locale, "/telecharger")}
+              aria-label={dict.nav.getApp}
+              title={dict.nav.getApp}
+              className="btn btn-ghost btn-sm h-10 w-10 shrink-0 whitespace-nowrap !px-0 sm:w-auto sm:!px-4 lg:w-10 lg:!px-0 2xl:w-auto 2xl:!px-4"
+            >
+              <Download width={16} height={16} />
+              <span className="hidden sm:inline lg:hidden 2xl:inline">{dict.nav.getApp}</span>
+            </Link>
+
+            <AppLink path={appPaths.measure} cta="nav" className="btn btn-primary btn-sm hidden whitespace-nowrap md:inline-flex">
               {dict.nav.cta}
               <ArrowRight className="btn-arrow" width={14} height={14} />
             </AppLink>
@@ -157,19 +170,21 @@ export function Navbar({ locale, dict }: NavbarProps) {
           tabIndex={-1}
           aria-hidden
           onClick={() => setOpen(false)}
-          className="absolute inset-0 h-full w-full cursor-default bg-ink-950/80 backdrop-blur-md"
+          className="absolute inset-0 h-full w-full cursor-default bg-white"
         />
-        <div className="container-smz relative flex h-full flex-col justify-between pb-10 pt-[calc(var(--nav-h)+2rem)]">
+        {/* Fond opaque et defilement : sur un petit ecran, les boutons du bas
+            restent atteignables. */}
+        <div className="container-smz relative flex h-full flex-col justify-between gap-8 overflow-y-auto pb-8 pt-[calc(var(--nav-h)+1rem)]">
           <ul className="flex flex-col gap-1">
             {LINKS.map((item) => (
               <li key={item.key}>
                 <a
                   href={localizePath(locale, item.hash)}
                   onClick={() => setOpen(false)}
-                  className="flex items-center justify-between border-b border-violet-950/[0.08] py-5 font-display text-3xl text-mist-50 transition-colors duration-300 hover:text-violet-600"
+                  className="flex items-center justify-between border-b border-violet-950/[0.08] py-4 font-display text-[1.75rem] leading-tight text-mist-50 transition-colors duration-300 hover:text-violet-600"
                 >
                   {dict.nav[item.key]}
-                  <ArrowRight className="text-mist-500" width={20} height={20} />
+                  <ArrowRight className="text-mist-500" width={18} height={18} />
                 </a>
               </li>
             ))}
@@ -178,7 +193,7 @@ export function Navbar({ locale, dict }: NavbarProps) {
           <div className="flex flex-col gap-4">
             <AppLink path={appPaths.measure} cta="menu" className="btn btn-primary w-full">
               {dict.nav.cta}
-              <ArrowRight className="btn-arrow" />
+              <ArrowRight className="btn-arrow" width={18} height={18} />
             </AppLink>
             <div className="grid grid-cols-2 gap-3">
               <AppLink path={appPaths.login} cta="menu-login" className="btn btn-ghost btn-sm">

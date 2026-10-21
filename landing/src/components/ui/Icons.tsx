@@ -28,6 +28,21 @@ export function Check(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+/** Telechargement : fleche vers un plateau. */
+export function Download(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>
+      <path
+        d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Small brand glyph — the Sur-MeZur measurement "M" mark, drawn from geometry. */
 export function Mark(props: SVGProps<SVGSVGElement>) {
   return (

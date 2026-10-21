@@ -26,8 +26,8 @@
     "path": "%USERPROFILE%/.surmezur/android.keystore",
     "alias": "surmezur"
   },
-  "appVersion": "1.0.1",
-  "appVersionCode": 2,
+  "appVersion": "1.0.2",
+  "appVersionCode": 3,
   "fingerprints": [
     {
       "name": "surmezur",

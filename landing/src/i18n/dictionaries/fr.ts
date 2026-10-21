@@ -25,6 +25,7 @@ const fr: Dictionary = {
     cta: "Mesurer gratuitement",
     login: "Se connecter",
     download: "Application Android",
+    getApp: "Télécharger l'appli",
     lang: "Langue",
     skip: "Aller au contenu",
     openMenu: "Ouvrir le menu",

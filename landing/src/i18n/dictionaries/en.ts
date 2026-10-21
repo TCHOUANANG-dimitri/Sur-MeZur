@@ -20,6 +20,7 @@ const en = {
     cta: "Measure for free",
     login: "Log in",
     download: "Android app",
+    getApp: "Get the app",
     lang: "Language",
     skip: "Skip to content",
     openMenu: "Open menu",

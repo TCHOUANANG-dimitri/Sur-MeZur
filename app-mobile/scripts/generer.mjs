@@ -12,11 +12,15 @@
  *  - R8 : code reduit et optimise (proguard-android-optimize) ;
  *  - ressources inutilisees retirees (shrinkResources) ;
  *  - traductions des bibliotheques limitees au francais et a l'anglais ;
- *  - pas de raccourcis, pas de notifications, pas de raccourci « Parametres
- *    du site » ;
+ *  - pas de raccourcis ni de notifications (le raccourci « Parametres du
+ *    site » reste : la bibliotheque plante au lancement sans lui) ;
  *  - ecran de demarrage en 2 densites seulement (xhdpi, xxhdpi : Android met
  *    a l'echelle pour les autres) et toutes les images PNG en palette de 256
  *    couleurs (un logo sur fond uni : aucune difference visible).
+ *
+ * Icones et ecran de demarrage sont redessines sur fond blanc a partir des
+ * logos de la landing (landing/public/brand) : ceux du site web, telecharges
+ * par Bubblewrap, sont sur fond violet.
  *
  * La version de Gradle et du plugin Android sont alignees sur celles deja
  * presentes sur le poste (moins de telechargements).
@@ -28,10 +32,12 @@ import { fileURLToPath } from "node:url";
 import { ConsoleLog, TwaGenerator, TwaManifest } from "@bubblewrap/core";
 import sharp from "sharp";
 
+sharp.cache(false); // Windows : ne pas garder les fichiers ouverts (reecriture sur place)
 const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CIBLE = path.join(RACINE, "android");
 const GRADLE = "8.14.3"; // distribution deja en cache (~/.gradle/wrapper/dists)
 const PLUGIN_ANDROID = "8.10.1"; // compatible Gradle 8.11.1+
+const MARQUE = path.resolve(RACINE, "../landing/public/brand");
 
 function remplacer(fichier, avant, apres) {
   const p = path.join(CIBLE, fichier);
@@ -77,6 +83,34 @@ remplacer(
         resourceConfigurations += ["fr", "en"]
 `,
 );
+
+// --- Icones et ecran de demarrage sur fond blanc ------------------------------
+const RES = path.join(CIBLE, "app/src/main/res");
+const BLANC = { r: 255, g: 255, b: 255, alpha: 1 };
+async function carre(source, cote, fichier) {
+  await sharp(source).resize(cote, cote).flatten({ background: BLANC }).png().toFile(fichier);
+}
+for (const dossier of fs.readdirSync(RES).filter((d) => d.startsWith("mipmap-") && !d.includes("anydpi"))) {
+  for (const [nom, source] of [["ic_launcher", "icon-512.png"], ["ic_maskable", "icon-maskable.png"]]) {
+    const f = path.join(RES, dossier, `${nom}.png`);
+    if (!fs.existsSync(f)) continue;
+    const { width } = await sharp(f).metadata();
+    await carre(path.join(MARQUE, source), width, f);
+  }
+}
+await carre(path.join(MARQUE, "icon-512.png"), 512, path.join(CIBLE, "store_icon.png"));
+// Splash : le logo seul (sans cadre), centre, sur le fond blanc de l'ecran.
+for (const d of ["xhdpi", "xxhdpi"]) {
+  const f = path.join(RES, `drawable-${d}`, "splash.png");
+  const { width } = await sharp(f).metadata();
+  const logo = await sharp(path.join(MARQUE, "mark.png")).resize({ height: Math.round(width * 0.62) }).toBuffer();
+  await sharp({ create: { width, height: width, channels: 4, background: BLANC } })
+    .composite([{ input: logo, gravity: "center" }])
+    .flatten({ background: BLANC })
+    .png()
+    .toFile(f + ".tmp");
+  fs.renameSync(f + ".tmp", f);
+}
 
 // Ecran de demarrage : 5 densites generees (830 Ko) ; deux suffisent.
 for (const d of ["mdpi", "hdpi", "xxxhdpi"]) {
