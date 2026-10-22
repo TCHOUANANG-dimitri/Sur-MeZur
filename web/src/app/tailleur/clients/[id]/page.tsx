@@ -2,7 +2,9 @@
 
 /**
  * Fiche d'un client du carnet (B3.2) : appeler, WhatsApp, enregistrer dans
- * les contacts du telephone (numero copie au passage), notes, historique
+ * les contacts du telephone (numero copie au passage dans les deux premiers
+ * cas, pour le coller si le telephone ne le remplit pas), nom, numero et sexe
+ * modifiables, notes, historique
  * des mesures et des travaux, nouvelle mesure (photo ou metre), fiche
  * imprimable et partageable par WhatsApp (lien public en lecture seule,
  * qui expire).
@@ -14,9 +16,12 @@ import { useCallback, useEffect, useState } from "react";
 import { TailorApi } from "@/lib/api/tailor";
 import type { ClientMeasurement, TailorClient, TailorJob } from "@/lib/api/tailor";
 import { formatCm, presentableGroups } from "@/lib/measurements";
-import { Button, Card, EmptyState, ErrorBanner, PageHeader, Spinner, Textarea } from "@/components/ui";
-import { IconCall, IconChat, IconContact, IconMeasure, IconPrint } from "@/components/icons";
+import { Button, Card, EmptyState, ErrorBanner, Input, PageHeader, Spinner, Textarea } from "@/components/ui";
+import { PhoneField } from "@/components/fields";
+import { IconCall, IconChat, IconContact, IconEdit, IconMeasure, IconPrint } from "@/components/icons";
 import { copyText, openNewContact, whatsappHref } from "@/lib/contact";
+import { COUNTRIES, splitPhone } from "@/lib/countries";
+import { nameError, phoneError } from "@/lib/validation";
 import { JobBadge, ManualMeasureForm, dueLabel, formatDateFR } from "../../_components";
 
 export default function ClientDetail() {
@@ -33,6 +38,11 @@ export default function ClientDetail() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [notice, setNotice] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editGender, setEditGender] = useState("female");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -95,10 +105,44 @@ export default function ClientDetail() {
     }
   }
 
-  async function saveContact() {
+  function startEdit() {
     if (!client) return;
+    setEditName(client.name);
+    setEditPhone(client.phone || COUNTRIES[0].dial);
+    setEditGender(client.gender === "male" ? "male" : "female");
+    setEditing(true);
+  }
+
+  const editNameErr = editName.trim() ? nameError(editName) : null;
+  const editPhoneErr = splitPhone(editPhone).local ? phoneError(editPhone) : null;
+  const canSaveEdit = !nameError(editName) && !phoneError(editPhone) && !savingEdit;
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || !canSaveEdit) return;
+    setSavingEdit(true);
+    setError("");
+    try {
+      setClient(await TailorApi.patchClient(id, { name: editName.trim(), phone: editPhone, gender: editGender }));
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Enregistrement impossible.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  /** Copie le numero : le composeur ou les contacts le recoivent deja, mais
+   *  certains telephones l'ignorent ; il suffit alors de le coller. */
+  async function copyPhone() {
+    if (!client?.phone) return;
     const copied = await copyText(client.phone);
-    setNotice(copied ? `Numéro ${client.phone} copié.` : "");
+    setNotice(copied ? `Numéro ${client.phone} copié : collez-le si le téléphone ne l'a pas déjà rempli.` : "");
+  }
+
+  async function saveContact() {
+    if (!client?.phone) return;
+    await copyPhone();
     openNewContact(client.name, client.phone);
   }
 
@@ -123,6 +167,7 @@ export default function ClientDetail() {
   }
 
   const latest = measurements?.[0] ?? null;
+  const telHref = `tel:${client.phone.replace(/[^\d+]/g, "")}`;
   const editee = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
   return (
@@ -130,23 +175,71 @@ export default function ClientDetail() {
       <PageHeader title={client.name} back />
       <ErrorBanner message={error} />
 
-      <div className="tActionRow no-print">
-        <a className="btn btnSecondary" href={`tel:${client.phone}`}>
-          <IconCall size={18} aria-hidden /> Appeler
-        </a>
-        <a className="btn btnWhatsapp" href={whatsappHref(client.phone)}>
-          <IconChat size={18} aria-hidden /> WhatsApp
-        </a>
-        <button type="button" className="btn btnSecondary" onClick={() => void saveContact()}>
-          <IconContact size={18} aria-hidden /> Enregistrer dans mes contacts
-        </button>
-      </div>
+      {client.phone ? (
+        <div className="tActionRow no-print">
+          <a className="btn btnSecondary" href={telHref} onClick={() => void copyPhone()}>
+            <IconCall size={18} aria-hidden /> Appeler
+          </a>
+          <a className="btn btnWhatsapp" href={whatsappHref(client.phone)}>
+            <IconChat size={18} aria-hidden /> WhatsApp
+          </a>
+          <button type="button" className="btn btnSecondary" onClick={() => void saveContact()}>
+            <IconContact size={18} aria-hidden /> Enregistrer dans mes contacts
+          </button>
+        </div>
+      ) : (
+        <div className="banner bannerInfo no-print" style={{ display: "block" }}>
+          Aucun numéro enregistré pour ce client : ajoutez-le pour l&apos;appeler, lui écrire sur
+          WhatsApp ou l&apos;enregistrer dans vos contacts.{" "}
+          <button type="button" className="linkButton" onClick={startEdit}>
+            Ajouter le numéro
+          </button>
+        </div>
+      )}
       {notice && <p className="tNotice no-print" role="status">{notice}</p>}
 
+      {editing && (
+        <form className="card no-print" onSubmit={saveEdit} noValidate>
+          <label className="field">
+            <span className="fieldLabel">Nom</span>
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              maxLength={120}
+              aria-invalid={editNameErr ? true : undefined}
+            />
+            {editNameErr && <span className="fieldError">{editNameErr}</span>}
+          </label>
+          <PhoneField label="Téléphone" value={editPhone} onChange={setEditPhone} error={editPhoneErr} />
+          <label className="field">
+            <span className="fieldLabel">Sexe</span>
+            <select className="input" value={editGender} onChange={(e) => setEditGender(e.target.value)}>
+              <option value="female">Femme</option>
+              <option value="male">Homme</option>
+            </select>
+          </label>
+          <div className="tActionRow">
+            <Button type="submit" disabled={!canSaveEdit}>
+              {savingEdit ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+            <Button variant="ghost" onClick={() => setEditing(false)}>
+              Annuler
+            </Button>
+          </div>
+        </form>
+      )}
+
       <Card>
-        <p className="tRowSub" style={{ margin: 0 }}>
-          {client.phone} · {client.gender === "male" ? "Homme" : "Femme"}
-        </p>
+        <div className="tHeader">
+          <p className="tRowSub" style={{ margin: 0, flex: 1 }}>
+            {client.phone || "Aucun numéro"} · {client.gender === "male" ? "Homme" : "Femme"}
+          </p>
+          {!editing && (
+            <Button variant="ghost" className="no-print" onClick={startEdit}>
+              <IconEdit size={16} aria-hidden /> Modifier
+            </Button>
+          )}
+        </div>
         <label className="field" style={{ marginTop: 10 }}>
           <span className="fieldLabel">Notes</span>
           <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Préférences, acompte reçu au comptant…" />

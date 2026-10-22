@@ -21,6 +21,7 @@ import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner, InfoBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
 import { PASSWORD_HINT, passwordError } from "@/lib/password";
+import { phoneError } from "@/lib/validation";
 
 export default function MotDePasseOublie() {
   const router = useRouter();
@@ -113,8 +114,13 @@ export default function MotDePasseOublie() {
             <p className="authSubtitle">
               Indiquez le numéro de votre compte, nous vous enverrons un code.
             </p>
-            <PhoneField label="Numéro de téléphone" value={phone} onChange={setPhone} />
-            <Button type="submit" block disabled={localDigits.length < 6 || busy}>
+            <PhoneField
+              label="Numéro de téléphone"
+              value={phone}
+              onChange={setPhone}
+              error={localDigits ? phoneError(phone) : null}
+            />
+            <Button type="submit" block disabled={phoneError(phone) !== null || busy}>
               {busy ? "Envoi…" : "Recevoir un code"}
             </Button>
           </>

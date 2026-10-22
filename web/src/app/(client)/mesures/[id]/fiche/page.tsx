@@ -85,9 +85,9 @@ function FicheInner() {
               {models.length} modèle{models.length > 1 ? "s" : ""} retenu
               {models.length > 1 ? "s" : ""}.{" "}
               <Link href={`/mesures/${measurement.id}/modeles`}>
-                Télécharger la fiche des modèles
+                Voir mes modèles
               </Link>{" "}
-              — c&apos;est un second document, séparé de vos mesures.
+              — leurs photos et, si besoin, une fiche d&apos;ajustements par modèle.
             </span>
           ) : (
             <span>
@@ -133,6 +133,29 @@ function FicheInner() {
               </div>
             )}
           </section>
+
+          {groups.map((group) => (
+            <section key={group.id} className="ficheGroup">
+              <h2 className="ficheGroupTitle">{group.title}</h2>
+              <table className="ficheTable">
+                <tbody>
+                  {group.items.map(({ key, info, value }) => (
+                    <tr key={key}>
+                      <th scope="row">
+                        <span className="ficheMeasureName">{info.label}</span>
+                        <span className="ficheMeasureWhere">{info.where}</span>
+                      </th>
+                      <td>{formatCm(value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ))}
+
+          {groups.length === 0 && (
+            <p className="muted">Aucune mesure n&apos;est encore disponible pour cette prise.</p>
+          )}
 
           <footer className="ficheFooter">
             Mesures obtenues a partir de deux photographies. A verifier au metre ruban avant

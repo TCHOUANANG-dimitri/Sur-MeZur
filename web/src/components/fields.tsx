@@ -40,10 +40,13 @@ export function PhoneField({
   label,
   value,
   onChange,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (phone: string) => void;
+  /** Message du controle de saisie (lib/validation), affiche sous le champ. */
+  error?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -88,9 +91,11 @@ export function PhoneField({
           placeholder="6 XX XX XX XX"
           maxLength={12}
           value={local}
+          aria-invalid={error ? true : undefined}
           onChange={(e) => onChange(`${country.dial}${stripToLocal(e.target.value, country.dial)}`)}
         />
       </div>
+      {error && <span className="fieldError">{error}</span>}
 
       {open && (
         <ul className="countryList" role="listbox">

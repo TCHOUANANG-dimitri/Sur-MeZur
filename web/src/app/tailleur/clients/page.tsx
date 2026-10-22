@@ -2,7 +2,8 @@
 
 /**
  * Carnet de clients (B3.2) : recherche par nom ou telephone, ajout en
- * 3 champs (nom, telephone, sexe), acces a la fiche de chacun.
+ * 3 champs (nom, telephone, sexe), acces a la fiche de chacun. Le numero est
+ * obligatoire et verifie : sans lui, ni appel, ni WhatsApp, ni contact.
  */
 
 import Link from "next/link";
@@ -12,7 +13,8 @@ import type { TailorClient } from "@/lib/api/tailor";
 import { Button, EmptyState, ErrorBanner, Input, PageHeader, Spinner } from "@/components/ui";
 import { PhoneField } from "@/components/fields";
 import { IconSearch, IconUsers } from "@/components/icons";
-import { COUNTRIES } from "@/lib/countries";
+import { COUNTRIES, splitPhone } from "@/lib/countries";
+import { nameError, phoneError } from "@/lib/validation";
 
 export default function Clients() {
   const [query, setQuery] = useState("");
@@ -39,8 +41,13 @@ export default function Clients() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
+  const nameErr = name.trim() ? nameError(name) : null;
+  const phoneErr = splitPhone(phone).local ? phoneError(phone) : null;
+  const canAdd = !nameError(name) && !phoneError(phone) && !busy;
+
   async function add(e: React.FormEvent) {
     e.preventDefault();
+    if (!canAdd) return;
     setError("");
     setBusy(true);
     try {
@@ -73,9 +80,16 @@ export default function Clients() {
         <form onSubmit={add} className="card" noValidate>
           <label className="field">
             <span className="fieldLabel">Nom</span>
-            <Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
+              maxLength={120}
+              aria-invalid={nameErr ? true : undefined}
+            />
+            {nameErr && <span className="fieldError">{nameErr}</span>}
           </label>
-          <PhoneField label="Téléphone" value={phone} onChange={setPhone} />
+          <PhoneField label="Téléphone" value={phone} onChange={setPhone} error={phoneErr} />
           <label className="field">
             <span className="fieldLabel">Sexe</span>
             <select className="input" value={gender} onChange={(e) => setGender(e.target.value)}>
@@ -83,7 +97,7 @@ export default function Clients() {
               <option value="male">Homme</option>
             </select>
           </label>
-          <Button type="submit" block disabled={name.trim().length < 2 || busy}>
+          <Button type="submit" block disabled={!canAdd}>
             {busy ? "Ajout…" : "Ajouter"}
           </Button>
         </form>

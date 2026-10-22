@@ -197,6 +197,11 @@ def main() -> None:
     check(j1["status"] == "todo" and j1["status_label"] == "À faire", "statut initial")
     check(j1["advance_received"] == 5000.0, "avance saisie")
     ok(client.post("/api/tailor/jobs", json={"status": "fini"}, headers=TH), "statut inconnu refuse", 400)
+    ok(client.post("/api/tailor/jobs", json={"agreed_price": 10000, "advance_received": 12000}, headers=TH),
+       "avance superieure au prix refusee", 400)
+    ok(client.patch(f"/api/tailor/jobs/{j1['id']}", json={"advance_received": 20000}, headers=TH),
+       "avance modifiee au-dela du prix refusee", 400)
+    check(client.get("/api/tailor/jobs", headers=TH).json()[0]["advance_received"] == 5000.0, "avance inchangee")
     ok(client.post("/api/tailor/jobs", json={"tailor_client_id": "00000000-0000-0000-0000-000000000000"},
                    headers=TH), "client inconnu refuse", 404)
     week = ok(client.get("/api/tailor/jobs?due=week", headers=TH), "travaux de la semaine").json()

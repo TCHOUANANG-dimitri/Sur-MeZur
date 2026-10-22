@@ -92,4 +92,6 @@ export {
   Undo2 as IconUndo,
   GripVertical as IconGrip,
   Mail as IconMail,
+  MapPin as IconLocation,
+  Languages as IconLanguage,
 } from "lucide-react";

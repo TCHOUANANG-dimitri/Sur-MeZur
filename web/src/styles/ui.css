@@ -136,6 +136,20 @@
   outline: none;
 }
 
+/* Champ refuse par un controle de saisie (lib/validation) : bordure et
+   message en rouge, sous le champ. */
+.input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+.fieldError {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--error);
+}
+
 .input:focus-visible {
   border-color: var(--violet-vivid);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
@@ -304,6 +318,18 @@ textarea.input {
 .bannerInfo {
   background: var(--bg-alt);
   color: var(--indigo-text);
+}
+
+/* Action en ligne dans un texte : apparence de lien, semantique de bouton. */
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--violet-primary);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .muted {

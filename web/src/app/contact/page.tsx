@@ -14,7 +14,8 @@ import { PublicApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/components/AuthProvider";
 import { PhoneField } from "@/components/fields";
 import { Button, ErrorBanner, InfoBanner } from "@/components/ui";
-import { COUNTRIES } from "@/lib/countries";
+import { COUNTRIES, splitPhone } from "@/lib/countries";
+import { emailError, phoneError } from "@/lib/validation";
 
 const CATEGORIES = [
   { code: "question", name: "Question" },
@@ -37,8 +38,14 @@ export default function Contact() {
   const [busy, setBusy] = useState(false);
   const [ticketNumber, setTicketNumber] = useState<number | null>(null);
 
+  // Un visiteur doit laisser un moyen de lui repondre : numero ou e-mail
+  // valide (lib/validation).
+  const hasPhone = splitPhone(phone).local !== "";
+  const phoneErr = hasPhone ? phoneError(phone) : null;
+  const emailErr = emailError(email);
+  const reachable = Boolean(user) || (hasPhone && !phoneErr) || (email.trim() !== "" && !emailErr);
   const canSubmit =
-    subject.trim().length >= 3 && message.trim().length >= 10 && !busy;
+    subject.trim().length >= 3 && message.trim().length >= 10 && !phoneErr && !emailErr && reachable && !busy;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,7 +54,7 @@ export default function Contact() {
     try {
       const res = await PublicApi.contact({
         ...(name.trim() ? { name: name.trim() } : {}),
-        ...(phone.replace(/[^0-9]/g, "").length >= 6 ? { phone: phone.trim() } : {}),
+        ...(hasPhone && !phoneErr ? { phone: phone.trim() } : {}),
         ...(email.trim() ? { email: email.trim() } : {}),
         category,
         subject: subject.trim(),
@@ -82,11 +89,11 @@ export default function Contact() {
         <form onSubmit={submit} noValidate>
           <label className="field">
             <span className="fieldLabel">Votre nom</span>
-            <input className="input" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
+            <input className="input" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
           </label>
           {!user && (
             <>
-              <PhoneField label="Téléphone" value={phone} onChange={setPhone} />
+              <PhoneField label="Téléphone" value={phone} onChange={setPhone} error={phoneErr} />
               <label className="field">
                 <span className="fieldLabel">E-mail <span className="fieldOptional">(si pas de téléphone)</span></span>
                 <input
@@ -95,8 +102,16 @@ export default function Contact() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  maxLength={160}
+                  aria-invalid={emailErr ? true : undefined}
                 />
+                {emailErr && <span className="fieldError">{emailErr}</span>}
               </label>
+              {!reachable && !phoneErr && !emailErr && (
+                <p className="fieldHint" style={{ marginTop: -8 }}>
+                  Laissez un numéro ou une adresse e-mail pour recevoir la réponse.
+                </p>
+              )}
             </>
           )}
           <label className="field">

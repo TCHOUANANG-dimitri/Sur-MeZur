@@ -160,10 +160,10 @@ function DetailMesureInner() {
                   <IconModels size={20} strokeWidth={1.9} />
                 </span>
                 <span className="downloadText">
-                  <strong>Fiche des modèles</strong>
+                  <strong>Mes modèles</strong>
                   <span className="fieldHint">
                     {selectionCount > 0
-                      ? `${selectionCount} modèle${selectionCount > 1 ? "s" : ""} retenu${selectionCount > 1 ? "s" : ""}.`
+                      ? `${selectionCount} modèle${selectionCount > 1 ? "s" : ""} retenu${selectionCount > 1 ? "s" : ""} : photos à télécharger, fiche d'ajustements si besoin.`
                       : "Aucun modèle retenu pour l'instant."}
                   </span>
                 </span>

@@ -33,6 +33,7 @@ import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
 import { PASSWORD_HINT, passwordError } from "@/lib/password";
+import { nameError, phoneError } from "@/lib/validation";
 
 type Role = "client" | "tailor";
 
@@ -92,9 +93,13 @@ function InscriptionInner() {
   // Meme logique assouplie que sur l'ecran de connexion : le bouton s'active
   // des que les champs sont remplis. La validation fine du mot de passe reste
   // au serveur au moment de l'envoi.
+  // Nom et numero sont controles ici (lib/validation) : un compte cree avec
+  // un numero faux ne pourrait jamais se reconnecter ni etre joint.
   const localDigits = splitPhone(phone).local;
+  const nameErr = fullName.trim() ? nameError(fullName) : null;
+  const phoneErr = localDigits ? phoneError(phone) : null;
   const canSubmit =
-    fullName.trim().length >= 2 && localDigits.length >= 6 && password.length > 0 && consent && !busy;
+    !nameError(fullName) && !phoneError(phone) && password.length > 0 && consent && !busy;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -210,10 +215,13 @@ function InscriptionInner() {
             autoComplete="name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
+            maxLength={120}
+            aria-invalid={nameErr ? true : undefined}
           />
+          {nameErr && <span className="fieldError">{nameErr}</span>}
         </label>
 
-        <PhoneField label="Numéro de téléphone" value={phone} onChange={setPhone} />
+        <PhoneField label="Numéro de téléphone" value={phone} onChange={setPhone} error={phoneErr} />
 
         {role === "tailor" && (
           <>
@@ -223,6 +231,7 @@ function InscriptionInner() {
                 className="input"
                 autoComplete="organization"
                 value={shopName}
+                maxLength={120}
                 onChange={(e) => setShopName(e.target.value)}
               />
             </label>
@@ -241,6 +250,7 @@ function InscriptionInner() {
                     className="input"
                     autoComplete="address-level2"
                     placeholder="Ex. Douala"
+                    maxLength={80}
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                   />
@@ -251,6 +261,7 @@ function InscriptionInner() {
                 <input
                   className="input"
                   value={quartier}
+                  maxLength={80}
                   onChange={(e) => setQuartier(e.target.value)}
                 />
               </label>

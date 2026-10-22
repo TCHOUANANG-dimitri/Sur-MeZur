@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { TailorApi } from "@/lib/api/tailor";
 import type { TailorClient } from "@/lib/api/tailor";
 import { MEASURE_ORDER, MEASURES } from "@/lib/measurements";
+import { measureError } from "@/lib/validation";
 import { Badge, Button, EmptyState, Input, Spinner } from "@/components/ui";
 import { IconSearch, IconUsers } from "@/components/icons";
 
@@ -203,16 +204,20 @@ export function ManualMeasureForm({
     setValues((v) => ({ ...v, [key]: raw.replace(",", ".") }));
   }
 
+  // Une valeur hors plage plausible (lib/validation) est signalee sous son
+  // champ et bloque l'enregistrement, au lieu d'etre ignoree en silence.
   const parsed: Record<string, number> = {};
+  const errors: Partial<Record<string, string>> = {};
   for (const key of MEASURE_ORDER) {
-    const n = Number(values[key]);
-    if (values[key] !== undefined && values[key] !== "" && isFinite(n) && n > 0 && n < 300) {
-      parsed[key] = Math.round(n * 10) / 10;
-    }
+    const raw = values[key] ?? "";
+    const err = measureError(key, raw);
+    if (err) errors[key] = err;
+    else if (raw.trim()) parsed[key] = Math.round(Number(raw) * 10) / 10;
   }
   const count = Object.keys(parsed).length;
-  const heightNum = Number(height);
-  const valid = count >= 1 && heightNum >= 100 && heightNum <= 230;
+  const heightNum = Number(height.replace(",", "."));
+  const heightErr = height.trim() && !(heightNum >= 100 && heightNum <= 230) ? "Entre 100 et 230 cm." : null;
+  const valid = count >= 1 && !heightErr && height.trim() !== "" && Object.keys(errors).length === 0;
 
   return (
     <form
@@ -232,7 +237,9 @@ export function ManualMeasureForm({
           placeholder="175"
           value={height}
           onChange={(e) => setHeight(e.target.value)}
+          aria-invalid={heightErr ? true : undefined}
         />
+        {heightErr && <span className="fieldError">{heightErr}</span>}
       </div>
       <div className="tMeasureGrid">
         {MEASURE_ORDER.map((key) => (
@@ -247,7 +254,9 @@ export function ManualMeasureForm({
               placeholder="—"
               value={values[key] ?? ""}
               onChange={(e) => set(key, e.target.value)}
+              aria-invalid={errors[key] ? true : undefined}
             />
+            {errors[key] && <span className="fieldError">{errors[key]}</span>}
           </label>
         ))}
       </div>

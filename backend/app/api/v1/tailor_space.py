@@ -538,6 +538,13 @@ def _check_job_client(tailor_id: str, tailor_client_id: str | None, db: Session)
         _owned_client(tailor_id, tailor_client_id, db)
 
 
+def _check_job_amounts(price: float | None, advance: float | None) -> None:
+    # Simple note de calcul, mais une avance superieure au prix rendrait le
+    # « reste a payer » negatif : c'est une faute de saisie.
+    if price is not None and advance is not None and float(advance) > float(price):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "L'avance ne peut pas dépasser le prix convenu")
+
+
 @router.get("/jobs")
 def list_jobs(
     status: str | None = None,
@@ -575,6 +582,7 @@ def create_job(
     _check_job_client(tp.id, payload.tailor_client_id, db)
     if payload.status not in JOB_STATUSES:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Statut inconnu")
+    _check_job_amounts(payload.agreed_price, payload.advance_received)
     j = TailorJob(
         tailor_id=tp.id,
         tailor_client_id=payload.tailor_client_id,
@@ -628,6 +636,7 @@ def update_job(
         j.agreed_price = payload.agreed_price
     if payload.advance_received is not None:
         j.advance_received = payload.advance_received
+    _check_job_amounts(j.agreed_price, j.advance_received)
     db.commit()
     db.refresh(j)
     return _job_out(j)

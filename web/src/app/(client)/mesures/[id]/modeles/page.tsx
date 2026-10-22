@@ -1,36 +1,35 @@
 "use client";
 
 /**
- * Fiche des modeles a coudre — SECOND document, distinct de la fiche de
- * mesures.
+ * Modeles retenus, a montrer au tailleur — distinct de la fiche de mesures.
  *
- * Les deux vont de paire mais se telechargent separement : un tailleur
- * imprime volontiers les mesures et garde les visuels a l'ecran, ou les
- * transmet a des personnes differentes. Les melanger dans un seul fichier
- * aurait force l'impression des photos a chaque fois, ce qui coute cher en
- * encre pour un document dont l'essentiel est une liste de chiffres.
+ * Pour chaque modele :
+ *  - la PHOTO a telecharger, marquee « Sur-MeZur » (lib/watermark) : c'est
+ *    ce qu'on envoie au tailleur la plupart du temps ;
+ *  - une FICHE seulement si la personne a des precisions a donner sur la
+ *    confection : un modele par fiche, la photo en grand sur la premiere
+ *    page, ses ajustements sur la seconde.
  *
- * Meme mecanique que l'autre fiche : mise en page HTML pilotee par
- * `@media print`, puis « Enregistrer en PDF » du navigateur.
+ * La fiche suit la meme mecanique que la fiche de mesures : mise en page
+ * HTML pilotee par `@media print`, puis « Enregistrer en PDF » du navigateur.
  */
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CatalogApi, MeasurementsApi } from "@/lib/api/endpoints";
 import type { GarmentModel, Measurement } from "@/lib/api/types";
 import { getSelection } from "@/lib/selection";
+import { photoFileName, watermarkedPhoto } from "@/lib/watermark";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, EmptyState, Field, PageHeader, Spinner, Textarea } from "@/components/ui";
-import { IconModels } from "@/components/icons";
+import { Button, EmptyState, ErrorBanner, PageHeader, Spinner, Textarea } from "@/components/ui";
+import { IconDownload, IconEdit, IconModels, IconPrint } from "@/components/icons";
 
 /*
- * Notes personnelles POUR CHAQUE MODELE (preferences, ajustements,
- * instructions de couture). Elles vivent dans `localStorage`, comme la
- * selection de modeles (`src/lib/selection.ts`) : cet eco n'appartient qu'au
- * navigateur et a l'edition de la fiche, rien qui doive etre persiste cote
- * serveur. Structure : un objet `{ [idModele]: note }`. On garde ces helpers
- * ici, sans toucher a `src/lib/**` (fichier partage, hors champ).
+ * Ajustements POUR CHAQUE MODELE (preferences, tissu, finitions). Ils vivent
+ * dans `localStorage`, comme la selection de modeles (`src/lib/selection.ts`) :
+ * ils n'appartiennent qu'au navigateur et a l'edition de la fiche, rien qui
+ * doive etre persiste cote serveur. Structure : `{ [idModele]: texte }`.
  */
 const NOTES_KEY = "sm_model_notes";
 
@@ -54,27 +53,29 @@ function writeNotes(map: Record<string, string>): void {
   }
 }
 
+function photoOf(m: GarmentModel): string | null {
+  return m.photo_url ?? m.photos?.[0] ?? null;
+}
+
 export default function FicheModeles() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [measurement, setMeasurement] = useState<Measurement | null | undefined>(undefined);
   const [models, setModels] = useState<GarmentModel[] | null>(null);
-  // Preferences par modele : `{ [idModele]: texte }`.
   const [notes, setNotes] = useState<Record<string, string>>({});
+  // Modeles dont le champ « ajustements » est ouvert.
+  const [editing, setEditing] = useState<Record<string, boolean>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  // Modele a imprimer, et sa photo marquee (URL blob).
+  const [print, setPrint] = useState<{ model: GarmentModel; src: string | null } | null>(null);
+  const printed = useRef(false);
 
   useEffect(() => {
-    setNotes(readNotes());
+    const n = readNotes();
+    setNotes(n);
+    setEditing(Object.fromEntries(Object.keys(n).map((k) => [k, true])));
   }, []);
-
-  const setModelNote = (modelId: string, text: string) => {
-    setNotes((prev) => {
-      const next = { ...prev };
-      if (text.trim()) next[modelId] = text;
-      else delete next[modelId];
-      writeNotes(next);
-      return next;
-    });
-  };
 
   useEffect(() => {
     if (!id) return;
@@ -90,20 +91,82 @@ export default function FicheModeles() {
       return;
     }
     // Un modele supprime entre-temps est ignore plutot que de faire echouer
-    // toute la fiche.
+    // toute la page.
     Promise.all(ids.map((mid) => CatalogApi.model(mid).catch(() => null))).then((list) =>
       setModels(list.filter((m): m is GarmentModel => m !== null))
     );
   }, []);
 
+  // L'URL blob de la photo imprimee est liberee quand elle est remplacee.
+  useEffect(() => {
+    const src = print?.src;
+    return () => {
+      if (src?.startsWith("blob:")) URL.revokeObjectURL(src);
+    };
+  }, [print?.src]);
+
+  // Sans photo, rien a attendre : impression des que la fiche est rendue.
+  useEffect(() => {
+    if (print && !print.src && !printed.current) {
+      printed.current = true;
+      requestAnimationFrame(() => window.print());
+    }
+  }, [print]);
+
+  const setModelNote = (modelId: string, text: string) => {
+    setNotes((prev) => {
+      const next = { ...prev };
+      if (text.trim()) next[modelId] = text;
+      else delete next[modelId];
+      writeNotes(next);
+      return next;
+    });
+  };
+
+  async function downloadPhoto(m: GarmentModel) {
+    const src = photoOf(m);
+    if (!src) return;
+    setBusy(`photo-${m.id}`);
+    setError("");
+    try {
+      const url = URL.createObjectURL(await watermarkedPhoto(src));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = photoFileName(m.name);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch {
+      setError("La photo n'a pas pu être préparée. Réessayez dans un instant.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function printFiche(m: GarmentModel) {
+    const src = photoOf(m);
+    setBusy(`fiche-${m.id}`);
+    setError("");
+    printed.current = false;
+    try {
+      setPrint({ model: m, src: src ? URL.createObjectURL(await watermarkedPhoto(src)) : null });
+    } catch {
+      // Filigrane impossible : la fiche part avec la photo telle quelle.
+      setPrint({ model: m, src });
+    } finally {
+      setBusy(null);
+    }
+  }
+
   if (measurement === undefined || models === null) {
-    return <Spinner label="Préparation de la fiche…" />;
+    return <Spinner label="Préparation…" />;
   }
 
   if (!models.length) {
     return (
       <>
-        <PageHeader title="Fiche des modèles" back />
+        <PageHeader title="Mes modèles" back />
         <div className="container section">
           <EmptyState
             icon={<IconModels size={30} strokeWidth={1.6} />}
@@ -126,108 +189,162 @@ export default function FicheModeles() {
     year: "numeric",
   });
 
+  const meta = (
+    <div className="ficheMeta">
+      {user?.full_name && (
+        <div>
+          <strong>{user.full_name}</strong>
+        </div>
+      )}
+      <div>Fiche éditée le {editee}</div>
+      {measurement && <div>Prise de mesures n&deg;{measurement.version}</div>}
+    </div>
+  );
+
   return (
     <>
-      <PageHeader title="Fiche des modèles" back />
+      <PageHeader title="Mes modèles" back />
 
-      <div className="container section">
-        <div className="ficheSwitch no-print">
+      <div className="container section no-print">
+        <div className="ficheSwitch">
           <span>
-            Ce document ne contient que les modèles.{" "}
+            Téléchargez la photo de chaque modèle pour la montrer au tailleur. Des précisions sur la
+            confection ? Ajoutez vos ajustements : vous obtiendrez une fiche pour ce modèle.
             {measurement && (
-              <Link href={`/mesures/${measurement.id}/fiche`}>
-                Télécharger la fiche de mesures
-              </Link>
-            )}{" "}
-            séparément.
+              <>
+                {" "}
+                Vos mesures :{" "}
+                <Link href={`/mesures/${measurement.id}/fiche`}>fiche de mesures</Link>.
+              </>
+            )}
           </span>
         </div>
 
-        <div className="ficheActions no-print">
-          <Button block onClick={() => window.print()}>
-            Enregistrer en PDF
-          </Button>
-          <p className="fieldHint" style={{ textAlign: "center" }}>
-            Dans la fenêtre qui s&apos;ouvre, choisissez «&nbsp;Enregistrer au format
-            PDF&nbsp;» comme destination.
-          </p>
-        </div>
+        <ErrorBanner message={error} />
 
-        <div className="ficheNotesEditor no-print">
-          <div className="rowLabel" style={{ marginBottom: 4 }}>
-            Vos préférences par modèle
-          </div>
-          <p className="fieldHint" style={{ marginBottom: 12 }}>
-            Ajustements, tissu, finitions, instructions de couture : ce que vous écrivez pour chaque
-            modèle sera imprimé sur la fiche, juste sous le modèle correspondant.
-          </p>
-          <div className="ficheNotesList">
-            {models.map((m) => (
-              <Field key={m.id} label={m.name}>
-                <Textarea
-                  rows={3}
-                  placeholder="Ex. : manches plus courtes, ourlet à 3 cm, boutons de couleur…"
-                  value={notes[m.id] ?? ""}
-                  onChange={(e) => setModelNote(m.id, e.target.value)}
+        <div className="modelSheetList">
+          {models.map((m) => {
+            const photo = photoOf(m);
+            const note = notes[m.id] ?? "";
+            const open = editing[m.id] ?? false;
+            return (
+              <section key={m.id} className="modelSheetCard">
+                <div
+                  className="modelSheetPhoto"
+                  style={photo ? { backgroundImage: `url(${photo})` } : { background: m.thumbnail_color }}
+                  role="img"
+                  aria-label={m.name}
                 />
-              </Field>
-            ))}
-          </div>
-        </div>
+                <div className="modelSheetBody">
+                  <h2 className="ficheModelName">{m.name}</h2>
+                  {m.category?.name && <p className="ficheModelCat">{m.category.name}</p>}
 
-        <article className="fiche">
-          <header className="ficheHeader">
-            <div>
-              <span className="ficheBrand">Sur-MeZur</span>
-              <h1 className="ficheTitle">
-                {models.length > 1 ? "Modèles à coudre" : "Modèle à coudre"}
-              </h1>
-            </div>
-            <div className="ficheMeta">
-              {user?.full_name && (
-                <div>
-                  <strong>{user.full_name}</strong>
-                </div>
-              )}
-              <div>Fiche éditée le {editee}</div>
-              {measurement && <div>Prise de mesures n&deg;{measurement.version}</div>}
-            </div>
-          </header>
-
-          {models.map((m) => (
-            <section key={m.id} className="ficheModelBlock">
-              {m.photo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.photo_url} alt="" className="ficheModelImage" />
-              ) : (
-                <span
-                  className="ficheModelImage"
-                  style={{ background: m.thumbnail_color }}
-                  aria-hidden
-                />
-              )}
-              <div className="ficheModelBody">
-                <h2 className="ficheModelName">{m.name}</h2>
-                {m.category?.name && <p className="ficheModelCat">{m.category.name}</p>}
-                {m.description && <p className="ficheModelDesc">{m.description}</p>}
-                {m.style_tags?.length > 0 && (
-                  <p className="ficheModelTags">{m.style_tags.join(" · ")}</p>
-                )}
-                {notes[m.id] && (
-                  <div className="ficheModelNote">
-                    <span className="ficheModelNoteLabel">Vos préférences</span>
-                    <p className="ficheModelNoteText">{notes[m.id]}</p>
+                  <div className="modelSheetActions">
+                    <Button
+                      onClick={() => downloadPhoto(m)}
+                      disabled={!photo || busy !== null}
+                      title={photo ? undefined : "Ce modèle n'a pas de photo."}
+                    >
+                      <IconDownload size={17} aria-hidden />
+                      {busy === `photo-${m.id}` ? "Préparation…" : "Télécharger la photo"}
+                    </Button>
+                    {!open && (
+                      <Button variant="ghost" onClick={() => setEditing((e) => ({ ...e, [m.id]: true }))}>
+                        <IconEdit size={17} aria-hidden /> Préciser des ajustements
+                      </Button>
+                    )}
                   </div>
-                )}
-              </div>
-            </section>
-          ))}
 
-          <footer className="ficheFooter">
-            À présenter au tailleur avec la fiche de mesures, qui se télécharge séparément.
-          </footer>
-        </article>
+                  {open && (
+                    <div className="modelSheetNotes">
+                      <label className="fieldLabel" htmlFor={`note-${m.id}`}>
+                        Vos ajustements
+                      </label>
+                      <Textarea
+                        id={`note-${m.id}`}
+                        rows={4}
+                        placeholder="Ex. : manches plus courtes, ourlet à 3 cm, doublure, boutons dorés…"
+                        value={note}
+                        onChange={(e) => setModelNote(m.id, e.target.value)}
+                      />
+                      <Button
+                        variant="secondary"
+                        onClick={() => printFiche(m)}
+                        disabled={!note.trim() || busy !== null}
+                      >
+                        <IconPrint size={17} aria-hidden />
+                        {busy === `fiche-${m.id}` ? "Préparation…" : "Télécharger la fiche (PDF)"}
+                      </Button>
+                      <p className="fieldHint">
+                        Page 1 : le modèle en grand. Page 2 : vos ajustements. Dans la fenêtre qui
+                        s&apos;ouvre, choisissez «&nbsp;Enregistrer au format PDF&nbsp;».
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </div>
+
+      {print && (
+        <article className="fiche ficheModele print-only" aria-hidden>
+          <section className="ficheModelePage">
+            <header className="ficheHeader">
+              <div>
+                <span className="ficheBrand">Sur-MeZur</span>
+                <h1 className="ficheTitle">Modèle à coudre</h1>
+              </div>
+              {meta}
+            </header>
+            <div className="ficheModeleTitre">
+              <h2 className="ficheModelName">{print.model.name}</h2>
+              {print.model.category?.name && <p className="ficheModelCat">{print.model.category.name}</p>}
+            </div>
+            {print.src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={print.src}
+                alt=""
+                className="ficheModeleImage"
+                onLoad={() => {
+                  if (printed.current) return;
+                  printed.current = true;
+                  window.print();
+                }}
+              />
+            ) : (
+              <span className="ficheModeleImage" style={{ background: print.model.thumbnail_color }} />
+            )}
+          </section>
+
+          <section className="ficheModelePage">
+            <header className="ficheHeader">
+              <div>
+                <span className="ficheBrand">Sur-MeZur</span>
+                <h1 className="ficheTitle">Ajustements</h1>
+              </div>
+              {meta}
+            </header>
+            <div className="ficheModeleTitre">
+              <h2 className="ficheModelName">{print.model.name}</h2>
+              {print.model.category?.name && <p className="ficheModelCat">{print.model.category.name}</p>}
+            </div>
+            <p className="ficheModeleNotes">{notes[print.model.id]}</p>
+            {print.model.description && (
+              <p className="ficheModelDesc">
+                <strong>Description du modèle : </strong>
+                {print.model.description}
+              </p>
+            )}
+            <footer className="ficheFooter">
+              À présenter au tailleur avec la fiche de mesures
+              {measurement ? ` (prise de mesures n°${measurement.version})` : ""}.
+            </footer>
+          </section>
+        </article>
+      )}
     </>
   );
 }

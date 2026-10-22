@@ -293,11 +293,12 @@ const RealTailorApi = {
     const jobs = rows.map((j) => toJob(j, names));
     return params.client_id ? jobs.filter((j) => j.tailor_client_id === params.client_id) : jobs;
   },
-  /** Un travail est toujours rattache a un client du carnet : un nom saisi
-   *  librement cree la fiche client au passage. */
+  /** Un travail est toujours rattache a un client du carnet : un nouveau
+   *  client (nom et numero) cree sa fiche au passage. */
   createJob: async (body: {
     tailor_client_id?: string;
     client_name: string;
+    client_phone?: string;
     description: string;
     due_date?: string;
     price?: number;
@@ -305,7 +306,12 @@ const RealTailorApi = {
   }) => {
     let clientId = body.tailor_client_id;
     if (!clientId && body.client_name.trim().length >= 2) {
-      clientId = (await api.post<Raw>("/tailor/clients", { full_name: body.client_name.trim() })).id as string;
+      clientId = (
+        await api.post<Raw>("/tailor/clients", {
+          full_name: body.client_name.trim(),
+          ...(body.client_phone ? { phone: body.client_phone } : {}),
+        })
+      ).id as string;
     }
     const created = await api.post<Raw>("/tailor/jobs", jobBody({ ...body, tailor_client_id: clientId }));
     return toJob(created, clientId ? { [clientId]: body.client_name } : {});

@@ -10,14 +10,14 @@
  * a la communaute, qui est la contribution equivalente sur le web.
  */
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { CatalogApi, MeasurementsApi, UsersApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/components/AuthProvider";
+import { emailError, nameError } from "@/lib/validation";
 import { Button, ErrorBanner, Spinner } from "@/components/ui";
+import { ProfileStat as Stat, SettingsRow, SettingsSection } from "@/components/profile";
 import {
   IconCatalog,
-  IconChevronRight,
   IconLogout,
   IconMeasure,
   IconModels,
@@ -53,6 +53,9 @@ export default function Profil() {
   }, [user, loadCounts]);
 
   if (loading || !user) return <Spinner label="Chargement…" />;
+
+  const nameErr = fullName.trim() ? nameError(fullName) : null;
+  const emailErr = emailError(email);
 
   async function save() {
     setBusy(true);
@@ -109,7 +112,14 @@ export default function Profil() {
           <div className="card profileEditCard">
             <label className="field">
               <span className="fieldLabel">Nom complet</span>
-              <input className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              <input
+                className="input"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                maxLength={120}
+                aria-invalid={nameErr ? true : undefined}
+              />
+              {nameErr && <span className="fieldError">{nameErr}</span>}
             </label>
             <label className="field">
               <span className="fieldLabel">Adresse e-mail</span>
@@ -119,10 +129,13 @@ export default function Profil() {
                 autoCapitalize="none"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                maxLength={160}
+                aria-invalid={emailErr ? true : undefined}
               />
+              {emailErr && <span className="fieldError">{emailErr}</span>}
             </label>
             <div className="profileEditActions">
-              <Button onClick={save} disabled={busy || fullName.trim().length < 2}>
+              <Button onClick={save} disabled={busy || nameError(fullName) !== null || emailErr !== null}>
                 {busy ? "Enregistrement…" : "Enregistrer"}
               </Button>
               <Button variant="secondary" onClick={() => setEditing(false)}>
@@ -174,83 +187,5 @@ export default function Profil() {
         </SettingsSection>
       </div>
     </div>
-  );
-}
-
-function Stat({
-  value,
-  label,
-  Icon,
-}: {
-  value: number;
-  label: string;
-  Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-}) {
-  return (
-    <div className="profileStat">
-      <span className="profileStatIcon" aria-hidden>
-        <Icon size={18} strokeWidth={1.9} />
-      </span>
-      <span className="profileStatValue">{value}</span>
-      <span className="profileStatLabel">{label}</span>
-    </div>
-  );
-}
-
-function SettingsSection({ title, children }: { title?: string; children: React.ReactNode }) {
-  return (
-    <section className="settingsSection">
-      {title && <h2 className="settingsTitle">{title}</h2>}
-      <div className="settingsCard">{children}</div>
-    </section>
-  );
-}
-
-function SettingsRow({
-  Icon,
-  label,
-  value,
-  hint,
-  href,
-  onClick,
-  danger,
-  last,
-}: {
-  Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  label: string;
-  value?: string;
-  hint?: string;
-  href?: string;
-  onClick?: () => void;
-  danger?: boolean;
-  last?: boolean;
-}) {
-  const inner = (
-    <>
-      <span className={`settingsIcon ${danger ? "settingsIconDanger" : ""}`} aria-hidden>
-        <Icon size={18} strokeWidth={1.9} />
-      </span>
-      <span className="settingsLabelWrap">
-        <span className="settingsLabel">{label}</span>
-        {hint && <span className="fieldHint">{hint}</span>}
-      </span>
-      {value && <span className="settingsValue">{value}</span>}
-      {href && <IconChevronRight size={18} aria-hidden />}
-    </>
-  );
-
-  const className = `settingsRow ${last ? "" : "settingsRowDivided"} ${danger ? "settingsRowDanger" : ""}`;
-
-  if (href) {
-    return (
-      <Link href={href} className={className}>
-        {inner}
-      </Link>
-    );
-  }
-  return (
-    <button type="button" className={className} onClick={onClick}>
-      {inner}
-    </button>
   );
 }
