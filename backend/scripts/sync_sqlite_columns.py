@@ -20,10 +20,17 @@ l'analyse » alors que le calcul, lui, fonctionnait parfaitement.
 Ce que fait le script
 ---------------------
 Il compare chaque table déclarée dans les modèles au schéma réel et émet un
-`ALTER TABLE ... ADD COLUMN` pour ce qui manque. C'est la seule opération
-qu'il pratique : jamais de suppression, jamais de modification de colonne
-existante, jamais de perte de données. Relançable sans risque — une seconde
-exécution ne trouve plus rien à faire.
+`ALTER TABLE ... ADD COLUMN` pour ce qui manque. Jamais de suppression,
+jamais de perte de données. Relançable sans risque — une seconde exécution
+ne trouve plus rien à faire.
+
+Seule modification d'une colonne existante : une colonne devenue FACULTATIVE
+dans les modèles mais encore NOT NULL en base perd sa contrainte (PostgreSQL,
+`ALTER COLUMN ... DROP NOT NULL`). C'est sans perte — on accepte une valeur
+de plus, on n'en retire aucune. Cas reel : le 08/10/2026, `client_id` des
+sessions et des mesures est devenu facultatif (mesures d'un client du carnet
+d'un tailleur, sans compte) ; la base de production, creee le 05/10, gardait
+la contrainte, et chaque mesure par photo d'un tailleur echouait en 500.
 
 Limites assumées
 ----------------
@@ -134,9 +141,19 @@ def run(apply: bool) -> int:
         if table.name not in existing_tables:
             # `create_all()` s'en chargera : rien à rattraper ici.
             continue
-        actual = {col["name"] for col in inspector.get_columns(table.name)}
+        columns = {col["name"]: col for col in inspector.get_columns(table.name)}
+        actual = set(columns)
         for column in table.columns:
             if column.name in actual:
+                db_col = columns[column.name]
+                if column.nullable and not column.primary_key and db_col.get("nullable") is False:
+                    if engine.dialect.name == "postgresql":
+                        statements.append(f"ALTER TABLE {table.name} ALTER COLUMN {column.name} DROP NOT NULL")
+                    else:
+                        skipped.append(
+                            f"{table.name}.{column.name} (facultative dans le code, NOT NULL en base "
+                            "— SQLite ne sait pas lever la contrainte)"
+                        )
                 continue
             if not column.nullable and not _default_clause(column):
                 skipped.append(
@@ -156,10 +173,10 @@ def run(apply: bool) -> int:
         print()
 
     if not statements:
-        print("Aucune colonne manquante — la base est à jour.")
+        print("Aucune colonne manquante ni contrainte en trop — la base est à jour.")
         return 0
 
-    print(f"{len(statements)} colonne(s) manquante(s) :")
+    print(f"{len(statements)} correction(s) de schéma :")
     for sql in statements:
         print(f"  {sql}")
 
@@ -170,7 +187,7 @@ def run(apply: bool) -> int:
     with engine.begin() as conn:
         for sql in statements:
             conn.execute(text(sql))
-    print(f"\n{len(statements)} colonne(s) ajoutée(s).")
+    print(f"\n{len(statements)} correction(s) appliquée(s).")
     return 0
 
 

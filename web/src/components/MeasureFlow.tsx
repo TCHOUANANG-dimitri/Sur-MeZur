@@ -30,6 +30,7 @@ import { MeasurementsApi } from "@/lib/api/endpoints";
 import type { JobStatus } from "@/lib/api/types";
 import { ensureSession } from "@/lib/guest";
 import { UnreadablePhotoError, compressForMeasurement } from "@/lib/imageCompress";
+import { ApiError } from "@/lib/api/client";
 import { friendlyError, withRetry } from "@/lib/retry";
 import { useAuth } from "./AuthProvider";
 import { Button, ErrorBanner, Field, Input, Select, Spinner, Steps } from "./ui";
@@ -164,7 +165,9 @@ export function MeasureFlow({
       onDone(current.measurement_id);
     } catch (e) {
       setError(friendlyError(e));
-      setErrorDetail(`${stage} · ${e instanceof Error ? `${e.name}: ${e.message}` : String(e)}`);
+      // Le code HTTP d'abord : un 500 sans message n'affichait que « Error: ».
+      const code = e instanceof ApiError ? ` HTTP ${e.status}` : "";
+      setErrorDetail(`${stage} ·${code} ${e instanceof Error ? `${e.name}: ${e.message || "sans message"}` : String(e)}`);
       go("photos");
     }
   }, [front, side, height, weight, gender, guest, refresh, onDone, go, sessionApi]);
