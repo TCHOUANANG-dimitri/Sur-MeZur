@@ -112,3 +112,17 @@ class TailorShareToken(Base, IDMixin, TimestampMixin):
     tailor_id: Mapped[str] = mapped_column(ForeignKey("tailor_profiles.id"), index=True)
     tailor_client_id: Mapped[str] = mapped_column(ForeignKey("tailor_clients.id"), index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class TailorStyleAnalysis(Base, IDMixin, TimestampMixin):
+    """Analyse de la photo d'un modele par le modele de vision (fiche de
+    style proposee au tailleur). Statuts : processing -> ready | failed.
+    La photo n'est PAS conservee : elle n'existe qu'en memoire, le temps de
+    l'analyse. `result` porte la fiche nettoyee et la proposition."""
+
+    __tablename__ = "tailor_style_analyses"
+
+    tailor_id: Mapped[str] = mapped_column(ForeignKey("tailor_profiles.id"), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="processing")
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)

@@ -103,9 +103,28 @@ export interface PatternBase {
 }
 export interface PatternCatalogue {
   mode: string;
+  /** Analyse de la photo par le modele de vision (Qwen3-VL) disponible. */
+  vision?: boolean;
   pdfs: Record<string, string>;
   categories: { id: string; label: string; bases: PatternBase[]; a_venir: string | null }[];
   styles: Record<string, { label: string; type: "nombre" | "choix"; unite?: string; choix?: (string | number)[] }>;
+}
+
+/** Analyse de la photo d'un modele : fiche de style proposee au tailleur. */
+export interface StyleAnalysis {
+  id: string;
+  status: "processing" | "ready" | "failed";
+  error_message: string | null;
+  fiche?: Record<string, string | string[]>;
+  proposition?: {
+    categorie: string | null;
+    categorie_label: string | null;
+    base: string | null;
+    style: Record<string, string | number>;
+    vu: Record<string, string>;
+    suggestions: { code: string; label: string }[];
+    pieces_assorties: string[];
+  };
 }
 
 export interface ShareLink {
@@ -338,6 +357,14 @@ const RealTailorApi = {
 
   patterns: async () => (await api.get<Raw[]>("/tailor/patterns")).map(toPattern),
   patternCatalogue: () => api.get<PatternCatalogue>("/tailor/patterns/catalogue"),
+  /** Lance l'analyse de la photo (1 a 3 minutes sur le VPS) ; le resultat
+   *  se lit ensuite avec `styleAnalysis`. */
+  analysePatternPhoto: (image: File) => {
+    const form = new FormData();
+    form.append("image", image);
+    return api.postForm<StyleAnalysis>("/tailor/patterns/analyse", form);
+  },
+  styleAnalysis: (id: string) => api.get<StyleAnalysis>(`/tailor/patterns/analyse/${id}`),
   createPattern: async (body: {
     image?: File | null;
     garment_type: string;
@@ -345,12 +372,15 @@ const RealTailorApi = {
     measurements?: Record<string, number>;
     base?: string;
     style?: Record<string, string | number>;
+    /** Fiche de style validee (analyse de la photo), gardee avec la demande. */
+    fiche?: Record<string, unknown>;
   }) => {
     const form = new FormData();
     if (body.image) form.append("image", body.image);
     form.append("garment_type", body.garment_type);
     if (body.base) form.append("base", body.base);
     if (body.style) form.append("style", JSON.stringify(body.style));
+    if (body.fiche) form.append("fiche", JSON.stringify(body.fiche));
     if (body.tailor_client_id) form.append("tailor_client_id", body.tailor_client_id);
     if (body.measurements) form.append("measurements", JSON.stringify(body.measurements));
     return toPattern(await api.postForm<Raw>("/tailor/patterns", form));

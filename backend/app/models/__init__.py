@@ -52,6 +52,7 @@ from app.models.tailor_tools import (
     TailorJob,
     TailorPatternRequest,
     TailorShareToken,
+    TailorStyleAnalysis,
 )
 from app.models.users import ClientProfile, TailorProfile, User, VerificationDocument
 
@@ -106,6 +107,7 @@ __all__ = [
     "TailorJob",
     "TailorPatternRequest",
     "TailorShareToken",
+    "TailorStyleAnalysis",
     "TailorPayout",
     "TailorProfile",
     "TryonSession",

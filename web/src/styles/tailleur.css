@@ -198,3 +198,34 @@ a.tRow:hover, button.tRow:hover { border-color: var(--violet-vivid); }
   .tBigButtons { grid-template-columns: repeat(3, 1fr); }
   .tBigBtn { flex-direction: column; text-align: center; padding: 20px 16px; }
 }
+
+/* --- Nouveau patron : analyse de la photo par l'IA ------------------------ */
+.tAnalysePhoto {
+  display: block;
+  margin-top: 10px;
+  max-width: 100%;
+  max-height: 360px;
+  border-radius: 12px;
+  object-fit: contain;
+}
+.tAnalyseEnCours { align-items: center; margin-top: 12px; }
+.tSpinnerSmall { flex: none; width: 20px; height: 20px; border-width: 2px; }
+.tAnalyse { margin-top: 12px; }
+.tAnalyseTitre { font-size: 16px; margin: 0 0 6px; }
+.tAnalyseVu {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 16px;
+  margin: 10px 0;
+}
+.tAnalyseVu dt { font-size: 12px; color: var(--text-secondary); }
+.tAnalyseVu dd { margin: 0; font-weight: 600; color: var(--indigo-text); }
+.tAnalyseDetails {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button);
+}
+.tAnalyseDetails legend { padding: 0 4px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }

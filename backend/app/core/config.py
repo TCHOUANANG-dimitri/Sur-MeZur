@@ -94,6 +94,15 @@ class Settings(BaseSettings):
     # cron, va chercher les sessions en attente et les traite séparément.
     measurement_worker_mode: str = "inline"
 
+    # --- Analyse de la photo d'un modele (patrons) --------------------------
+    # Adresse du serveur llama.cpp qui sert Qwen3-VL 4B sur le VPS
+    # (deploy/contabo/surmezur-vl.service), ex. « http://127.0.0.1:8090 ».
+    # Vide : analyse desactivee, le tailleur remplit la fiche de style lui-meme.
+    vl_url: str = ""
+    # Sur le processeur du VPS, une photo prend 1 a 3 minutes (essais
+    # d'octobre 2026) ; au-dela, l'analyse est abandonnee.
+    vl_timeout_s: float = 300
+
     # --- Modélisation 3D (avatar via Blender + MPFB2) -----------------------
     # Blender tourne en subprocess (--background --python) : pas de dépendance
     # pip, mais le binaire doit être présent sur la machine. Local uniquement

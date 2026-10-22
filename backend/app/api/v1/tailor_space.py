@@ -44,8 +44,10 @@ from app.models.tailor_tools import (
     TailorJob,
     TailorPatternRequest,
     TailorShareToken,
+    TailorStyleAnalysis,
 )
 from app.models.users import TailorProfile, User
+from app.services.patrons import vision
 from app.services.activity import platform_of, utcnow
 from app.services import patrons
 from app.services.pattern_engine import GARMENT_TYPES, PREVIEW_NOTE, generate_preview_svg
@@ -847,6 +849,7 @@ def create_pattern(
     base: str | None = Form(None),
     style: str | None = Form(None),
     genre: str | None = Form(None),
+    fiche: str | None = Form(None),
     user: User = Depends(require_roles("tailor")),
     db: Session = Depends(get_db),
 ):
@@ -859,6 +862,10 @@ def create_pattern(
       de base, image facultative ; `base` choisit le modele (sinon celui par
       defaut), `style` est un JSON de reglages (`{"longueur_cm": 60}`),
       `genre` (femme/homme) le gabarit des mesures manquantes.
+
+    `fiche` : fiche de style validee par le tailleur (JSON), issue de
+    l'analyse de la photo ; conservee avec la demande, pour tracer d'ou
+    viennent les reglages.
     """
     tp = _tailor(user, db)
     features = get_platform_setting("features") or {}
@@ -893,6 +900,16 @@ def create_pattern(
             if genre not in ("femme", "homme"):
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, "Genre : femme ou homme")
             demande["genre"] = genre
+    if fiche:
+        import json
+
+        try:
+            parsed_fiche = json.loads(fiche)
+        except ValueError:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fiche de style JSON invalide")
+        if not isinstance(parsed_fiche, dict) or len(fiche) > 4000:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fiche de style JSON invalide")
+        demande["fiche_style"] = parsed_fiche
     engine = patrons.MOTEUR if demande.get("base") else "preview-v0"
     if image is None and engine == "preview-v0":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Image de référence requise")
@@ -948,7 +965,70 @@ def pattern_catalogue(user: User = Depends(require_roles("tailor"))):
     avec le mode actif (`preview` ou `garmentcode`)."""
     features = get_platform_setting("features") or {}
     return {"mode": features.get("pattern_generation", "preview"), "pdfs": PATTERN_PDFS,
+            # Analyse de la photo par le modele de vision disponible ?
+            "vision": bool(settings.vl_url),
             **patrons.catalogue_public()}
+
+
+# --- Fiche de style : analyse de la photo du modele (Qwen3-VL) ---------------
+
+def _analyse_out(a: TailorStyleAnalysis) -> dict:
+    return {"id": a.id, "status": a.status, "error_message": a.error_message, **(a.result or {})}
+
+
+def _run_style_analysis(analysis_id: str, contenu: bytes) -> None:
+    """Tache de fond : 1 a 3 minutes sur le processeur du VPS. La photo
+    n'existe qu'en memoire, le temps de l'appel."""
+    try:
+        result = vision.analyser(settings.vl_url, contenu, settings.vl_timeout_s)
+        statut, erreur = "ready", None
+    except vision.AnalyseImpossible as e:
+        result, statut, erreur = None, "failed", str(e)[:500]
+    except Exception:
+        result, statut, erreur = None, "failed", "L'analyse a échoué."
+    with SessionLocal() as db:
+        a = db.get(TailorStyleAnalysis, analysis_id)
+        if a:
+            a.status, a.result, a.error_message = statut, result, erreur
+            db.commit()
+
+
+@router.post("/patterns/analyse", status_code=status.HTTP_202_ACCEPTED)
+def analyse_pattern_photo(
+    background_tasks: BackgroundTasks,
+    image: UploadFile = File(...),
+    user: User = Depends(require_roles("tailor")),
+    db: Session = Depends(get_db),
+):
+    """Lance l'analyse de la photo d'un modele ; le resultat se lit ensuite
+    sur GET /patterns/analyse/{id} (fiche de style + proposition pour le
+    formulaire de patron). 503 si le modele de vision n'est pas configure."""
+    if not settings.vl_url:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Analyse de photo indisponible")
+    tp = _tailor(user, db)
+    contenu = image.file.read(MAX_IMAGE_BYTES + 1)
+    if len(contenu) > MAX_IMAGE_BYTES:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Image trop lourde (10 Mo maximum)")
+    _image_ext(contenu[:12])  # refuse ce qui n'est pas une photo
+    a = TailorStyleAnalysis(tailor_id=tp.id, status="processing")
+    db.add(a)
+    db.commit()
+    db.refresh(a)
+    background_tasks.add_task(_run_style_analysis, a.id, contenu)
+    return _analyse_out(a)
+
+
+@router.get("/patterns/analyse/{analysis_id}")
+def get_pattern_photo_analysis(
+    analysis_id: str,
+    user: User = Depends(require_roles("tailor")),
+    db: Session = Depends(get_db),
+):
+    tp = _tailor(user, db)
+    a = db.get(TailorStyleAnalysis, analysis_id)
+    if not a or a.tailor_id != tp.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Analyse introuvable")
+    return _analyse_out(a)
 
 
 @router.get("/patterns")
