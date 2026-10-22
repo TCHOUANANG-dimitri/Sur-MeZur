@@ -48,6 +48,7 @@ LIBELLES = {
     "wrist": "Tour de poignet", "shoulder": "Largeur d'épaules", "sleeve_length": "Longueur de bras",
     "back_length": "Longueur dos (nuque-taille)", "waist_hip_height": "Hauteur taille-hanches",
     "neck": "Tour de cou", "inseam": "Entrejambe", "outseam": "Longueur taille-sol",
+    "ankle": "Tour de cheville", "biceps": "Tour de bras", "height_total": "Taille (hauteur)",
 }
 # Plages plausibles (cm) : au-dela, on refuse plutot que de tracer n'importe quoi.
 PLAGES = {

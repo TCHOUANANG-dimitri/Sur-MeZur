@@ -89,6 +89,12 @@ export interface TailorPattern {
   controles?: { controle: string; statut: string; detail: string }[];
   remarques?: string[];
   pdf_types?: string[];
+  /** Pieces avec leurs dimensions finies (cm), pour la fiche imprimable. */
+  piecesDetail?: { nom: string; consigne?: string; quantite: number; largeur_cm: number; hauteur_cm: number }[];
+  /** Mesures utilisees (cm), cles du parcours de mesure. */
+  mesures?: Record<string, number>;
+  /** Vrai si des valeurs du corps ont ete estimees (mesures manquantes). */
+  estimees?: boolean;
 }
 
 /** Catalogue des patrons (GET /tailor/patterns/catalogue). */
@@ -245,6 +251,17 @@ function toPattern(r: Raw): TailorPattern {
     controles: Array.isArray(r.result?.controles) ? r.result.controles : [],
     remarques: Array.isArray(r.result?.remarques) ? r.result.remarques : [],
     pdf_types: r.pdf_urls ? Object.keys(r.pdf_urls) : [],
+    // Deux formats selon le moteur : garmentcode (nom, largeur_cm) ou
+    // apercu (label, w_mm).
+    piecesDetail: rows.map((p) => ({
+      nom: String(p.nom ?? p.label ?? ""),
+      consigne: p.consigne ? String(p.consigne) : undefined,
+      quantite: Number(p.quantite ?? 1),
+      largeur_cm: p.largeur_cm != null ? Number(p.largeur_cm) : Math.round(Number(p.w_mm ?? 0)) / 10,
+      hauteur_cm: p.hauteur_cm != null ? Number(p.hauteur_cm) : Math.round(Number(p.h_mm ?? 0)) / 10,
+    })),
+    mesures: r.result?.mesures_cm ?? undefined,
+    estimees: Boolean(r.result?.estimated_values),
   };
 }
 

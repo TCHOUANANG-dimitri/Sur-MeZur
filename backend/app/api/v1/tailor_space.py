@@ -869,7 +869,7 @@ def create_pattern(
     """
     tp = _tailor(user, db)
     features = get_platform_setting("features") or {}
-    mode = features.get("pattern_generation", "preview")
+    mode = features.get("pattern_generation", "on")
     if mode == "off":
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Patrons désactivés")
     gtype = (garment_type or "").strip().lower()
@@ -964,7 +964,7 @@ def pattern_catalogue(user: User = Depends(require_roles("tailor"))):
     """Categories, modeles de base et reglages de style du moteur de patrons,
     avec le mode actif (`preview` ou `garmentcode`)."""
     features = get_platform_setting("features") or {}
-    return {"mode": features.get("pattern_generation", "preview"), "pdfs": PATTERN_PDFS,
+    return {"mode": features.get("pattern_generation", "on"), "pdfs": PATTERN_PDFS,
             # Analyse de la photo par le modele de vision disponible ?
             "vision": bool(settings.vl_url),
             **patrons.catalogue_public()}

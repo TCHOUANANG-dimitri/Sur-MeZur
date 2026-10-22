@@ -187,7 +187,13 @@ def generate_preview_svg(
         "ease_mm": EASE_MM,
         "estimated_values": estimated,
         "note": PREVIEW_NOTE,
-        "pieces": [{"label": p["label"], "w_mm": p["w"] - 2 * SEAM_MM, "h_mm": p["h"] - 2 * SEAM_MM, "keys": p["keys"]} for p in layout],
+        "pieces": [{"label": p["label"], "w_mm": p["w"] - 2 * SEAM_MM, "h_mm": p["h"] - 2 * SEAM_MM, "keys": p["keys"],
+                    # Manches et jambes vont par paire ; le reste se coupe une fois.
+                    "quantite": 2 if p["label"].startswith(("Manche", "Devant jambe", "Dos jambe")) else 1}
+                   for p in layout],
+        # Mesures reellement lues (cm), pour la fiche imprimable du tailleur.
+        "mesures_cm": {k: round(float(v), 1) for k, v in (measurements or {}).items()
+                       if isinstance(v, (int, float)) and not isinstance(v, bool)},
         "pages": [{"page": n, "label": t["covers"]} for n, t in enumerate(tiles, start=1)],
     }
     return svg, tech

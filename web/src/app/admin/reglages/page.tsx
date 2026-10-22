@@ -119,12 +119,12 @@ function PatternsRow({ value, onSave, saving }: { value: Record<string, unknown>
       className="adForm"
       onSubmit={(e) => {
         e.preventDefault();
-        onSave({ ...value, pattern_generation: mode ?? value.pattern_generation ?? "preview" });
+        onSave({ ...value, pattern_generation: mode ?? value.pattern_generation ?? "on" });
       }}
     >
       <label className="adFilter">
         <span>Moteur</span>
-        <select className="input" value={String(mode ?? value.pattern_generation ?? "preview")} onChange={(e) => setMode(e.target.value)}>
+        <select className="input" value={String(mode ?? value.pattern_generation ?? "on")} onChange={(e) => setMode(e.target.value)}>
           <option value="off">Coupée</option>
           <option value="preview">Aperçu (moteur de démonstration)</option>
           <option value="on">Activée (GarmentCode : patrons cotés, PDF)</option>

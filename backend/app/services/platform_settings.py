@@ -63,8 +63,9 @@ DEFAULTS: dict[str, Any] = {
         "payments": False,
         "negotiation": False,
         # "off" | "preview" (apercu preview-v0) | "on" (vrais patrons garmentcode-v1,
-        # apercu pour les categories sans modele de base)
-        "pattern_generation": "preview",
+        # apercu pour les categories sans modele de base). « on » par defaut
+        # depuis que le moteur GarmentCode est en production (octobre 2026).
+        "pattern_generation": "on",
     },
 }
 

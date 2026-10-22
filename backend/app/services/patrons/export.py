@@ -433,7 +433,7 @@ def pdf_echelle(pieces: list[Piece], lignes: list[str], pleine_page: bool = Fals
         "3. Découpez chaque page le long du cadre fin et assemblez-les",
         "   selon le plan ci-dessous (ligne, colonne), repères + sur +.",
         "4. Les cotes écrites sur les pièces sont en cm, ligne de couture.",
-    ] + [f"   {l}" for l in lignes[1:]]
+    ] + [f"   {m}" for l in lignes[1:] for m in _couper(l, 95)]
     for i, s in enumerate(consignes):
         t.texte(MARGE_PAGE, A4[1] - 32 - i * 6, s, 4, NOIR, ancre="debut")
     _carre_test(t, A4[0] - MARGE_PAGE - CARRE_TEST, MARGE_PAGE + 5)
@@ -482,9 +482,16 @@ def _recapitulatif(c, pieces, lignes, coutures, remarques):
     t = ToilePdf(c)
     y = A4[1] - 18
     t.texte(MARGE_PAGE, y, lignes[0], 8, NOIR, gras=True, ancre="debut")
+    # Les mesures du client ont leur propre section, en colonnes : sur une
+    # seule ligne, elles sortaient de la page.
+    mesures = [l for l in lignes[1:] if l.startswith("Mesures : ")]
+    y -= 2  # le sous-titre ne touche pas le titre
     for s in lignes[1:]:
-        y -= 6
-        t.texte(MARGE_PAGE, y, s, 3.3, GRIS, ancre="debut")
+        if s in mesures:
+            continue
+        for morceau in _couper(s, 150):
+            y -= 5
+            t.texte(MARGE_PAGE, y, morceau, 3.3, GRIS, ancre="debut")
 
     def titre(s):
         nonlocal y
@@ -496,6 +503,15 @@ def _recapitulatif(c, pieces, lignes, coutures, remarques):
         nonlocal y
         y -= 5.5
         t.texte(MARGE_PAGE + retrait, y, s, 3.8, coul, gras=gras, ancre="debut")
+
+    if mesures:
+        titre("Mesures du client (cm)")
+        items = [m.strip() for m in mesures[0][len("Mesures : "):].split(",") if m.strip()]
+        colonne = (A4[0] - 2 * MARGE_PAGE) / 3
+        for i in range(0, len(items), 3):
+            y -= 5.5
+            for j, item in enumerate(items[i:i + 3]):
+                t.texte(MARGE_PAGE + j * colonne, y, item, 3.8, NOIR, ancre="debut")
 
     titre("Pièces à couper")
     for i, p in enumerate(pieces, start=1):

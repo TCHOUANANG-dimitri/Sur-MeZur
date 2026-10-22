@@ -7,7 +7,13 @@
  *
  * Moteur GarmentCode : trois PDF a telecharger (fiche de tracage cotee,
  * patron 1:1 en pages A4, patron 1:1 pleine page), consigne de coupe par
- * piece, controles et remarques. Moteur apercu : bandeau « Apercu ».
+ * piece, controles et remarques. Le dessin a l'ecran n'est qu'un apercu :
+ * pour couper, ce sont les PDF (la fiche de tracage d'abord).
+ *
+ * Moteur apercu (categories sans modele de base) : bandeau « Apercu » et une
+ * FICHE A IMPRIMER d'une page — mesures utilisees, pieces a couper avec leurs
+ * dimensions finies, valeur de couture. L'impression du dessin brut donnait
+ * des pages blanches et des tuiles illisibles.
  */
 
 const PDFS: { type: string; label: string; aide: string }[] = [
@@ -22,7 +28,23 @@ import { TailorApi } from "@/lib/api/tailor";
 import type { TailorPattern } from "@/lib/api/tailor";
 import { Button, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { IconPrint } from "@/components/icons";
+import { MEASURES, type MeasureKey } from "@/lib/measurements";
 import { PatternBadge } from "../../_components";
+
+const LIBELLES_GARMENT: Record<string, string> = {
+  jupe: "Jupe", robe: "Robe", kaba: "Kaba", haut: "Haut / blouse", tunique: "Tunique homme",
+  pantalon: "Pantalon", chemise: "Chemise", boubou: "Boubou", agbada: "Agbada",
+};
+
+/** Libelle d'une mesure, y compris les alias du moteur d'apercu. */
+function libelleMesure(cle: string): string {
+  const alias: Record<string, string> = {
+    sleeve: "Longueur de manche", outseam: "Longueur de jambe (côté)", height: "Taille", height_total: "Taille",
+  };
+  return MEASURES[cle as MeasureKey]?.label ?? alias[cle] ?? cle;
+}
+
+const cm = (v: number) => `${v.toFixed(1).replace(".", ",")} cm`;
 
 export default function PatronDetail() {
   const { id } = useParams<{ id: string }>();
@@ -112,9 +134,13 @@ export default function PatronDetail() {
     );
   }
 
+  const apercu = pattern.engine !== "garmentcode-v1";
+  const nomVetement = pattern.base_label ?? LIBELLES_GARMENT[pattern.garment_type] ?? pattern.garment_type;
+
   return (
-    <div className="tPage">
-      <PageHeader title={`Patron — ${pattern.base_label ?? pattern.garment_type}`} back />
+    <>
+    <div className="tPage no-print">
+      <PageHeader title={`Patron — ${nomVetement}`} back />
       <ErrorBanner message={error} />
       <p>
         {pattern.engine !== "garmentcode-v1" && (
@@ -145,14 +171,21 @@ export default function PatronDetail() {
               ))}
             </section>
           )}
-          <div className="tZoomRow no-print">
+          {apercu && (
+            <div style={{ marginBottom: 12 }}>
+              <Button block onClick={() => window.print()}>
+                <IconPrint size={18} aria-hidden /> Imprimer la fiche (PDF)
+              </Button>
+              <span className="muted" style={{ fontSize: 13 }}>
+                une page : mesures et pièces à couper avec leurs dimensions
+              </span>
+            </div>
+          )}
+          <div className="tZoomRow">
             <Button variant="secondary" onClick={() => setZoom((z) => Math.max(50, z - 25))} aria-label="Réduire">−</Button>
             <span className="tRowSub">{zoom} %</span>
             <Button variant="secondary" onClick={() => setZoom((z) => Math.min(300, z + 25))} aria-label="Agrandir">+</Button>
-            <span style={{ flex: 1 }} />
-            <Button variant="secondary" onClick={() => window.print()}>
-              <IconPrint size={18} aria-hidden /> Imprimer (A4)
-            </Button>
+            <span className="muted" style={{ fontSize: 13 }}>Aperçu à l&apos;écran : pour couper, utilisez le PDF.</span>
           </div>
           <div className="tSvgFrame">
             {svgUrl ? (
@@ -166,8 +199,12 @@ export default function PatronDetail() {
             <section aria-label="Pièces du patron">
               <h2 style={{ fontSize: 18 }}>Pièces ({pattern.pieces.length})</h2>
               <ul>
-                {pattern.pieces.map((piece) => (
-                  <li key={piece}>{piece}{pattern.consignes?.[piece] ? ` — ${pattern.consignes[piece]}` : ""}</li>
+                {(pattern.piecesDetail ?? []).map((piece) => (
+                  <li key={piece.nom}>
+                    <strong>{piece.nom}</strong>
+                    {piece.consigne ? ` — ${piece.consigne}` : piece.quantite > 1 ? ` — couper ${piece.quantite}` : ""}
+                    {piece.largeur_cm > 0 && ` — ${cm(piece.largeur_cm)} × ${cm(piece.hauteur_cm)} (fini)`}
+                  </li>
                 ))}
               </ul>
             </section>
@@ -193,11 +230,73 @@ export default function PatronDetail() {
               </ul>
             </section>
           )}
-          <div className="no-print">
+          <div>
             <Button variant="ghost" onClick={remove}>Supprimer ce patron</Button>
           </div>
         </>
       )}
     </div>
+
+    {pattern.status === "ready" && apercu && (
+      <article className="fiche print-only" aria-hidden>
+        <header className="ficheHeader">
+          <div>
+            <span className="ficheBrand">Sur-MeZur</span>
+            <h1 className="ficheTitle">Patron — {nomVetement}</h1>
+          </div>
+          <div className="ficheMeta">
+            <div>Fiche éditée le {new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</div>
+            <div>Patron indicatif (aperçu)</div>
+          </div>
+        </header>
+
+        {pattern.mesures && Object.keys(pattern.mesures).length > 0 && (
+          <section className="ficheGroup">
+            <h2 className="ficheGroupTitle">Mesures utilisées</h2>
+            <table className="ficheTable">
+              <tbody>
+                {Object.entries(pattern.mesures).map(([k, v]) => (
+                  <tr key={k}>
+                    <th scope="row"><span className="ficheMeasureName">{libelleMesure(k)}</span></th>
+                    <td>{cm(v)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+
+        <section className="ficheGroup">
+          <h2 className="ficheGroupTitle">Pièces à couper</h2>
+          <table className="ficheTable">
+            <thead>
+              <tr>
+                <th scope="col">Pièce</th>
+                <td>À couper</td>
+                <td>Largeur finie</td>
+                <td>Hauteur finie</td>
+              </tr>
+            </thead>
+            <tbody>
+              {(pattern.piecesDetail ?? []).map((piece) => (
+                <tr key={piece.nom}>
+                  <th scope="row"><span className="ficheMeasureName">{piece.nom}</span></th>
+                  <td>× {piece.quantite}</td>
+                  <td>{cm(piece.largeur_cm)}</td>
+                  <td>{cm(piece.hauteur_cm)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        <footer className="ficheFooter">
+          Dimensions finies, aisance comprise : ajoutez 1 cm de couture tout autour. Patron indicatif fait de
+          rectangles de base : tracez l&apos;encolure, l&apos;emmanchure et les pinces selon votre méthode.
+          {pattern.estimees ? " Certaines mesures manquaient et ont été estimées : vérifiez-les." : ""}
+        </footer>
+      </article>
+    )}
+    </>
   );
 }

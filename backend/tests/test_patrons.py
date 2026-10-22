@@ -154,7 +154,12 @@ def api() -> None:
     }), "inscription tailleur")
     TH = {"Authorization": f"Bearer {reg.json()['access_token']}"}
     cat_api = ok(client.get("/api/tailor/patterns/catalogue", headers=TH), "catalogue").json()
-    check(cat_api["mode"] == "preview" and len(cat_api["categories"]) == 9, "catalogue en mode apercu")
+    check(cat_api["mode"] == "on" and len(cat_api["categories"]) == 9, "catalogue : GarmentCode par defaut")
+    invalidate()
+    with SessionLocal() as db:
+        set_setting(db, "features", {"pattern_generation": "preview"}, None)
+        db.commit()
+    invalidate()
     ok(client.post("/api/tailor/patterns", data={"garment_type": "jupe", "measurements": json.dumps(FEMME)},
                    headers=TH), "apercu sans image refuse", 400)
 

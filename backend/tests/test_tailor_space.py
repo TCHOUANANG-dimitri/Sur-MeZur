@@ -82,7 +82,7 @@ def main() -> None:
     cfg = ok(client.get("/api/public/config"), "config publique").json()
     check(cfg["features"] == {
         "tailor_verification": False, "payments": False,
-        "negotiation": False, "pattern_generation": "preview",
+        "negotiation": False, "pattern_generation": "on",
     }, "features par defaut")
 
     print("\n== A1.3 : OTP ferme par defaut")
@@ -231,6 +231,12 @@ def main() -> None:
     check("jobs_due_week" in dash and "jobs_late" in dash, "travaux au tableau")
 
     print("\n== A2.4 : patrons apercus")
+    from app.services.platform_settings import invalidate as _inv, set_setting as _set
+    _inv()
+    with SessionLocal() as db:
+        _set(db, "features", {"pattern_generation": "preview"}, None)
+        db.commit()
+    _inv()
     ok(client.post("/api/tailor/patterns", files={"image": ("r.png", io.BytesIO(PNG), "image/png")},
                    data={"garment_type": "fusée"}, headers=TH), "type inconnu refuse", 400)
     ok(client.post("/api/tailor/patterns", files={"image": ("r.png", io.BytesIO(PNG), "image/png")},
