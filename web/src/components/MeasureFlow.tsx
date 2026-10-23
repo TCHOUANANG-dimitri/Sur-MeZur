@@ -25,6 +25,7 @@
  * ouvre l'appareil photo natif du telephone.
  */
 
+import { tr } from "@/lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MeasurementsApi } from "@/lib/api/endpoints";
 import type { JobStatus } from "@/lib/api/types";
@@ -159,7 +160,7 @@ export function MeasureFlow({
       if (current.status !== "ready" || !current.measurement_id) {
         throw new Error(
           current.error_message ||
-            "Nous n'avons pas réussi à lire vos photos. Reprenez-les en vous plaçant bien en entier dans le cadre."
+            tr("Photos illisibles. Reprenez-les, corps entier dans le cadre.", "Photos unreadable. Retake them, whole body in frame.")
         );
       }
       onDone(current.measurement_id);
@@ -167,7 +168,7 @@ export function MeasureFlow({
       setError(friendlyError(e));
       // Le code HTTP d'abord : un 500 sans message n'affichait que « Error: ».
       const code = e instanceof ApiError ? ` HTTP ${e.status}` : "";
-      setErrorDetail(`${stage} ·${code} ${e instanceof Error ? `${e.name}: ${e.message || "sans message"}` : String(e)}`);
+      setErrorDetail(`${stage} ·${code} ${e instanceof Error ? `${e.name}: ${e.message || "—"}` : String(e)}`);
       go("photos");
     }
   }, [front, side, height, weight, gender, guest, refresh, onDone, go, sessionApi]);
@@ -176,18 +177,15 @@ export function MeasureFlow({
     <div className="measureFlow">
       <Steps total={4} current={STEP_INDEX[step]} />
       <ErrorBanner message={error} />
-      {error && errorDetail && <p className="errorDetail">Détail : {errorDetail}</p>}
+      {error && errorDetail && <p className="errorDetail">{tr("Détail", "Detail")} : {errorDetail}</p>}
 
       {step === "infos" && (
         <div className="flowForm">
-          <h2>Quelques informations</h2>
-          <p className="muted">
-            {forClient ? "La taille et le poids du client" : "Votre taille et votre poids"} servent à convertir ce que
-            voient les photos en centimètres. Sans eux, aucune mesure n&apos;est possible.
-          </p>
+          <h2>{tr("Taille et poids", "Height and weight")}</h2>
+          <p className="muted">{tr("Indispensables pour calculer les mesures.", "Needed to calculate the measurements.")}</p>
 
           <div className="fieldRow" style={{ marginTop: 20 }}>
-            <Field label={forClient ? "Taille du client (cm)" : "Votre taille (cm)"}>
+            <Field label={forClient ? tr("Taille du client (cm)", "Client's height (cm)") : tr("Votre taille (cm)", "Your height (cm)")}>
               <Input
                 type="number"
                 inputMode="numeric"
@@ -198,7 +196,7 @@ export function MeasureFlow({
                 onChange={(e) => setHeight(e.target.value)}
               />
             </Field>
-            <Field label={forClient ? "Poids du client (kg)" : "Votre poids (kg)"}>
+            <Field label={forClient ? tr("Poids du client (kg)", "Client's weight (kg)") : tr("Votre poids (kg)", "Your weight (kg)")}>
               <Input
                 type="number"
                 inputMode="numeric"
@@ -212,19 +210,18 @@ export function MeasureFlow({
           </div>
 
           <Field
-            label={forClient ? "Le client est" : "Vous êtes"}
-            hint="Les proportions du corps diffèrent ; la mesure en tient compte."
+            label={forClient ? tr("Le client est", "The client is") : tr("Vous êtes", "You are")}
           >
             <Select value={gender} onChange={(e) => setGender(e.target.value)}>
-              <option value="">Choisir…</option>
-              <option value="female">Une femme</option>
-              <option value="male">Un homme</option>
+              <option value="">{tr("Choisir…", "Choose…")}</option>
+              <option value="female">{tr("Une femme", "A woman")}</option>
+              <option value="male">{tr("Un homme", "A man")}</option>
             </Select>
           </Field>
 
           <div className="actionBar flowActions">
             <Button block disabled={!infosValid} onClick={() => go("consignes")}>
-              Continuer
+              {tr("Continuer", "Continue")}
             </Button>
           </div>
         </div>
@@ -232,62 +229,58 @@ export function MeasureFlow({
 
       {step === "consignes" && (
         <>
-          <h2>{forClient ? "Avant les photos" : "Avant vos photos"}</h2>
-          <p className="muted flowLead">
-            La précision {forClient ? "des" : "de vos"} mesures dépend presque entièrement de ces quelques règles.
-            Prenez un instant pour les lire.
-          </p>
+          <h2>{tr("Avant les photos", "Before the photos")}</h2>
 
           <ul className="guideRules">
             <Rule
               Icon={IconModels}
-              title="Tenue ajustée"
-              body={forClient ? "Un vêtement ample fausse la mesure : le client porte une tenue près du corps." : "Un vêtement ample fausse la mesure : portez une tenue près du corps."}
+              title={tr("Tenue ajustée", "Fitted clothes")}
+              body={tr("Un vêtement ample fausse la mesure.", "Loose clothes distort the result.")}
             />
             <Rule
               Icon={IconPhone}
-              title="Téléphone posé"
-              body={forClient ? "À 2,5–3 m du client, à hauteur de poitrine, bien droit." : "À 2,5–3 m de vous, à hauteur de poitrine. Faites-vous aider ou utilisez un support."}
+              title={tr("Téléphone posé", "Phone set down")}
+              body={tr("À 2,5–3 m, à hauteur de poitrine, bien droit.", "2.5–3 m away, at chest height, upright.")}
             />
             <Rule
               Icon={IconFrame}
-              title="Corps entier"
-              body="De la tête aux pieds dans le cadre, devant un mur dégagé."
+              title={tr("Corps entier", "Whole body")}
+              body={tr("De la tête aux pieds, devant un mur dégagé.", "Head to toe, against a plain wall.")}
             />
             <Rule
               Icon={IconLight}
-              title="Bonne lumière"
-              body="Un endroit bien éclairé, sans contre-jour."
+              title={tr("Bonne lumière", "Good light")}
+              body={tr("Bien éclairé, sans contre-jour.", "Well lit, no backlight.")}
             />
           </ul>
 
           <div className="guidePoses">
             <Pose
-              title="Photo de face"
+              title={tr("Photo de face", "Front photo")}
               Figure={SilhouetteFace}
               points={[
-                "Face à l'appareil, regard droit devant",
-                "Bras écartés du corps, à environ 45°",
-                "Jambes légèrement séparées",
+                tr("Face à l'appareil", "Facing the camera"),
+                tr("Bras écartés à 45°", "Arms out at 45°"),
+                tr("Jambes un peu écartées", "Legs slightly apart"),
               ]}
             />
             <Pose
-              title="Photo de profil"
+              title={tr("Photo de profil", "Side photo")}
               Figure={SilhouetteProfil}
               points={[
-                "De profil, l'épaule tournée vers l'appareil",
-                "Bras collés le long du corps, mains détendues",
-                "Dos droit, jambes jointes",
+                tr("Épaule vers l'appareil", "Shoulder to the camera"),
+                tr("Bras le long du corps", "Arms by your sides"),
+                tr("Dos droit, jambes jointes", "Back straight, legs together"),
               ]}
             />
           </div>
 
           <div className="actionBar flowActions">
             <Button variant="secondary" onClick={() => go("infos")}>
-              Retour
+              {tr("Retour", "Back")}
             </Button>
             <Button block onClick={() => go("photos")}>
-              J&apos;ai compris
+              {tr("J'ai compris", "Got it")}
             </Button>
           </div>
         </>
@@ -295,27 +288,23 @@ export function MeasureFlow({
 
       {step === "photos" && (
         <>
-          <h2>Vos deux photos</h2>
-          <p className="muted flowLead">
-            Prenez-les maintenant avec votre appareil, ou importez-les si elles sont déjà
-            dans votre galerie.
-          </p>
+          <h2>{tr("Vos deux photos", "Your two photos")}</h2>
           <button type="button" className="guideRecall" onClick={() => go("consignes")}>
-            <IconInfo size={15} aria-hidden /> Revoir les consignes de posture
+            <IconInfo size={15} aria-hidden /> {tr("Revoir les consignes", "See the instructions")}
           </button>
 
           <div className="photoCards">
             <PhotoPicker
               target="front"
-              label="Photo de face"
-              hint="Face à l'appareil, bras écartés, corps entier dans le cadre."
+              label={tr("Photo de face", "Front photo")}
+              hint={tr("Face, bras écartés, corps entier.", "Front, arms out, whole body.")}
               file={front}
               onPick={setFront}
             />
             <PhotoPicker
               target="side"
-              label="Photo de profil"
-              hint="De profil, bras collés le long du corps."
+              label={tr("Photo de profil", "Side photo")}
+              hint={tr("Profil, bras le long du corps.", "Side on, arms by your sides.")}
               file={side}
               onPick={setSide}
             />
@@ -323,10 +312,10 @@ export function MeasureFlow({
 
           <div className="actionBar flowActions">
             <Button variant="secondary" onClick={() => go("consignes")}>
-              Retour
+              {tr("Retour", "Back")}
             </Button>
             <Button block disabled={!front || !side} onClick={analyse}>
-              Analyser mes photos
+              {tr("Analyser mes photos", "Analyse my photos")}
             </Button>
           </div>
         </>
@@ -334,12 +323,8 @@ export function MeasureFlow({
 
       {step === "analyse" && (
         <div className="flowAnalyse">
-          <Spinner label={phase === "envoi" ? "Envoi de vos photos…" : "Analyse de vos photos…"} />
-          <p className="muted">
-            {phase === "envoi"
-              ? "Selon votre connexion, cela peut prendre quelques instants. Gardez cette page ouverte."
-              : "Cela prend généralement moins d'une minute. Ne fermez pas cette page."}
-          </p>
+          <Spinner label={phase === "envoi" ? tr("Envoi des photos…", "Uploading photos…") : tr("Analyse des photos…", "Analysing photos…")} />
+          <p className="muted">{tr("Moins d'une minute. Gardez la page ouverte.", "Under a minute. Keep this page open.")}</p>
         </div>
       )}
     </div>
@@ -453,7 +438,7 @@ function PhotoPicker({
           // next/image n'apporte rien sur une URL blob locale, et imposerait des
           // dimensions connues a l'avance.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt={`Aperçu - ${label}`} />
+          <img src={preview} alt={label} />
         ) : (
           <span className="photoCardPlaceholder" aria-hidden>
             <IconCamera size={26} strokeWidth={1.7} />
@@ -465,14 +450,14 @@ function PhotoPicker({
         <h3 className="photoCardTitle">
           {label}
           {file ? (
-            <span className="photoDone" aria-label="Photo choisie">
+            <span className="photoDone" aria-label={tr("Photo choisie", "Photo chosen")}>
               <IconCheck size={15} strokeWidth={3} />
             </span>
           ) : null}
         </h3>
         <p className={`fieldHint ${pickError ? "fieldHintError" : ""}`}>
           {pickError ||
-            (preparing ? "Préparation de la photo…" : file ? "Photo prête. Vous pouvez la remplacer." : hint)}
+            (preparing ? tr("Préparation…", "Preparing…") : file ? tr("Photo prête.", "Photo ready.") : hint)}
         </p>
       </div>
 
@@ -482,11 +467,11 @@ function PhotoPicker({
       <div className="photoCardActions">
         <button type="button" className="btn btnSecondary" onClick={openCamera}>
           <IconCamera size={17} aria-hidden />
-          {file ? "Reprendre" : "Prendre la photo"}
+          {file ? tr("Reprendre", "Retake") : tr("Prendre la photo", "Take photo")}
         </button>
         <button type="button" className="btn btnGhost" onClick={() => galleryRef.current?.click()}>
           <IconGallery size={17} aria-hidden />
-          {file ? "Changer" : "Importer"}
+          {file ? tr("Changer", "Change") : tr("Importer", "Upload")}
         </button>
       </div>
 

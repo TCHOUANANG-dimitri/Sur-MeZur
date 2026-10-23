@@ -19,6 +19,7 @@
  * d'arrivee) part dans `acquisition` (14.10).
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -33,7 +34,7 @@ import { SignedInNotice } from "@/components/SignedInNotice";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
-import { PASSWORD_HINT, passwordError } from "@/lib/password";
+import { passwordError, passwordHint } from "@/lib/password";
 import { nameError, phoneError } from "@/lib/validation";
 
 type Role = "client" | "tailor";
@@ -147,7 +148,7 @@ function InscriptionInner() {
         router.replace(destinationFor(res.role ?? role, next));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Création du compte impossible.");
+      setError(err instanceof Error ? err.message : tr("Création impossible.", "Could not create the account."));
     } finally {
       setBusy(false);
     }
@@ -158,7 +159,7 @@ function InscriptionInner() {
   // n'a pas de sens sans se deconnecter d'abord.
   if (!loading && user && !user.is_guest && !handedOff) {
     return (
-      <SignedInNotice message="Pour créer un nouveau compte, choisissez « Changer de compte » : vous serez déconnecté de celui-ci." />
+      <SignedInNotice />
     );
   }
 
@@ -176,16 +177,12 @@ function InscriptionInner() {
           />
         </div>
 
-        <h1 className="authTitle">Créer un compte</h1>
-        {next && (
-          <p className="authSubtitle">
-            Vos mesures sont prêtes : un compte suffit pour les voir en entier.
-          </p>
-        )}
+        <h1 className="authTitle">{tr("Créer un compte", "Create an account")}</h1>
+        {next && <p className="authSubtitle">{tr("Pour voir vos mesures en entier.", "To see all your measurements.")}</p>}
 
         <ErrorBanner message={error} />
 
-        <div className="roleChoice" role="radiogroup" aria-label="Vous êtes">
+        <div className="roleChoice" role="radiogroup" aria-label={tr("Vous êtes", "You are")}>
           <button
             type="button"
             role="radio"
@@ -193,8 +190,8 @@ function InscriptionInner() {
             className={`roleCard ${role === "client" ? "roleCardActive" : ""}`}
             onClick={() => setRole("client")}
           >
-            <strong>Je suis client</strong>
-            <span>Mes mesures, mes modèles, mon tailleur.</span>
+            <strong>{tr("Je suis client", "I'm a client")}</strong>
+            <span>{tr("Mesures, modèles, tailleur.", "Measurements, styles, tailor.")}</span>
           </button>
           <button
             type="button"
@@ -203,13 +200,13 @@ function InscriptionInner() {
             className={`roleCard ${role === "tailor" ? "roleCardActive" : ""}`}
             onClick={() => setRole("tailor")}
           >
-            <strong>Je suis tailleur</strong>
-            <span>Mon carnet de clients et mes patrons.</span>
+            <strong>{tr("Je suis tailleur", "I'm a tailor")}</strong>
+            <span>{tr("Clients et patrons.", "Clients and patterns.")}</span>
           </button>
         </div>
 
         <label className="field">
-          <span className="fieldLabel">Nom complet</span>
+          <span className="fieldLabel">{tr("Nom complet", "Full name")}</span>
           <input
             className="input"
             autoComplete="name"
@@ -221,12 +218,12 @@ function InscriptionInner() {
           {nameErr && <span className="fieldError">{nameErr}</span>}
         </label>
 
-        <PhoneField label="Numéro de téléphone" value={phone} onChange={setPhone} error={phoneErr} />
+        <PhoneField label={tr("Numéro de téléphone", "Phone number")} value={phone} onChange={setPhone} error={phoneErr} />
 
         {role === "tailor" && (
           <>
             <label className="field">
-              <span className="fieldLabel">Nom de l&apos;atelier <span className="fieldOptional">(facultatif)</span></span>
+              <span className="fieldLabel">{tr("Nom de l'atelier", "Workshop name")} <span className="fieldOptional">{tr("(facultatif)", "(optional)")}</span></span>
               <input
                 className="input"
                 autoComplete="organization"
@@ -237,10 +234,10 @@ function InscriptionInner() {
             </label>
             <div className="fieldRow">
               <label className="field">
-                <span className="fieldLabel">Ville <span className="fieldOptional">(facultatif)</span></span>
+                <span className="fieldLabel">{tr("Ville", "City")} <span className="fieldOptional">{tr("(facultatif)", "(optional)")}</span></span>
                 {cities.length > 0 ? (
                   <select className="input" value={city} onChange={(e) => setCity(e.target.value)}>
-                    <option value="">Choisir…</option>
+                    <option value="">{tr("Choisir…", "Choose…")}</option>
                     {cities.map((c) => (
                       <option key={c.name} value={c.name}>{c.name}</option>
                     ))}
@@ -249,7 +246,7 @@ function InscriptionInner() {
                   <input
                     className="input"
                     autoComplete="address-level2"
-                    placeholder="Ex. Douala"
+                    placeholder="Douala"
                     maxLength={80}
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
@@ -257,7 +254,7 @@ function InscriptionInner() {
                 )}
               </label>
               <label className="field">
-                <span className="fieldLabel">Quartier <span className="fieldOptional">(facultatif)</span></span>
+                <span className="fieldLabel">{tr("Quartier", "Area")} <span className="fieldOptional">{tr("(facultatif)", "(optional)")}</span></span>
                 <input
                   className="input"
                   value={quartier}
@@ -270,30 +267,30 @@ function InscriptionInner() {
         )}
 
         <div className="field">
-          <span className="fieldLabel">Mot de passe</span>
+          <span className="fieldLabel">{tr("Mot de passe", "Password")}</span>
           <PasswordInput
             value={password}
             onChange={setPassword}
             autoComplete="new-password"
           />
-          <span className="fieldHint">{password.length > 0 ? (passwordError(password) ?? "Mot de passe valide.") : PASSWORD_HINT}</span>
+          <span className="fieldHint">{passwordHint(password)}</span>
         </div>
 
         {showSourceQuestion && (
           <label className="field">
-            <span className="fieldLabel">Comment nous avez-vous connu ? <span className="fieldOptional">(facultatif)</span></span>
+            <span className="fieldLabel">{tr("Comment nous avez-vous connu ?", "How did you hear about us?")} <span className="fieldOptional">{tr("(facultatif)", "(optional)")}</span></span>
             <select className="input" value={source} onChange={(e) => setSource(e.target.value)}>
-              <option value="">Choisir…</option>
+              <option value="">{tr("Choisir…", "Choose…")}</option>
               {channels.map((c) => (
                 <option key={c.code} value={c.code}>{c.name}</option>
               ))}
-              {channels.length === 0 && <option value="other">Autre</option>}
+              {channels.length === 0 && <option value="other">{tr("Autre", "Other")}</option>}
             </select>
           </label>
         )}
         {showSourceQuestion && showOther && (
           <label className="field">
-            <span className="fieldLabel">Précisez</span>
+            <span className="fieldLabel">{tr("Précisez", "Please specify")}</span>
             <input
               className="input"
               value={sourceOther}
@@ -304,7 +301,7 @@ function InscriptionInner() {
         )}
 
         <label className="field">
-          <span className="fieldLabel">Code de parrainage ou promo <span className="fieldOptional">(facultatif)</span></span>
+          <span className="fieldLabel">{tr("Code promo", "Promo code")} <span className="fieldOptional">{tr("(facultatif)", "(optional)")}</span></span>
           <input
             className="input"
             autoComplete="off"
@@ -316,14 +313,11 @@ function InscriptionInner() {
 
         <label className="consentRow">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-          <span>
-            J&apos;accepte que mes photos soient analysées pour calculer mes mesures. Elles ne
-            servent qu&apos;à cela.
-          </span>
+          <span>{tr("J'accepte que mes photos servent uniquement à calculer mes mesures.", "I agree my photos are used only to calculate my measurements.")}</span>
         </label>
 
         <Button type="submit" block disabled={!canSubmit}>
-          {busy ? "Création…" : "Créer mon compte"}
+          {busy ? tr("Création…", "Creating…") : tr("Créer mon compte", "Create my account")}
         </Button>
 
         <div className="authLinks">
@@ -331,7 +325,7 @@ function InscriptionInner() {
             href={next ? `/connexion?suite=${encodeURIComponent(next)}` : "/connexion"}
             className="authLink"
           >
-            J&apos;ai déjà un compte
+            {tr("J'ai déjà un compte", "I already have an account")}
           </Link>
         </div>
       </form>

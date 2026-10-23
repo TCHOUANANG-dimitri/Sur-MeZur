@@ -8,6 +8,7 @@
  * relu depuis le stockage local du navigateur du tailleur.
  */
 
+import { locale, tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -52,7 +53,7 @@ export default function FichePartagee() {
           const found = shares[token];
           if (found) {
             if (new Date(found.expires_at).getTime() < Date.now()) {
-              setError("Ce lien a expiré. Demandez-en un nouveau à votre tailleur.");
+              setError(tr("Lien expiré. Demandez-en un nouveau.", "Link expired. Ask for a new one."));
               setFiche(null);
             } else {
               setFiche(found);
@@ -62,12 +63,12 @@ export default function FichePartagee() {
         } catch {
           /* ignore */
         }
-        setError("Lien invalide ou expiré. Demandez-en un nouveau à votre tailleur.");
+        setError(tr("Lien invalide ou expiré.", "Invalid or expired link."));
         setFiche(null);
       });
   }, [token]);
 
-  if (fiche === undefined) return <Spinner label="Chargement de la fiche…" />;
+  if (fiche === undefined) return <Spinner />;
 
   if (fiche === null || !fiche.measurement) {
     return (
@@ -75,10 +76,10 @@ export default function FichePartagee() {
         <ErrorBanner message={error} />
         <EmptyState
           icon={<IconMeasure size={30} strokeWidth={1.6} />}
-          title="Fiche indisponible"
+          title={tr("Fiche indisponible", "Sheet unavailable")}
           action={
             <Link href="/" className="btn btnSecondary">
-              Retour à l&apos;accueil
+              {tr("Retour à l'accueil", "Back to home")}
             </Link>
           }
         />
@@ -86,21 +87,21 @@ export default function FichePartagee() {
     );
   }
 
-  const editee = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const editee = new Date().toLocaleDateString(locale(), { day: "numeric", month: "long", year: "numeric" });
 
   return (
     <main className="container section">
-      <article className="fiche" aria-label="Fiche de mesures partagée">
+      <article className="fiche" aria-label={tr("Fiche de mesures", "Measurement sheet")}>
         <header className="ficheHeader">
           <div>
             <span className="ficheBrand">Sur-MeZur</span>
             <h1 className="ficheTitle">
-              Fiche de mesures{fiche.client ? ` — ${fiche.client.name}` : ""}
+              {tr("Fiche de mesures", "Measurement sheet")}{fiche.client ? ` — ${fiche.client.name}` : ""}
             </h1>
           </div>
           <div className="ficheMeta">
-            <div>Fiche éditée le {editee}</div>
-            <div>Taille : {fiche.measurement.height_cm} cm</div>
+            <div>{tr(`Éditée le ${editee}`, `Issued ${editee}`)}</div>
+            <div>{tr("Taille", "Height")} : {fiche.measurement.height_cm} cm</div>
           </div>
         </header>
         {presentableGroups(fiche.measurement.data).map((group) => (
@@ -119,12 +120,12 @@ export default function FichePartagee() {
           </section>
         ))}
         <footer className="ficheFooter">
-          Lien de partage en lecture seule — expire le{" "}
-          {new Date(fiche.expires_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}.
+          {tr("Lien en lecture seule, expire le", "Read-only link, expires")}{" "}
+          {new Date(fiche.expires_at).toLocaleDateString(locale(), { day: "numeric", month: "long", year: "numeric" })}.
         </footer>
       </article>
       <p className="no-print" style={{ textAlign: "center", marginTop: 16 }}>
-        <Link href="/" className="authLink">Découvrir Sur-MeZur</Link>
+        <Link href="/" className="authLink">{tr("Découvrir Sur-MeZur", "Discover Sur-MeZur")}</Link>
       </p>
     </main>
   );

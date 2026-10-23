@@ -10,6 +10,7 @@
  * qui expire).
  */
 
+import { locale, tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -57,7 +58,7 @@ export default function ClientDetail() {
       setMeasurements(mes);
       setJobs(jb);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Chargement impossible.");
+      setError(e instanceof Error ? e.message : tr("Chargement impossible.", "Could not load."));
     }
   }, [id]);
 
@@ -72,7 +73,7 @@ export default function ClientDetail() {
       const updated = await TailorApi.patchClient(id, { notes: notes.trim() || null });
       setClient(updated);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Enregistrement impossible.");
+      setError(e instanceof Error ? e.message : tr("Enregistrement impossible.", "Could not save."));
     } finally {
       setSavingNotes(false);
     }
@@ -86,7 +87,7 @@ export default function ClientDetail() {
       setShowManual(false);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Enregistrement impossible.");
+      setError(e instanceof Error ? e.message : tr("Enregistrement impossible.", "Could not save."));
     } finally {
       setSavingManual(false);
     }
@@ -99,7 +100,7 @@ export default function ClientDetail() {
       const link = await TailorApi.shareClient(id);
       setShareUrl(link.url);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Partage impossible.");
+      setError(e instanceof Error ? e.message : tr("Partage impossible.", "Could not share."));
     } finally {
       setSharing(false);
     }
@@ -126,7 +127,7 @@ export default function ClientDetail() {
       setClient(await TailorApi.patchClient(id, { name: editName.trim(), phone: editPhone, gender: editGender }));
       setEditing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Enregistrement impossible.");
+      setError(err instanceof Error ? err.message : tr("Enregistrement impossible.", "Could not save."));
     } finally {
       setSavingEdit(false);
     }
@@ -137,7 +138,7 @@ export default function ClientDetail() {
   async function copyPhone() {
     if (!client?.phone) return;
     const copied = await copyText(client.phone);
-    setNotice(copied ? `Numéro ${client.phone} copié : collez-le si le téléphone ne l'a pas déjà rempli.` : "");
+    setNotice(copied ? tr(`Numéro ${client.phone} copié.`, `Number ${client.phone} copied.`) : "");
   }
 
   async function saveContact() {
@@ -148,27 +149,27 @@ export default function ClientDetail() {
 
   async function remove() {
     if (!id) return;
-    if (!window.confirm(`Retirer ${client?.name} du carnet ? Ses mesures et travaux restent enregistrés.`)) return;
+    if (!window.confirm(tr(`Retirer ${client?.name} du carnet ?`, `Remove ${client?.name} from your clients?`))) return;
     try {
       await TailorApi.deleteClient(id);
       router.replace("/tailleur/clients");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Suppression impossible.");
+      setError(e instanceof Error ? e.message : tr("Suppression impossible.", "Could not delete."));
     }
   }
 
   if (!client) {
     return (
       <>
-        <PageHeader title="Client" back />
-        {error ? <ErrorBanner message={error} /> : <Spinner label="Chargement…" />}
+        <PageHeader title={tr("Client", "Client")} back />
+        {error ? <ErrorBanner message={error} /> : <Spinner />}
       </>
     );
   }
 
   const latest = measurements?.[0] ?? null;
   const telHref = `tel:${client.phone.replace(/[^\d+]/g, "")}`;
-  const editee = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const editee = new Date().toLocaleDateString(locale(), { day: "numeric", month: "long", year: "numeric" });
 
   return (
     <div className="tPage">
@@ -178,21 +179,20 @@ export default function ClientDetail() {
       {client.phone ? (
         <div className="tActionRow no-print">
           <a className="btn btnSecondary" href={telHref} onClick={() => void copyPhone()}>
-            <IconCall size={18} aria-hidden /> Appeler
+            <IconCall size={18} aria-hidden /> {tr("Appeler", "Call")}
           </a>
           <a className="btn btnWhatsapp" href={whatsappHref(client.phone)}>
             <IconChat size={18} aria-hidden /> WhatsApp
           </a>
           <button type="button" className="btn btnSecondary" onClick={() => void saveContact()}>
-            <IconContact size={18} aria-hidden /> Enregistrer dans mes contacts
+            <IconContact size={18} aria-hidden /> {tr("Enregistrer le contact", "Save contact")}
           </button>
         </div>
       ) : (
         <div className="banner bannerInfo no-print" style={{ display: "block" }}>
-          Aucun numéro enregistré pour ce client : ajoutez-le pour l&apos;appeler, lui écrire sur
-          WhatsApp ou l&apos;enregistrer dans vos contacts.{" "}
+          {tr("Aucun numéro.", "No phone number.")}{" "}
           <button type="button" className="linkButton" onClick={startEdit}>
-            Ajouter le numéro
+            {tr("Ajouter le numéro", "Add number")}
           </button>
         </div>
       )}
@@ -201,7 +201,7 @@ export default function ClientDetail() {
       {editing && (
         <form className="card no-print" onSubmit={saveEdit} noValidate>
           <label className="field">
-            <span className="fieldLabel">Nom</span>
+            <span className="fieldLabel">{tr("Nom", "Name")}</span>
             <Input
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
@@ -210,20 +210,20 @@ export default function ClientDetail() {
             />
             {editNameErr && <span className="fieldError">{editNameErr}</span>}
           </label>
-          <PhoneField label="Téléphone" value={editPhone} onChange={setEditPhone} error={editPhoneErr} />
+          <PhoneField label={tr("Téléphone", "Phone")} value={editPhone} onChange={setEditPhone} error={editPhoneErr} />
           <label className="field">
-            <span className="fieldLabel">Sexe</span>
+            <span className="fieldLabel">{tr("Sexe", "Sex")}</span>
             <select className="input" value={editGender} onChange={(e) => setEditGender(e.target.value)}>
-              <option value="female">Femme</option>
-              <option value="male">Homme</option>
+              <option value="female">{tr("Femme", "Female")}</option>
+              <option value="male">{tr("Homme", "Male")}</option>
             </select>
           </label>
           <div className="tActionRow">
             <Button type="submit" disabled={!canSaveEdit}>
-              {savingEdit ? "Enregistrement…" : "Enregistrer"}
+              {savingEdit ? tr("Enregistrement…", "Saving…") : tr("Enregistrer", "Save")}
             </Button>
             <Button variant="ghost" onClick={() => setEditing(false)}>
-              Annuler
+              {tr("Annuler", "Cancel")}
             </Button>
           </div>
         </form>
@@ -232,31 +232,31 @@ export default function ClientDetail() {
       <Card>
         <div className="tHeader">
           <p className="tRowSub" style={{ margin: 0, flex: 1 }}>
-            {client.phone || "Aucun numéro"} · {client.gender === "male" ? "Homme" : "Femme"}
+            {client.phone || tr("Aucun numéro", "No number")} · {client.gender === "male" ? tr("Homme", "Male") : tr("Femme", "Female")}
           </p>
           {!editing && (
             <Button variant="ghost" className="no-print" onClick={startEdit}>
-              <IconEdit size={16} aria-hidden /> Modifier
+              <IconEdit size={16} aria-hidden /> {tr("Modifier", "Edit")}
             </Button>
           )}
         </div>
         <label className="field" style={{ marginTop: 10 }}>
-          <span className="fieldLabel">Notes</span>
-          <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Préférences, acompte reçu au comptant…" />
+          <span className="fieldLabel">{tr("Notes", "Notes")}</span>
+          <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={tr("Préférences…", "Preferences…")} />
         </label>
         <Button variant="secondary" onClick={saveNotes} disabled={savingNotes}>
-          {savingNotes ? "Enregistrement…" : "Enregistrer les notes"}
+          {savingNotes ? tr("Enregistrement…", "Saving…") : tr("Enregistrer les notes", "Save notes")}
         </Button>
       </Card>
 
       <section aria-labelledby="mesures-titre">
         <div className="tHeader no-print">
-          <h2 id="mesures-titre" style={{ fontSize: 18, margin: 0, flex: 1 }}>Mesures</h2>
+          <h2 id="mesures-titre" style={{ fontSize: 18, margin: 0, flex: 1 }}>{tr("Mesures", "Measurements")}</h2>
           <Link href={`/tailleur/mesurer?client=${client.id}`} className="btn btnSecondary">
-            <IconMeasure size={18} aria-hidden /> Par photo
+            <IconMeasure size={18} aria-hidden /> {tr("Par photo", "By photo")}
           </Link>
           <Button variant="ghost" onClick={() => setShowManual((s) => !s)}>
-            Au mètre
+            {tr("Au mètre", "With tape")}
           </Button>
         </div>
         {showManual && (
@@ -265,37 +265,36 @@ export default function ClientDetail() {
           </div>
         )}
         {!measurements ? (
-          <Spinner label="Chargement…" />
+          <Spinner />
         ) : measurements.length === 0 ? (
           <EmptyState
             icon={<IconMeasure size={26} strokeWidth={1.6} />}
-            title="Aucune mesure"
-            body="Mesurez ce client par photo ou au mètre ruban."
+            title={tr("Aucune mesure", "No measurements")}
           />
         ) : (
           <ul className="tList" style={{ marginTop: 10 }}>
             {measurements.map((m, i) => (
               <li key={m.id} className="card">
                 <strong>
-                  Mesure n°{measurements.length - i}
+                  {tr("Mesure n°", "Measurement #")}{measurements.length - i}
                 </strong>{" "}
                 <span className="tRowSub">
-                  · {m.height_cm} cm · {m.source === "manual" ? "au mètre" : "par photo"} · {formatDateFR(m.created_at)}
+                  · {m.height_cm} cm · {m.source === "manual" ? tr("au mètre", "tape") : tr("par photo", "photo")} · {formatDateFR(m.created_at)}
                 </span>
                 {i === 0 && (
                   <div className="tActionRow no-print" style={{ marginTop: 10 }}>
                     <Button variant="secondary" onClick={() => window.print()}>
-                      <IconPrint size={18} aria-hidden /> Imprimer
+                      <IconPrint size={18} aria-hidden /> {tr("Imprimer", "Print")}
                     </Button>
                     <Button variant="secondary" onClick={share} disabled={sharing}>
-                      {sharing ? "…" : shareUrl ? "Lien copié ci-dessous" : "Partager"}
+                      {sharing ? "…" : shareUrl ? tr("Lien prêt", "Link ready") : tr("Partager", "Share")}
                     </Button>
                   </div>
                 )}
                 {i === 0 && shareUrl && (
                   <p className="no-print">
-                    <a href={whatsappHref(client.phone, `Vos mesures Sur-MeZur : ${shareUrl}`)} className="authLink">
-                      Envoyer à {client.name} par WhatsApp (lien public, expire)
+                    <a href={whatsappHref(client.phone, tr(`Vos mesures Sur-MeZur : ${shareUrl}`, `Your Sur-MeZur measurements: ${shareUrl}`))} className="authLink">
+                      {tr(`Envoyer à ${client.name} par WhatsApp`, `Send to ${client.name} on WhatsApp`)}
                     </a>
                   </p>
                 )}
@@ -306,15 +305,15 @@ export default function ClientDetail() {
       </section>
 
       {latest && (
-        <article className="fiche" aria-label="Fiche de mesures imprimable">
+        <article className="fiche" aria-label={tr("Fiche de mesures", "Measurement sheet")}>
           <header className="ficheHeader">
             <div>
               <span className="ficheBrand">Sur-MeZur</span>
-              <h2 className="ficheTitle">Fiche de mesures — {client.name}</h2>
+              <h2 className="ficheTitle">{tr("Fiche de mesures", "Measurement sheet")} — {client.name}</h2>
             </div>
             <div className="ficheMeta">
-              <div>Fiche éditée le {editee}</div>
-              <div>Taille : {latest.height_cm} cm</div>
+              <div>{tr(`Éditée le ${editee}`, `Issued ${editee}`)}</div>
+              <div>{tr("Taille", "Height")} : {latest.height_cm} cm</div>
             </div>
           </header>
           {presentableGroups(latest.data).map((group) => (
@@ -333,17 +332,17 @@ export default function ClientDetail() {
             </section>
           ))}
           <footer className="ficheFooter">
-            Mesures obtenues à partir de deux photographies ou au mètre ruban. À vérifier avant la coupe si le vêtement est ajusté.
+            {tr("À vérifier au mètre avant de couper un vêtement ajusté.", "Check with a tape before cutting a fitted garment.")}
           </footer>
         </article>
       )}
 
       <section aria-labelledby="travaux-titre">
-        <h2 id="travaux-titre" style={{ fontSize: 18 }}>Travaux de ce client</h2>
+        <h2 id="travaux-titre" style={{ fontSize: 18 }}>{tr("Travaux", "Jobs")}</h2>
         {!jobs ? (
-          <Spinner label="Chargement…" />
+          <Spinner />
         ) : jobs.length === 0 ? (
-          <p className="muted">Aucun travail enregistré.</p>
+          <p className="muted">{tr("Aucun travail.", "No jobs.")}</p>
         ) : (
           <ul className="tList">
             {jobs.map((j) => (
@@ -352,7 +351,7 @@ export default function ClientDetail() {
                   <span className="tRowTitle">{j.description}</span>
                   <br />
                   <span className="tRowSub">
-                    Échéance : {j.due_date ? `${formatDateFR(j.due_date)} (${dueLabel(j.due_date)})` : "—"}
+                    {tr("Échéance", "Due")} : {j.due_date ? `${formatDateFR(j.due_date)} (${dueLabel(j.due_date)})` : "—"}
                   </span>
                 </span>
                 <JobBadge status={j.status} />
@@ -362,14 +361,14 @@ export default function ClientDetail() {
         )}
         <p className="no-print">
           <Link href={`/tailleur/travaux?nouveau=1&client=${client.id}`} className="authLink">
-            + Nouveau travail pour {client.name}
+            {tr("+ Nouveau travail", "+ New job")}
           </Link>
         </p>
       </section>
 
       <div className="no-print">
         <Button variant="ghost" onClick={remove}>
-          Retirer du carnet
+          {tr("Retirer du carnet", "Remove client")}
         </Button>
       </div>
     </div>

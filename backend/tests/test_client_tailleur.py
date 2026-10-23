@@ -184,6 +184,12 @@ def main() -> None:
     order = r.json()
     check(order["status"] == "new", "commande a l'etat « nouvelle »")
     check(order["measurement_id"] == mid, "mesures jointes")
+    # Pas de messagerie dans l'app : client et tailleur se joignent par appel
+    # ou WhatsApp.
+    r = client.get(f"/api/orders/{order['id']}/chat", headers=CH)
+    check(r.status_code in (404, 405), f"plus de chat (lecture) -> {r.status_code}")
+    r = client.post(f"/api/orders/{order['id']}/chat", json={"body": "Bonjour"}, headers=CH)
+    check(r.status_code in (404, 405), f"plus de chat (envoi) -> {r.status_code}")
 
     print("\n== Securite : on ne commande pas avec les mesures d'un autre")
     r = client.post("/api/orders", json={

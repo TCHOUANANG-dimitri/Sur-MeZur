@@ -100,7 +100,7 @@ function useTheme(): [string, () => void] {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     return () => {
-      // En quittant l'administration, le site client reste en theme clair.
+      // En quittant l'administration, le site reprend le theme du telephone.
       delete document.documentElement.dataset.theme;
     };
   }, [theme]);

@@ -8,17 +8,23 @@
  */
 
 import type { TailorProfile } from "./api/types";
+import { langue, tr } from "./i18n";
 
 export const APP_URL = "https://sur-me-zur.vercel.app";
 
 /** Message pre-rempli quand un client ecrit a un tailleur sur WhatsApp : il
  *  dit d'ou vient le contact. Avec une commande, il en donne la reference. */
 export function tailorWhatsappMessage(shopName: string, orderId?: string | null): string {
-  let text =
-    `Bonjour ${shopName}, je vous contacte depuis l'application Sur-MeZur (${APP_URL}). ` +
-    "J'aimerais vous parler d'une commande de couture.";
-  if (orderId) {
-    text += ` Je viens de vous envoyer ma commande n° ${orderId.slice(0, 6).toUpperCase()} avec mes mesures sur Sur-MeZur.`;
+  const ref = orderId ? orderId.slice(0, 6).toUpperCase() : "";
+  let text = tr(
+    `Bonjour ${shopName}, je vous contacte depuis l'application Sur-MeZur (${APP_URL}). J'aimerais vous parler d'une commande de couture.`,
+    `Hello ${shopName}, I'm contacting you from the Sur-MeZur app (${APP_URL}). I'd like to talk about a tailoring order.`
+  );
+  if (ref) {
+    text += tr(
+      ` Je viens de vous envoyer ma commande n° ${ref} avec mes mesures sur Sur-MeZur.`,
+      ` I've just sent you my order no. ${ref} with my measurements on Sur-MeZur.`
+    );
   }
   return text;
 }
@@ -46,14 +52,15 @@ export function tailorMapHref(t: Pick<TailorProfile, "lat" | "lng" | "city" | "q
 export function formatDistance(km: number | null | undefined): string | null {
   if (km == null || !isFinite(km)) return null;
   if (km < 1) return `${Math.max(50, Math.round((km * 1000) / 50) * 50)} m`;
-  return `${km.toFixed(km < 10 ? 1 : 0).replace(".", ",")} km`;
+  const v = km.toFixed(km < 10 ? 1 : 0);
+  return `${langue() === "en" ? v : v.replace(".", ",")} km`;
 }
 
 /** Position du navigateur, avec un message clair en cas de refus. */
 export function currentPosition(): Promise<{ lat: number; lng: number; accuracy: number }> {
   return new Promise((resolve, reject) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      reject(new Error("Ce navigateur ne donne pas la position."));
+      reject(new Error(tr("Position indisponible sur ce navigateur.", "Location not available in this browser.")));
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -62,8 +69,8 @@ export function currentPosition(): Promise<{ lat: number; lng: number; accuracy:
         reject(
           new Error(
             err.code === err.PERMISSION_DENIED
-              ? "Position refusée : autorisez la localisation pour ce site dans les réglages du navigateur."
-              : "Position introuvable pour l'instant. Réessayez à l'extérieur ou avec le GPS activé."
+              ? tr("Position refusée : autorisez la localisation dans les réglages.", "Location blocked: allow it in settings.")
+              : tr("Position introuvable. Activez le GPS et réessayez.", "Location not found. Turn on GPS and try again.")
           )
         ),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }

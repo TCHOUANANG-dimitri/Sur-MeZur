@@ -13,6 +13,7 @@
  * ses douze mesures sans reprendre ses photos.
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -50,7 +51,7 @@ export default function ResultatInvite() {
       .then((list) => setMeasurement(list.find((m) => m.id === id) ?? null))
       .catch((e) => {
         setLoadFailed(isTransientError(e));
-        setError(friendlyError(e, "réessayez"));
+        setError(friendlyError(e, tr("réessayez", "try again")));
         setMeasurement(null);
       });
   }, [id]);
@@ -60,7 +61,7 @@ export default function ResultatInvite() {
   const signupTailleurHref = `/inscription?suite=${encodeURIComponent(next)}&role=tailleur`;
   const loginHref = `/connexion?suite=${encodeURIComponent(next)}`;
 
-  if (measurement === undefined) return <Spinner label="Chargement de vos mesures…" />;
+  if (measurement === undefined) return <Spinner />;
 
   if (measurement === null && loadFailed) {
     return (
@@ -68,9 +69,9 @@ export default function ResultatInvite() {
         <ErrorBanner message={error} />
         <EmptyState
           icon={<IconMeasure size={30} strokeWidth={1.6} />}
-          title="Vos mesures ne peuvent pas s'afficher pour l'instant"
-          body="Elles ont bien été calculées et enregistrées. Réessayez dans un instant."
-          action={<Button onClick={() => window.location.reload()}>Réessayer</Button>}
+          title={tr("Affichage impossible pour l'instant", "Can't display right now")}
+          body={tr("Vos mesures sont enregistrées. Réessayez.", "Your measurements are saved. Try again.")}
+          action={<Button onClick={() => window.location.reload()}>{tr("Réessayer", "Try again")}</Button>}
         />
       </div>
     );
@@ -82,11 +83,11 @@ export default function ResultatInvite() {
         <ErrorBanner message={error} />
         <EmptyState
           icon={<IconMeasure size={30} strokeWidth={1.6} />}
-          title="Ces mesures sont introuvables"
-          body="Votre session a peut-être expiré. Reprenez vos photos : cela ne prend qu'une minute."
+          title={tr("Mesures introuvables", "Measurements not found")}
+          body={tr("Session expirée ? Reprenez vos photos.", "Session expired? Retake your photos.")}
           action={
             <Link href="/mesurer">
-              <Button>Reprendre mes mesures</Button>
+              <Button>{tr("Reprendre mes mesures", "Measure again")}</Button>
             </Link>
           }
         />
@@ -105,11 +106,11 @@ export default function ResultatInvite() {
       <div className="containerNarrow section">
         <EmptyState
           icon={<IconMeasure size={30} strokeWidth={1.6} />}
-          title="Aucune mesure exploitable"
-          body="L'analyse n'a rien pu retenir de ces photos. Reprenez-les en suivant bien les consignes de posture."
+          title={tr("Aucune mesure exploitable", "No usable measurements")}
+          body={tr("Reprenez les photos en suivant les consignes.", "Retake the photos following the instructions.")}
           action={
             <Link href="/mesurer">
-              <Button>Reprendre mes photos</Button>
+              <Button>{tr("Reprendre mes photos", "Retake photos")}</Button>
             </Link>
           }
         />
@@ -120,37 +121,29 @@ export default function ResultatInvite() {
   return (
     <div className="container section">
       <div className="resultIntro">
-        <h2>Vos mesures sont prêtes</h2>
-        <p className="muted">
-          {hasLocked
-            ? `Voici ${visible} de vos ${total} mensurations. Les autres sont déjà calculées et n'attendent que votre compte.`
-            : "Voici vos mensurations."}
-        </p>
+        <h2>{tr("Vos mesures sont prêtes", "Your measurements are ready")}</h2>
+        {hasLocked && <p className="muted">{tr(`${visible} sur ${total} visibles.`, `${visible} of ${total} shown.`)}</p>}
       </div>
 
       {hasLocked && (
         <section className="unlockCard" aria-labelledby="unlock-title">
           <div>
-            <h2 id="unlock-title">Débloquez vos {total} mensurations</h2>
-            <p>
-              Créez votre compte avec votre numéro de téléphone : vos mesures y sont
-              enregistrées, et vous pourrez télécharger la fiche à remettre à votre tailleur.
-              Client ou tailleur, c&apos;est le même essai.
-            </p>
+            <h2 id="unlock-title">{tr(`Voir les ${total} mesures`, `See all ${total} measurements`)}</h2>
+            <p>{tr("Créez votre compte avec votre numéro : c'est gratuit.", "Create your account with your phone number: it's free.")}</p>
           </div>
           <div className="unlockActions">
             <Link href={signupClientHref} style={{ display: "contents" }}>
               <Button block>
-                <IconUserPlus size={18} aria-hidden /> Je suis client
+                <IconUserPlus size={18} aria-hidden /> {tr("Je suis client", "I'm a client")}
               </Button>
             </Link>
             <Link href={signupTailleurHref} style={{ display: "contents" }}>
               <Button block variant="secondary">
-                Je suis tailleur
+                {tr("Je suis tailleur", "I'm a tailor")}
               </Button>
             </Link>
             <Link href={loginHref} className="unlockLogin">
-              J&apos;ai déjà un compte
+              {tr("J'ai déjà un compte", "I already have an account")}
             </Link>
           </div>
         </section>
@@ -173,7 +166,7 @@ export default function ResultatInvite() {
                         {PLACEHOLDER}
                       </span>
                       <span className="visually-hidden">
-                        Valeur disponible après la création du compte
+                        {tr("Disponible après création du compte", "Available once you create an account")}
                       </span>
                     </>
                   ) : (
@@ -181,7 +174,6 @@ export default function ResultatInvite() {
                   )}
                 </div>
                 <p className="measureWhere">{info.where}</p>
-                {!locked && <p className="measurePurpose">{info.purpose}</p>}
               </div>
             ))}
           </div>
@@ -192,7 +184,7 @@ export default function ResultatInvite() {
         <div className="unlockBar">
           <Link href={signupClientHref} style={{ display: "contents" }}>
             <Button block>
-              <IconLock size={17} aria-hidden /> Voir mes {total} mensurations
+              <IconLock size={17} aria-hidden /> {tr(`Voir mes ${total} mesures`, `See my ${total} measurements`)}
             </Button>
           </Link>
         </div>

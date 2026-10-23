@@ -13,6 +13,7 @@
  * - `GET /api/tailor/jobs` accepte `client_id` en filtre.
  */
 
+import { tr } from "@/lib/i18n";
 import { api, getToken } from "./client";
 import { MockTailorApi } from "./tailor.mock";
 import type { Order, TailorProfile } from "./types";
@@ -187,17 +188,31 @@ export interface ShareLink {
   expires_at: string;
 }
 
-export const GARMENT_TYPES = [
-  { code: "jupe", name: "Jupe" },
-  { code: "robe", name: "Robe" },
-  { code: "kaba", name: "Kaba" },
-  { code: "haut", name: "Haut / blouse" },
-  { code: "tunique", name: "Tunique homme" },
-  { code: "pantalon", name: "Pantalon" },
-  { code: "chemise", name: "Chemise" },
-  { code: "boubou", name: "Boubou" },
-  { code: "agbada", name: "Agbada" },
+const GARMENT_NAMES: [string, string, string][] = [
+  ["jupe", "Jupe", "Skirt"],
+  ["robe", "Robe", "Dress"],
+  ["kaba", "Kaba", "Kaba"],
+  ["haut", "Haut / blouse", "Top / blouse"],
+  ["tunique", "Tunique homme", "Men's tunic"],
+  ["pantalon", "Pantalon", "Trousers"],
+  ["chemise", "Chemise", "Shirt"],
+  ["boubou", "Boubou", "Boubou"],
+  ["agbada", "Agbada", "Agbada"],
 ];
+
+/** Categories de vetement, libelle dans la langue du telephone. */
+export const GARMENT_TYPES = GARMENT_NAMES.map(([code, fr, en]) => ({
+  code,
+  get name() {
+    return tr(fr, en);
+  },
+}));
+
+/** Libelle d'une categorie (code de l'API : « chemise »…). */
+export function garmentLabel(code: string): string {
+  const g = GARMENT_NAMES.find(([c]) => c === code);
+  return g ? tr(g[1], g[2]) : code;
+}
 
 // --- Traduction entre l'interface et l'API reelle ---------------------------
 //
@@ -423,10 +438,6 @@ const RealTailorApi = {
     api.post<Order>(`/orders/${id}/accept`, agreed_price != null ? { agreed_price } : {}),
   declineOrder: (id: string, reason: string) => api.post<Order>(`/orders/${id}/decline`, { reason }),
   setOrderStatus: (id: string, status: string) => api.post<Order>(`/orders/${id}/status`, { status }),
-  orderChat: (id: string) =>
-    api.get<{ id: string; body: string | null; created_at: string; sender_id: string }[]>(`/orders/${id}/chat`),
-  sendOrderChat: (id: string, body: string) =>
-    api.post<{ id: string; body: string | null; created_at: string; sender_id: string }>(`/orders/${id}/chat`, { body }),
 
   /** Nom, telephone et mesures du client d'une commande. Reserve au
    *  tailleur de la commande. */
@@ -499,7 +510,7 @@ const RealTailorApi = {
         "X-SMZ-Platform": "web",
       },
     });
-    if (!res.ok) throw new Error("Patron indisponible.");
+    if (!res.ok) throw new Error(tr("Patron indisponible.", "Pattern unavailable."));
     const blob = await res.blob();
     return URL.createObjectURL(blob);
   },

@@ -14,6 +14,7 @@ import "@/styles/tailleur.css";
 import "@/styles/accueil.css";
 // Charge en dernier : affine ce que les feuilles precedentes posent.
 import "@/styles/mobile.css";
+import { LangProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/components/AuthProvider";
 import { AcquisitionTracker } from "@/components/AcquisitionTracker";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
@@ -36,7 +37,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#5b21b6",
+  // Barre d'etat du telephone : violette en clair, sombre en theme sombre.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#5b21b6" },
+    { media: "(prefers-color-scheme: dark)", color: "#17141f" },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -51,12 +56,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <AuthProvider>
-          <MaintenanceScreen />
-          <AcquisitionTracker />
-          <SwRegister />
-          {children}
-        </AuthProvider>
+        <LangProvider>
+          <AuthProvider>
+            <MaintenanceScreen />
+            <AcquisitionTracker />
+            <SwRegister />
+            {children}
+          </AuthProvider>
+        </LangProvider>
       </body>
     </html>
   );

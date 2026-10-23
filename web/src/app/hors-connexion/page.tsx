@@ -1,20 +1,21 @@
+"use client";
+
 /**
  * Page hors connexion (B4) : servie par le service worker quand une
- * navigation echoue sans reseau. Statique, sans appel API.
+ * navigation echoue sans reseau. Sans appel API ; texte dans la langue du
+ * telephone.
  */
 
 import Link from "next/link";
+import { tr } from "@/lib/i18n";
 
 export default function HorsConnexion() {
   return (
     <main className="containerNarrow section" style={{ textAlign: "center" }}>
-      <h1>Vous êtes hors ligne</h1>
-      <p className="muted">
-        Vérifiez votre connexion internet, puis réessayez. Vos données
-        enregistrées ne sont pas perdues.
-      </p>
+      <h1>{tr("Vous êtes hors ligne", "You're offline")}</h1>
+      <p className="muted">{tr("Vérifiez votre connexion, puis réessayez.", "Check your connection, then try again.")}</p>
       <Link href="/" className="btn btnPrimary">
-        Réessayer
+        {tr("Réessayer", "Try again")}
       </Link>
     </main>
   );

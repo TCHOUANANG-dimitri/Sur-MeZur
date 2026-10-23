@@ -92,6 +92,15 @@
 }
 
 .fiche {
+  /* Feuille de papier : toujours en theme clair, a l'ecran comme a
+     l'impression. */
+  --indigo-text: #1f2a44;
+  --text-secondary: #6b7280;
+  --border: #e5e1ee;
+  --violet-primary: #5b21b6;
+  --violet-tint: #ede9fe;
+  --bg-alt: #f4f2f8;
+  color: var(--indigo-text);
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);

@@ -14,6 +14,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import React from "react";
+import { useT } from "@/lib/i18n";
 import {
   IconHome,
   IconModels,
@@ -27,6 +28,8 @@ import {
 export interface NavItem {
   href: string;
   label: string;
+  /** Libelle anglais (la langue suit celle du telephone, lib/i18n). */
+  en: string;
   /** Composant d'icone lucide, pas une chaine : le meme trait que
    *  l'application mobile, qui utilise lucide-react-native. */
   Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
@@ -36,11 +39,11 @@ export interface NavItem {
 // envoyer. Cinq entrees au plus (barre du bas au telephone) : « Mes
 // commandes » est atteint depuis l'accueil et le profil.
 export const CLIENT_NAV: NavItem[] = [
-  { href: "/accueil", label: "Accueil", Icon: IconHome },
-  { href: "/modeles", label: "Modèles", Icon: IconModels },
-  { href: "/tailleurs", label: "Tailleurs", Icon: IconTailor },
-  { href: "/mesures", label: "Mes mesures", Icon: IconMeasure },
-  { href: "/profil", label: "Profil", Icon: IconProfile },
+  { href: "/accueil", label: "Accueil", en: "Home", Icon: IconHome },
+  { href: "/modeles", label: "Modèles", en: "Styles", Icon: IconModels },
+  { href: "/tailleurs", label: "Tailleurs", en: "Tailors", Icon: IconTailor },
+  { href: "/mesures", label: "Mes mesures", en: "Measures", Icon: IconMeasure },
+  { href: "/profil", label: "Profil", en: "Profile", Icon: IconProfile },
 ];
 
 /**
@@ -51,17 +54,18 @@ export const CLIENT_NAV: NavItem[] = [
  * pret-a-porter dans cette version.
  */
 export const TAILOR_NAV: NavItem[] = [
-  { href: "/tailleur", label: "Accueil", Icon: IconHome },
-  { href: "/tailleur/clients", label: "Clients", Icon: IconUsers },
-  { href: "/tailleur/travaux", label: "Travaux", Icon: IconOrders },
-  { href: "/tailleur/patrons", label: "Patrons", Icon: IconTailor },
-  { href: "/tailleur/profil", label: "Profil", Icon: IconProfile },
+  { href: "/tailleur", label: "Accueil", en: "Home", Icon: IconHome },
+  { href: "/tailleur/clients", label: "Clients", en: "Clients", Icon: IconUsers },
+  { href: "/tailleur/travaux", label: "Travaux", en: "Jobs", Icon: IconOrders },
+  { href: "/tailleur/patrons", label: "Patrons", en: "Patterns", Icon: IconTailor },
+  { href: "/tailleur/profil", label: "Profil", en: "Profile", Icon: IconProfile },
 ];
 
 function NavList({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
+  const t = useT();
   return (
-    <nav className="tabbar" aria-label="Navigation principale">
+    <nav className="tabbar" aria-label={t("Navigation principale", "Main navigation")}>
       {items.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
@@ -74,7 +78,7 @@ function NavList({ items }: { items: NavItem[] }) {
             <span className="tabIcon" aria-hidden>
               <item.Icon size={22} strokeWidth={active ? 2.4 : 1.9} />
             </span>
-            <span>{item.label}</span>
+            <span>{t(item.label, item.en)}</span>
           </Link>
         );
       })}

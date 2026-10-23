@@ -4,6 +4,8 @@
  * soit jamais renvoye vers l'espace d'un autre.
  */
 
+import { tr } from "./i18n";
+
 export function homeFor(role: string | null | undefined): string {
   if (role === "tailor") return "/tailleur";
   if (role === "admin") return "/admin";
@@ -60,16 +62,23 @@ export function destinationFor(role: string | null | undefined, next: string | n
   return next && pathAllowedFor(role, next) ? next : homeFor(role);
 }
 
-export const ROLE_NAME: Record<string, string> = {
-  client: "client",
-  tailor: "tailleur",
-  admin: "administrateur",
-  collector: "agent de collecte",
-};
+/** Nom du role, dans la langue du telephone. */
+export function roleName(role: string): string {
+  const n: Record<string, [string, string]> = {
+    client: ["client", "client"],
+    tailor: ["tailleur", "tailor"],
+    admin: ["administrateur", "administrator"],
+    collector: ["agent de collecte", "data collector"],
+  };
+  return n[role] ? tr(...n[role]) : role;
+}
 
-/** Libelle du public d'un espace, pour « Cette page est reservee aux … ». */
-export const ROLE_AUDIENCE: Record<string, string> = {
-  client: "clients",
-  tailor: "tailleurs",
-  admin: "administrateurs",
-};
+/** « Cette page est reservee aux … » : titre de la garde d'un espace. */
+export function reservedTitle(role: string): string {
+  const n: Record<string, [string, string]> = {
+    client: ["Page réservée aux clients", "For clients only"],
+    tailor: ["Page réservée aux tailleurs", "For tailors only"],
+    admin: ["Page réservée à l'équipe", "For the team only"],
+  };
+  return n[role] ? tr(...n[role]) : tr("Page réservée", "Restricted page");
+}

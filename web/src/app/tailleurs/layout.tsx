@@ -10,6 +10,7 @@
  * connectes (`GET /tailors/{id}/contact`).
  */
 
+import { tr } from "@/lib/i18n";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
@@ -18,7 +19,7 @@ import { Spinner } from "@/components/ui";
 
 export default function TailleursLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <Spinner label="Chargement…" />;
+  if (loading) return <Spinner />;
   const registered = user && !user.is_guest;
   if (registered && user.role === "client") return <Shell nav={CLIENT_NAV}>{children}</Shell>;
   if (registered && user.role === "tailor") return <Shell nav={TAILOR_NAV}>{children}</Shell>;
@@ -31,7 +32,7 @@ export default function TailleursLayout({ children }: { children: React.ReactNod
         </Link>
         {!registered && (
           <Link href={`/connexion?suite=${encodeURIComponent("/tailleurs")}`} className="publicLogin">
-            Se connecter
+            {tr("Se connecter", "Sign in")}
           </Link>
         )}
       </header>

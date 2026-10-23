@@ -250,7 +250,7 @@ textarea.input {
 .filterSelectOn .input {
   border-color: var(--violet-vivid);
   background-color: var(--violet-tint);
-  color: var(--violet-deep);
+  color: var(--violet-text);
 }
 
 .chip {

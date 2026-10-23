@@ -10,6 +10,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { IconBack, IconEmpty, IconWarning } from "./icons";
+import { useT } from "@/lib/i18n";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 
@@ -111,9 +112,10 @@ export function InfoBanner({ children }: { children: React.ReactNode }) {
 }
 
 export function Spinner({ label }: { label?: string }) {
+  const t = useT();
   return (
     <div className="center">
-      <div className="spinner" role="status" aria-label={label ?? "Chargement"} />
+      <div className="spinner" role="status" aria-label={label ?? t("Chargement", "Loading")} />
       {label && <p className="muted">{label}</p>}
     </div>
   );
@@ -153,10 +155,11 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   const router = useRouter();
+  const t = useT();
   return (
     <header className="header no-print">
       {back && (
-        <button className="backBtn" onClick={() => router.back()} aria-label="Retour">
+        <button className="backBtn" onClick={() => router.back()} aria-label={t("Retour", "Back")}>
           <IconBack size={22} aria-hidden />
         </button>
       )}

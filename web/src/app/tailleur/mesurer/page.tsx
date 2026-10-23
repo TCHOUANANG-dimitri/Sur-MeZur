@@ -6,6 +6,7 @@
  * (formulaire des 12 mesures). Le resultat est range dans le carnet.
  */
 
+import { tr } from "@/lib/i18n";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { MeasureFlow } from "@/components/MeasureFlow";
@@ -43,7 +44,7 @@ function MesurerInner() {
       await TailorApi.addManualMeasurements(clientId, { data, height_cm: heightCm });
       router.replace(`/tailleur/clients/${clientId}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Enregistrement impossible.");
+      setError(e instanceof Error ? e.message : tr("Enregistrement impossible.", "Could not save."));
     } finally {
       setBusy(false);
     }
@@ -51,7 +52,7 @@ function MesurerInner() {
 
   return (
     <div className="tPage">
-      <PageHeader title="Mesurer un client" back />
+      <PageHeader title={tr("Mesurer un client", "Measure a client")} back />
       <ErrorBanner message={error} />
       {/* Le parcours photo a sa propre barre d'etapes : pas de double barre. */}
       {mode !== "photo" && <Steps total={3} current={!clientId ? 1 : mode === null ? 2 : 3} />}
@@ -61,25 +62,25 @@ function MesurerInner() {
           <ClientPicker value={clientId} onChange={(id) => { setClientId(id); setMode(null); }} />
           {clientId && mode === null && (
             <div className="tBigButtons">
-              <Button block onClick={() => setMode("photo")}>Par photo</Button>
-              <Button block variant="secondary" onClick={() => setMode("manuel")}>Au mètre ruban</Button>
+              <Button block onClick={() => setMode("photo")}>{tr("Par photo", "By photo")}</Button>
+              <Button block variant="secondary" onClick={() => setMode("manuel")}>{tr("Au mètre ruban", "With a tape measure")}</Button>
             </div>
           )}
         </>
       ) : mode === "manuel" ? (
         <>
-          <Button variant="ghost" onClick={() => setMode(null)}>← Changer de méthode</Button>
-          <ManualMeasureForm onSubmit={saveManual} busy={busy} submitLabel="Enregistrer dans le carnet" />
+          <Button variant="ghost" onClick={() => setMode(null)}>{tr("← Changer de méthode", "← Change method")}</Button>
+          <ManualMeasureForm onSubmit={saveManual} busy={busy} submitLabel={tr("Enregistrer", "Save")} />
         </>
       ) : sessionApi ? (
         <>
           <div className="no-print">
-            <Button variant="ghost" onClick={() => setMode(null)}>← Changer de méthode</Button>
+            <Button variant="ghost" onClick={() => setMode(null)}>{tr("← Changer de méthode", "← Change method")}</Button>
           </div>
           <MeasureFlow forClient sessionApi={sessionApi} onDone={() => router.replace(`/tailleur/clients/${clientId}`)} />
         </>
       ) : (
-        <Spinner label="Chargement…" />
+        <Spinner />
       )}
     </div>
   );
@@ -87,7 +88,7 @@ function MesurerInner() {
 
 export default function MesurerClient() {
   return (
-    <Suspense fallback={<Spinner label="Chargement…" />}>
+    <Suspense fallback={<Spinner />}>
       <MesurerInner />
     </Suspense>
   );

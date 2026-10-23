@@ -12,6 +12,7 @@
  * exactement ce qu'on cherche a eviter en remplacant les emoji par des SVG.
  */
 
+import { tr } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { COUNTRIES, splitPhone, type Country } from "@/lib/countries";
 import { IconChevronDown, IconEye, IconEyeOff } from "./icons";
@@ -77,7 +78,7 @@ export function PhoneField({
           className="countryButton"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
-          aria-label={`Indicatif ${country.dial}, ${country.name}`}
+          aria-label={`${tr("Indicatif", "Country code")} ${country.dial}, ${country.name}`}
         >
           <span className="countryCode">{country.code}</span>
           <span className="countryDial">{country.dial}</span>
@@ -149,7 +150,7 @@ export function PasswordInput({
         type="button"
         className="passwordToggle"
         onClick={() => setHidden((h) => !h)}
-        aria-label={hidden ? "Afficher le mot de passe" : "Masquer le mot de passe"}
+        aria-label={hidden ? tr("Afficher le mot de passe", "Show password") : tr("Masquer le mot de passe", "Hide password")}
       >
         {hidden ? <IconEyeOff size={20} aria-hidden /> : <IconEye size={20} aria-hidden />}
       </button>

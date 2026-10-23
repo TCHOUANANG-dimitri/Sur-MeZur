@@ -17,8 +17,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { CatalogApi } from "@/lib/api/endpoints";
 import type { Category } from "@/lib/api/types";
-import { Button, ErrorBanner, InfoBanner, PageHeader, Select, Spinner } from "@/components/ui";
+import { Button, ErrorBanner, PageHeader, Select, Spinner } from "@/components/ui";
 import { IconCamera } from "@/components/icons";
+import { tr } from "@/lib/i18n";
 
 const MAX_PHOTOS = 4;
 
@@ -84,40 +85,35 @@ export default function ProposerModele() {
       }
       router.replace(`/modeles/${model.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Publication impossible.");
+      setError(err instanceof Error ? err.message : tr("Publication impossible.", "Could not publish."));
       setBusy(false);
     }
   }
 
-  if (categories === null) return <Spinner label="Chargement…" />;
+  if (categories === null) return <Spinner />;
 
   return (
     <>
-      <PageHeader title="Proposer un modèle" back />
+      <PageHeader title={tr("Proposer un modèle", "Suggest a style")} back />
       <div className="containerNarrow section">
-        <InfoBanner>
-          <div>
-            Votre modèle rejoindra le catalogue visible par tous. Décrivez-le simplement, et
-            ajoutez une photo si vous en avez une.
-          </div>
-        </InfoBanner>
+        <p className="muted" style={{ marginTop: 0 }}>{tr("Visible par tous dans le catalogue.", "Visible to everyone in the catalogue.")}</p>
 
         <form onSubmit={submit} noValidate>
           <ErrorBanner message={error} />
 
           <label className="field">
-            <span className="fieldLabel">Nom du modèle</span>
+            <span className="fieldLabel">{tr("Nom du modèle", "Style name")}</span>
             <input
               className="input"
               maxLength={120}
-              placeholder="Boubou brodé col rond"
+              placeholder={tr("Boubou brodé col rond", "Embroidered boubou, round neck")}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </label>
 
           <label className="field">
-            <span className="fieldLabel">Catégorie</span>
+            <span className="fieldLabel">{tr("Catégorie", "Category")}</span>
             <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -133,21 +129,21 @@ export default function ProposerModele() {
               className="input"
               rows={4}
               maxLength={2000}
-              placeholder="Coupe, finitions, occasion…"
+              placeholder={tr("Coupe, finitions, occasion…", "Cut, finish, occasion…")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </label>
 
           <label className="field">
-            <span className="fieldLabel">Mots-clés</span>
+            <span className="fieldLabel">{tr("Mots-clés", "Tags")}</span>
             <input
               className="input"
-              placeholder="cérémonie, wax, manches longues"
+              placeholder={tr("cérémonie, wax, manches longues", "ceremony, wax, long sleeves")}
               value={tags}
               onChange={(e) => setTags(e.target.value)}
             />
-            <span className="fieldHint">Séparés par des virgules, huit au maximum.</span>
+            <span className="fieldHint">{tr("Séparés par des virgules.", "Comma-separated.")}</span>
           </label>
 
           <div className="field">
@@ -170,18 +166,18 @@ export default function ProposerModele() {
                   type="button"
                   className="proposeAdd"
                   onClick={() => fileRef.current?.click()}
-                  aria-label="Ajouter une photo"
+                  aria-label={tr("Ajouter une photo", "Add a photo")}
                 >
                   <IconCamera size={22} strokeWidth={1.7} aria-hidden />
                 </button>
               )}
             </div>
-            <span className="fieldHint">Facultatif, {MAX_PHOTOS} au maximum.</span>
+            <span className="fieldHint">{tr(`Facultatif, ${MAX_PHOTOS} au plus.`, `Optional, up to ${MAX_PHOTOS}.`)}</span>
           </div>
 
           <div className="actionBar">
             <Button type="submit" block disabled={!canSubmit}>
-              {busy ? "Publication…" : "Publier mon modèle"}
+              {busy ? tr("Publication…", "Publishing…") : tr("Publier", "Publish")}
             </Button>
           </div>
         </form>

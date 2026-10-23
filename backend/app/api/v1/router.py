@@ -13,7 +13,6 @@ from app.api.v1 import (
     auth,
     avatars,
     catalog,
-    chat,
     collecte,
     deliveries,
     enquete,
@@ -50,7 +49,6 @@ api_router.include_router(orders.router)
 api_router.include_router(offers.router)
 api_router.include_router(quotes.router)
 api_router.include_router(modifications.router)
-api_router.include_router(chat.router)
 api_router.include_router(patterns.router)
 api_router.include_router(payments.router)
 api_router.include_router(deliveries.router)

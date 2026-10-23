@@ -36,6 +36,7 @@
  * l'image (`frame`), pour se cadrer de la tete aux pieds.
  */
 
+import { tr } from "@/lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Chip } from "./ui";
 import { IconClose, IconSwitchCamera, IconTimer } from "./icons";
@@ -180,10 +181,10 @@ export function CameraCapture({
         const name = e instanceof DOMException ? e.name : "";
         setError(
           name === "NotAllowedError" || name === "SecurityError"
-            ? "L'accès à la caméra a été refusé. Autorisez-le dans les réglages de votre navigateur, ou importez une photo."
+            ? tr("Caméra refusée. Autorisez-la dans les réglages, ou importez une photo.", "Camera blocked. Allow it in settings, or upload a photo.")
             : name === "NotFoundError" || name === "OverconstrainedError"
-              ? "Aucune caméra n'a été détectée sur cet appareil. Importez une photo à la place."
-              : "Impossible d'ouvrir la caméra. Importez une photo à la place."
+              ? tr("Aucune caméra trouvée. Importez une photo.", "No camera found. Upload a photo.")
+              : tr("Caméra indisponible. Importez une photo.", "Camera unavailable. Upload a photo.")
         );
       });
 
@@ -224,7 +225,7 @@ export function CameraCapture({
     canvas.toBlob(
       (blob) => {
         if (!blob) {
-          setError("La photo n'a pas pu être enregistrée. Réessayez, ou importez une photo.");
+          setError(tr("Photo non enregistrée. Réessayez, ou importez-en une.", "Photo not saved. Try again, or upload one."));
           return;
         }
         const name = `${target === "front" ? "face" : "profil"}-${Date.now()}.jpg`;
@@ -258,7 +259,7 @@ export function CameraCapture({
   }
 
   const counting = count !== null;
-  const title = target === "front" ? "Photo de face" : "Photo de profil";
+  const title = target === "front" ? tr("Photo de face", "Front photo") : tr("Photo de profil", "Side photo");
 
   return (
     <div className="camera" role="dialog" aria-modal="true" aria-label={title}>
@@ -298,7 +299,7 @@ export function CameraCapture({
           <div className="cameraError" role="alert">
             <p>{error}</p>
             <button type="button" className="btn btnPrimary" onClick={close}>
-              Revenir
+              {tr("Revenir", "Back")}
             </button>
           </div>
         )}
@@ -306,7 +307,7 @@ export function CameraCapture({
 
       <div className="cameraTop">
         <span className="cameraTitle">{title}</span>
-        <button type="button" className="cameraIconBtn" onClick={close} aria-label="Fermer la caméra">
+        <button type="button" className="cameraIconBtn" onClick={close} aria-label={tr("Fermer la caméra", "Close camera")}>
           <IconClose size={22} aria-hidden />
         </button>
       </div>
@@ -315,19 +316,19 @@ export function CameraCapture({
         <div className="cameraBottom">
           <p className="cameraHint">
             {target === "front"
-              ? "Placez-vous dans la silhouette, de la tête aux pieds, bras écartés."
-              : "De profil dans la silhouette, bras collés le long du corps."}
+              ? tr("Dans la silhouette, bras écartés.", "Inside the outline, arms out.")
+              : tr("De profil, bras le long du corps.", "Side on, arms by your sides.")}
           </p>
 
           {/* Libelle commun devant des choix courts : « Retardateur 5 s »
               repete trois fois passait sur deux lignes au telephone. */}
-          <div className="cameraDelays" role="group" aria-label="Retardateur">
+          <div className="cameraDelays" role="group" aria-label={tr("Retardateur", "Timer")}>
             <span className="cameraDelaysLabel">
-              <IconTimer size={15} aria-hidden /> Retardateur
+              <IconTimer size={15} aria-hidden /> {tr("Retardateur", "Timer")}
             </span>
             {DELAYS.map((d) => (
               <Chip key={d} active={delay === d} disabled={counting} onClick={() => setDelay(d)}>
-                {d === 0 ? "Aucun" : `${d} s`}
+                {d === 0 ? tr("Aucun", "None") : `${d} s`}
               </Chip>
             ))}
           </div>
@@ -339,7 +340,7 @@ export function CameraCapture({
               className={`cameraShutter ${counting ? "cameraShutterCounting" : ""}`}
               onClick={trigger}
               disabled={!ready}
-              aria-label={counting ? "Annuler le retardateur" : "Prendre la photo"}
+              aria-label={counting ? tr("Annuler le retardateur", "Cancel timer") : tr("Prendre la photo", "Take photo")}
             >
               <span />
             </button>
@@ -349,7 +350,7 @@ export function CameraCapture({
                 className="cameraIconBtn"
                 onClick={() => setFacing((f) => (f === "environment" ? "user" : "environment"))}
                 disabled={counting}
-                aria-label="Changer de caméra"
+                aria-label={tr("Changer de caméra", "Switch camera")}
               >
                 <IconSwitchCamera size={22} aria-hidden />
               </button>

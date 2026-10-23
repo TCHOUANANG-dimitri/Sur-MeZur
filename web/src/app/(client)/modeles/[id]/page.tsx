@@ -28,6 +28,7 @@ import { addToSelection, isSelected, removeFromSelection } from "@/lib/selection
 import { cacheModels, modelCache, readSuite, rememberSuite, setDirection, takeDirection } from "@/lib/modelSuite";
 import { Badge, Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { IconBack, IconCheck, IconChevronRight, IconHeart, IconModels, IconSearch } from "@/components/icons";
+import { tr } from "@/lib/i18n";
 
 /** Distance (px) au-dela de laquelle un balayage change de modele... */
 const SEUIL = 70;
@@ -77,7 +78,7 @@ function ModeleDetail({ id, onNavigate }: { id: string; onNavigate: (id: string)
       })
       .catch((e) => {
         if (modelCache.has(id)) return;
-        setError(e instanceof Error ? e.message : "Modèle introuvable.");
+        setError(e instanceof Error ? e.message : tr("Modèle introuvable.", "Style not found."));
         setModel(null);
       });
   }, [id]);
@@ -225,14 +226,14 @@ function ModeleDetail({ id, onNavigate }: { id: string; onNavigate: (id: string)
     }
   }
 
-  if (model === undefined) return <Spinner label="Chargement…" />;
+  if (model === undefined) return <Spinner />;
   if (model === null) {
     return (
       <>
-        <PageHeader title="Modèle" back />
+        <PageHeader title={tr("Modèle", "Style")} back />
         <div className="container section">
           <ErrorBanner message={error} />
-          <EmptyState icon={<IconSearch size={30} strokeWidth={1.6} />} title="Ce modèle n'existe pas" />
+          <EmptyState icon={<IconSearch size={30} strokeWidth={1.6} />} title={tr("Ce modèle n'existe pas", "This style doesn't exist")} />
         </div>
       </>
     );
@@ -277,14 +278,14 @@ function ModeleDetail({ id, onNavigate }: { id: string; onNavigate: (id: string)
               )}
               {suite.length > 1 && index >= 0 && (
                 <div className="modelSuiteNav">
-                  <button type="button" onClick={() => go("prev")} disabled={!prevId} aria-label="Modèle précédent">
+                  <button type="button" onClick={() => go("prev")} disabled={!prevId} aria-label={tr("Modèle précédent", "Previous style")}>
                     <IconBack size={20} aria-hidden />
                   </button>
                   <span>
                     {index + 1} / {suite.length}
-                    <small>Glissez pour changer de modèle</small>
+                    <small>{tr("Glissez pour changer", "Swipe to browse")}</small>
                   </span>
-                  <button type="button" onClick={() => go("next")} disabled={!nextId} aria-label="Modèle suivant">
+                  <button type="button" onClick={() => go("next")} disabled={!nextId} aria-label={tr("Modèle suivant", "Next style")}>
                     <IconChevronRight size={20} aria-hidden />
                   </button>
                 </div>
@@ -298,17 +299,17 @@ function ModeleDetail({ id, onNavigate }: { id: string; onNavigate: (id: string)
                   className={`likeBtn ${model.liked_by_me ? "likeBtnActive" : ""}`}
                   onClick={toggleLike}
                   aria-pressed={model.liked_by_me}
-                  aria-label={model.liked_by_me ? "Retirer des modèles enregistrés" : "Enregistrer ce modèle"}
+                  aria-label={model.liked_by_me ? tr("Retirer des enregistrés", "Remove from saved") : tr("Enregistrer ce modèle", "Save this style")}
                 >
                   <IconHeart size={20} strokeWidth={2} />
-                  <span>{model.liked_by_me ? "Enregistré" : "Enregistrer"} · {model.like_count}</span>
+                  <span>{model.liked_by_me ? tr("Enregistré", "Saved") : tr("Enregistrer", "Save")} · {model.like_count}</span>
                 </button>
               </div>
 
               <div className="tagRow">
                 <Badge>{model.category?.name}</Badge>
                 {model.created_by && (
-                  <Badge tone="success">{mine ? "Votre proposition" : "Modèle de la communauté"}</Badge>
+                  <Badge tone="success">{mine ? tr("Votre proposition", "Your suggestion") : tr("Communauté", "Community")}</Badge>
                 )}
                 {model.style_tags?.map((tag) => (
                   <Badge key={tag}>{tag}</Badge>
@@ -317,31 +318,23 @@ function ModeleDetail({ id, onNavigate }: { id: string; onNavigate: (id: string)
 
               {model.description && <p className="muted modelDescription">{model.description}</p>}
 
-              <div className="card cardFlat modelNext">
-                <h3>Et maintenant ?</h3>
-                <p className="muted">
-                  Ajoutez ce modèle à votre sélection, puis prenez vos mesures. Votre fiche à
-                  télécharger réunira vos mensurations et les modèles retenus.
-                </p>
-              </div>
-
               <div className="actionBar">
                 <Button variant={selected ? "secondary" : "ghost"} onClick={toggleSelection}>
                   {selected ? (
                     <>
-                      <IconCheck size={17} strokeWidth={2.6} aria-hidden /> Dans ma sélection
+                      <IconCheck size={17} strokeWidth={2.6} aria-hidden /> {tr("Dans ma sélection", "In my selection")}
                     </>
                   ) : (
                     <>
-                      <IconModels size={17} strokeWidth={2} aria-hidden /> Ajouter à ma sélection
+                      <IconModels size={17} strokeWidth={2} aria-hidden /> {tr("Ajouter à ma sélection", "Add to my selection")}
                     </>
                   )}
                 </Button>
                 <Link href={`/mesures/nouvelle?modele=${model.id}`} style={{ display: "contents" }}>
-                  <Button block>Prendre mes mesures</Button>
+                  <Button block>{tr("Prendre mes mesures", "Take my measurements")}</Button>
                 </Link>
                 <Link href={`/tailleurs?modele=${model.id}`} style={{ display: "contents" }}>
-                  <Button block variant="secondary">Faire coudre par un tailleur</Button>
+                  <Button block variant="secondary">{tr("Faire coudre par un tailleur", "Have it made by a tailor")}</Button>
                 </Link>
               </div>
             </div>

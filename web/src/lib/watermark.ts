@@ -10,12 +10,14 @@
  * « contamine » par une image d'une autre origine et peut etre exporte.
  */
 
+import { tr } from "./i18n";
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     if (/^https?:\/\//.test(src) && !src.startsWith(window.location.origin)) img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Image introuvable."));
+    img.onerror = () => reject(new Error(tr("Image introuvable.", "Image not found.")));
     img.src = src;
   });
 }
@@ -45,7 +47,7 @@ export async function watermarkedPhoto(src: string): Promise<Blob> {
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Navigateur incompatible.");
+  if (!ctx) throw new Error(tr("Navigateur incompatible.", "Browser not supported."));
   ctx.drawImage(img, 0, 0);
 
   // 1 % du grand cote : tailles proportionnelles a l'image.
@@ -93,7 +95,7 @@ export async function watermarkedPhoto(src: string): Promise<Blob> {
   ctx.fillText("Sur-MeZur", px + pad + logoW + (logo ? u * 0.8 : 0), py + pilleH / 2);
 
   return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Image non enregistrée."))), "image/jpeg", 0.92)
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error(tr("Image non enregistrée.", "Image not saved.")))), "image/jpeg", 0.92)
   );
 }
 

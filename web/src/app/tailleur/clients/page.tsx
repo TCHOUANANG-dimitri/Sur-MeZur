@@ -6,6 +6,7 @@
  * obligatoire et verifie : sans lui, ni appel, ni WhatsApp, ni contact.
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TailorApi } from "@/lib/api/tailor";
@@ -30,7 +31,7 @@ export default function Clients() {
     try {
       setClients(await TailorApi.clients(q || undefined));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Chargement impossible.");
+      setError(e instanceof Error ? e.message : tr("Chargement impossible.", "Could not load."));
       setClients([]);
     }
   }
@@ -58,7 +59,7 @@ export default function Clients() {
       await load(query);
       void created;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ajout impossible.");
+      setError(err instanceof Error ? err.message : tr("Ajout impossible.", "Could not add."));
     } finally {
       setBusy(false);
     }
@@ -67,10 +68,10 @@ export default function Clients() {
   return (
     <div className="tPage">
       <PageHeader
-        title="Clients"
+        title={tr("Clients", "Clients")}
         action={
           <Button variant="secondary" onClick={() => setShowForm((s) => !s)}>
-            {showForm ? "Fermer" : "+ Ajouter"}
+            {showForm ? tr("Fermer", "Close") : tr("+ Ajouter", "+ Add")}
           </Button>
         }
       />
@@ -79,7 +80,7 @@ export default function Clients() {
       {showForm && (
         <form onSubmit={add} className="card" noValidate>
           <label className="field">
-            <span className="fieldLabel">Nom</span>
+            <span className="fieldLabel">{tr("Nom", "Name")}</span>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -89,36 +90,35 @@ export default function Clients() {
             />
             {nameErr && <span className="fieldError">{nameErr}</span>}
           </label>
-          <PhoneField label="Téléphone" value={phone} onChange={setPhone} error={phoneErr} />
+          <PhoneField label={tr("Téléphone", "Phone")} value={phone} onChange={setPhone} error={phoneErr} />
           <label className="field">
-            <span className="fieldLabel">Sexe</span>
+            <span className="fieldLabel">{tr("Sexe", "Sex")}</span>
             <select className="input" value={gender} onChange={(e) => setGender(e.target.value)}>
-              <option value="female">Femme</option>
-              <option value="male">Homme</option>
+              <option value="female">{tr("Femme", "Female")}</option>
+              <option value="male">{tr("Homme", "Male")}</option>
             </select>
           </label>
           <Button type="submit" block disabled={!canAdd}>
-            {busy ? "Ajout…" : "Ajouter"}
+            {busy ? tr("Ajout…", "Adding…") : tr("Ajouter", "Add")}
           </Button>
         </form>
       )}
 
       <div className="tSearch">
         <Input
-          placeholder="Rechercher par nom ou téléphone…"
+          placeholder={tr("Nom ou téléphone…", "Name or phone…")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Rechercher un client"
+          aria-label={tr("Rechercher un client", "Search a client")}
         />
       </div>
 
       {clients === null ? (
-        <Spinner label="Chargement…" />
+        <Spinner />
       ) : clients.length === 0 ? (
         <EmptyState
           icon={<IconUsers size={30} strokeWidth={1.6} />}
-          title={query ? "Aucun client trouvé" : "Carnet vide"}
-          body={query ? "Essayez un autre nom ou numéro." : "Ajoutez votre premier client : nom, téléphone, sexe."}
+          title={query ? tr("Aucun client trouvé", "No client found") : tr("Aucun client", "No clients yet")}
         />
       ) : (
         <ul className="tList">
@@ -133,8 +133,8 @@ export default function Clients() {
                   <br />
                   <span className="tRowSub">
                     {c.phone}
-                    {c.measurements_count ? ` · ${c.measurements_count} mesure${c.measurements_count > 1 ? "s" : ""}` : ""}
-                    {c.jobs_count ? ` · ${c.jobs_count} travail${c.jobs_count > 1 ? "x" : ""}` : ""}
+                    {c.measurements_count ? ` · ${c.measurements_count} ${tr("mesure(s)", "measurement(s)")}` : ""}
+                    {c.jobs_count ? ` · ${c.jobs_count} ${tr("travail(x)", "job(s)")}` : ""}
                   </span>
                 </span>
               </Link>

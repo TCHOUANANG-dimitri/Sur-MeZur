@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { tr } from "@/lib/i18n";
 
 /**
  * Coquille publique du parcours sans compte.
@@ -17,7 +20,7 @@ export default function MesurerLayout({ children }: { children: React.ReactNode 
           Sur-MeZur
         </span>
         <Link href="/connexion" className="publicLogin">
-          Se connecter
+          {tr("Se connecter", "Sign in")}
         </Link>
       </header>
       <main className="publicMain">{children}</main>

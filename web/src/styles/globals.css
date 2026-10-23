@@ -44,6 +44,17 @@
   --radius-button: 12px;
   --radius-chip: 999px;
 
+  /* Surfaces translucides (barre du haut, boutons sur photo), fond doux
+     des ecrans d'accueil, pastilles d'avertissement et de favori. */
+  --surface-glass: rgba(255, 255, 255, 0.92);
+  /* Violet en couleur de TEXTE (fonce en clair, eclairci en sombre). */
+  --violet-text: #4c1d95;
+  --bg-soft: #faf7ff;
+  --warn-bg: #fef3c7;
+  --like: #e11d48;
+  --like-bg: #fff1f2;
+  color-scheme: light;
+
   --shadow-sm: 0 1px 3px rgba(31, 42, 68, 0.06);
   --shadow: 0 4px 16px rgba(31, 42, 68, 0.08);
   --shadow-lg: 0 12px 32px rgba(31, 42, 68, 0.12);
@@ -65,6 +76,34 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Theme sombre : il suit le reglage du telephone. L'administration garde
+   son propre bouton (html[data-theme]), qui l'emporte dans les deux sens. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --violet-primary: #a78bfa;
+    --violet-vivid: #8b5cf6;
+    --violet-deep: #6d28d9;
+    --indigo-text: #ece9f6;
+    --bg: #17141f;
+    --bg-alt: #221e2d;
+    --surface: #1c1926;
+    --violet-tint: #2c2343;
+    --bg-page: #110f17;
+    --border: #322c40;
+    --text-secondary: #a8a2ba;
+    --success: #4ade80;
+    --error: #f87171;
+    --pending: #fbbf24;
+    --surface-glass: rgba(23, 20, 31, 0.92);
+    --violet-text: #c4b5fd;
+    --bg-soft: #1b1724;
+    --warn-bg: #3a2a0c;
+    --like: #fb7185;
+    --like-bg: #3a1420;
+    color-scheme: dark;
+  }
 }
 
 html,
@@ -179,8 +218,15 @@ h3 {
    Android et iOS que sur ordinateur.
    ------------------------------------------------------------------------ */
 @media print {
-  :root {
+  :root,
+  :root:not([data-theme="light"]) {
     --bg-page: #ffffff;
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --indigo-text: #1f2a44;
+    --text-secondary: #6b7280;
+    --border: #e5e1ee;
+    color-scheme: light;
   }
   body {
     background: #fff;

@@ -9,6 +9,7 @@
  */
 
 import { splitPhone } from "./countries";
+import { tr } from "./i18n";
 import type { MeasureKey } from "./measurements";
 
 /** Numero de telephone complet (indicatif + numero local). Cameroun : 9
@@ -16,13 +17,13 @@ import type { MeasureKey } from "./measurements";
 export function phoneError(value: string, { required = true } = {}): string | null {
   const { country, local } = splitPhone(value.replace(/\s/g, ""));
   const digits = local.replace(/\D/g, "");
-  if (!digits) return required ? "Saisissez le numéro de téléphone." : null;
+  if (!digits) return required ? tr("Saisissez le numéro.", "Enter the phone number.") : null;
   if (country.code === "CM") {
-    if (digits.length !== 9) return "Un numéro camerounais compte 9 chiffres (ex. 6 XX XX XX XX).";
-    if (!/^[62]/.test(digits)) return "Un numéro camerounais commence par 6 ou 2.";
+    if (digits.length !== 9) return tr("9 chiffres (ex. 6 XX XX XX XX).", "9 digits (e.g. 6 XX XX XX XX).");
+    if (!/^[62]/.test(digits)) return tr("Commence par 6 ou 2.", "Starts with 6 or 2.");
     return null;
   }
-  if (digits.length < 7 || digits.length > 10) return "Numéro incomplet ou trop long.";
+  if (digits.length < 7 || digits.length > 10) return tr("Numéro incomplet ou trop long.", "Number too short or too long.");
   return null;
 }
 
@@ -30,15 +31,15 @@ export function phoneError(value: string, { required = true } = {}): string | nu
 export function emailError(value: string): string | null {
   const v = value.trim();
   if (!v) return null;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? null : "Adresse e-mail invalide (ex. nom@exemple.com).";
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? null : tr("E-mail invalide (ex. nom@exemple.com).", "Invalid e-mail (e.g. name@example.com).");
 }
 
 /** Nom de personne ou d'atelier : 2 a 120 caracteres, au moins une lettre. */
-export function nameError(value: string, label = "Le nom"): string | null {
+export function nameError(value: string): string | null {
   const v = value.trim();
-  if (v.length < 2) return `${label} doit contenir au moins 2 caractères.`;
-  if (v.length > 120) return `${label} ne doit pas dépasser 120 caractères.`;
-  if (!/\p{L}/u.test(v)) return `${label} doit contenir des lettres.`;
+  if (v.length < 2) return tr("2 caractères au moins.", "At least 2 characters.");
+  if (v.length > 120) return tr("120 caractères au plus.", "120 characters at most.");
+  if (!/\p{L}/u.test(v)) return tr("Des lettres, s'il vous plaît.", "Letters, please.");
   return null;
 }
 
@@ -51,10 +52,10 @@ export const AMOUNT_MAX = 10_000_000;
 export function amountError(value: string, { min = 0 } = {}): string | null {
   const v = value.trim();
   if (!v) return null;
-  if (!/^\d+$/.test(v)) return "Montant en chiffres entiers, sans espace ni virgule.";
+  if (!/^\d+$/.test(v)) return tr("Chiffres seulement, sans espace.", "Digits only, no spaces.");
   const n = Number(v);
-  if (n < min) return min > 0 ? "Montant supérieur à zéro." : null;
-  if (n > AMOUNT_MAX) return "Montant trop élevé.";
+  if (n < min) return min > 0 ? tr("Plus que zéro.", "More than zero.") : null;
+  if (n > AMOUNT_MAX) return tr("Montant trop élevé.", "Amount too high.");
   return null;
 }
 
@@ -81,8 +82,8 @@ export function measureError(key: MeasureKey, value: string): string | null {
   if (!v) return null;
   const n = Number(v);
   const [min, max] = MEASURE_RANGES[key];
-  if (!isFinite(n)) return "Valeur en chiffres.";
-  if (n < min || n > max) return `Entre ${min} et ${max} cm.`;
+  if (!isFinite(n)) return tr("En chiffres.", "Numbers only.");
+  if (n < min || n > max) return tr(`Entre ${min} et ${max} cm.`, `Between ${min} and ${max} cm.`);
   return null;
 }
 

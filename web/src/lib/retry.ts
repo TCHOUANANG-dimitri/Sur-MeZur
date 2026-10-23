@@ -14,6 +14,7 @@
  * croire a la personne que ses mesures etaient perdues.
  */
 
+import { tr } from "./i18n";
 import { ApiError } from "./api/client";
 
 const RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
@@ -42,19 +43,20 @@ export async function withRetry<T>(fn: () => Promise<T>, attempts = 4): Promise<
  * `nextStep` complete la phrase selon l'ecran : « relancez l'analyse » sur la
  * prise de mesure, « réessayez » sur une page de resultat.
  */
-export function friendlyError(e: unknown, nextStep = "relancez l'analyse"): string {
+export function friendlyError(e: unknown, nextStep?: string): string {
+  const ensuite = nextStep ?? tr("relancez l'analyse", "run the analysis again");
   if (e instanceof ApiError) {
     if (e.status === 429) {
-      return `Le service reçoit beaucoup de demandes en ce moment. Patientez une minute puis ${nextStep}.`;
+      return tr(`Service très demandé. Patientez une minute puis ${ensuite}.`, `Service busy. Wait a minute, then ${ensuite}.`);
     }
     if (e.status >= 500) {
-      return "Le service rencontre un problème passager. Réessayez dans un instant.";
+      return tr("Problème passager. Réessayez dans un instant.", "Temporary problem. Try again shortly.");
     }
   }
   if (e instanceof TypeError) {
-    return `La connexion a été interrompue. Vérifiez votre réseau puis ${nextStep}.`;
+    return tr(`Connexion interrompue. Vérifiez le réseau puis ${ensuite}.`, `Connection lost. Check your network, then ${ensuite}.`);
   }
-  return e instanceof Error ? e.message : "Une erreur est survenue.";
+  return e instanceof Error ? e.message : tr("Une erreur est survenue.", "Something went wrong.");
 }
 
 /** Vrai pour un echec de chargement, par opposition a une donnee absente. */

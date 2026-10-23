@@ -8,6 +8,7 @@
  * ici, avec un compteur.
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TailorApi } from "@/lib/api/tailor";
@@ -27,70 +28,55 @@ export default function TailleurAccueil() {
       .catch(() => setNewOrders(0));
   }, []);
 
-  if (dashboard === null) return <Spinner label="Chargement…" />;
+  if (dashboard === null) return <Spinner />;
 
   return (
     <div className="tPage">
-      <PageHeader title="Mon atelier" />
+      <PageHeader title={tr("Mon atelier", "My workshop")} />
 
-      <div className="tStats" role="group" aria-label="Suivi de la semaine">
-        <Stat label="À livrer cette semaine" value={dashboard.due_this_week} href="/tailleur/travaux?filtre=semaine" />
-        <Stat label="En retard" value={dashboard.late} alert={dashboard.late > 0} href="/tailleur/travaux?filtre=retard" />
-        <Stat label="Nouvelles commandes" value={newOrders ?? dashboard.new_orders} href="/tailleur/commandes" />
+      <div className="tStats" role="group" aria-label={tr("Suivi de la semaine", "This week")}>
+        <Stat label={tr("À livrer cette semaine", "Due this week")} value={dashboard.due_this_week} href="/tailleur/travaux?filtre=semaine" />
+        <Stat label={tr("En retard", "Late")} value={dashboard.late} alert={dashboard.late > 0} href="/tailleur/travaux?filtre=retard" />
+        <Stat label={tr("Nouvelles commandes", "New orders")} value={newOrders ?? dashboard.new_orders} href="/tailleur/commandes" />
       </div>
 
       <div className="tBigButtons">
         <BigAction
           href="/tailleur/mesurer"
           icon={<IconCamera size={24} aria-hidden />}
-          title="Mesurer un client"
-          sub="Par photo ou au mètre"
+          title={tr("Mesurer un client", "Measure a client")}
+          sub={tr("Photo ou mètre", "Photo or tape")}
         />
         <BigAction
           href="/tailleur/travaux?nouveau=1"
           icon={<IconPlus size={24} aria-hidden />}
-          title="Nouveau travail"
-          sub="Commande directe"
+          title={tr("Nouveau travail", "New job")}
           secondary
         />
         <BigAction
           href="/tailleur/patrons/nouveau"
           icon={<IconTailor size={24} aria-hidden />}
-          title="Patron"
-          sub="Jupe, robe, kaba… à partir des mesures"
+          title={tr("Patron", "Pattern")}
           secondary
         />
       </div>
 
-      <Link href="/tailleur/finances" className="tRow" aria-label="Voir les recettes de l'atelier">
-        <IconWallet size={20} aria-hidden />
-        <span className="tRowMain">
-          <span className="tRowTitle">Recettes de l&apos;atelier</span>
-          <br />
-          <span className="tRowSub">Noter un paiement, voir ce qui est encaissé et ce qui reste dû.</span>
-        </span>
-      </Link>
-
-      <Link href="/tailleur/commandes" className="tRow" aria-label="Voir les commandes Sur-MeZur">
+      <Link href="/tailleur/commandes" className="tRow">
         <IconOrders size={20} aria-hidden />
         <span className="tRowMain">
-          <span className="tRowTitle">Commandes Sur-MeZur</span>
-          <br />
-          <span className="tRowSub">Les clients de l&apos;application vous envoient leurs mesures et leur modèle.</span>
+          <span className="tRowTitle">
+            {tr("Commandes Sur-MeZur", "Sur-MeZur orders")}
+            {(newOrders ?? dashboard.new_orders) > 0 && ` (${newOrders ?? dashboard.new_orders} ${tr("nouvelle(s)", "new")})`}
+          </span>
         </span>
       </Link>
 
-      {(newOrders ?? dashboard.new_orders) > 0 && (
-        <Link href="/tailleur/commandes" className="tRow" aria-label="Voir les commandes reçues">
-          <span className="tRowMain">
-            <span className="tRowTitle">
-              <IconOrders size={18} aria-hidden /> Commandes reçues via Sur-MeZur ({newOrders ?? dashboard.new_orders} nouvelle{(newOrders ?? dashboard.new_orders) > 1 ? "s" : ""})
-            </span>
-            <br />
-            <span className="tRowSub">Accepter, suivre, discuter avec le client.</span>
-          </span>
-        </Link>
-      )}
+      <Link href="/tailleur/finances" className="tRow">
+        <IconWallet size={20} aria-hidden />
+        <span className="tRowMain">
+          <span className="tRowTitle">{tr("Recettes de l'atelier", "Workshop income")}</span>
+        </span>
+      </Link>
     </div>
   );
 }

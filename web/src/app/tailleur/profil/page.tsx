@@ -9,9 +9,9 @@
  * desactivee.
  */
 
+import { tr } from "@/lib/i18n";
 import { useCallback, useEffect, useState } from "react";
 import { TailorApi } from "@/lib/api/tailor";
-import { UsersApi } from "@/lib/api/endpoints";
 import type { TailorProfile } from "@/lib/api/types";
 import { useAuth } from "@/components/AuthProvider";
 import { Button, ErrorBanner, Input, Spinner, Textarea } from "@/components/ui";
@@ -20,7 +20,6 @@ import {
   IconCall,
   IconEdit,
   IconKey,
-  IconLanguage,
   IconLocate,
   IconLocation,
   IconLogout,
@@ -33,10 +32,9 @@ import { currentPosition, hasPosition } from "@/lib/tailors";
 import { nameError } from "@/lib/validation";
 
 const BIO_MAX = 500;
-const LANGUES: Record<string, string> = { fr: "Français", en: "English" };
 
 export default function ProfilTailleur() {
-  const { user, refresh, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [profile, setProfile] = useState<TailorProfile | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [counts, setCounts] = useState({ clients: 0, jobs: 0, patterns: 0 });
@@ -50,7 +48,6 @@ export default function ProfilTailleur() {
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [positionNote, setPositionNote] = useState("");
-  const [language, setLanguage] = useState("fr");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -84,7 +81,6 @@ export default function ProfilTailleur() {
     setShowPhone(profile?.show_phone !== false);
     setPosition(profile && hasPosition(profile) ? { lat: profile.lat as number, lng: profile.lng as number } : null);
     setPositionNote("");
-    setLanguage(user?.language ?? "fr");
     setNotice("");
     setEditing(true);
   }
@@ -97,19 +93,19 @@ export default function ProfilTailleur() {
     try {
       const p = await currentPosition();
       setPosition({ lat: p.lat, lng: p.lng });
-      setPositionNote(`Position relevée, précision d'environ ${Math.round(p.accuracy)} m. Enregistrez pour la garder.`);
+      setPositionNote(tr(`Position relevée (± ${Math.round(p.accuracy)} m). Enregistrez.`, `Location found (± ${Math.round(p.accuracy)} m). Save to keep it.`));
     } catch (e) {
-      setPositionNote(e instanceof Error ? e.message : "Position indisponible.");
+      setPositionNote(e instanceof Error ? e.message : tr("Position indisponible.", "Location unavailable."));
     } finally {
       setLocating(false);
     }
   }
 
   // Controles de saisie : nom d'atelier obligatoire, longueurs bornees.
-  const shopErr = nameError(shopName, "Le nom de l'atelier");
-  const cityErr = city.trim().length > 80 ? "80 caractères au plus." : null;
-  const quartierErr = quartier.trim().length > 80 ? "80 caractères au plus." : null;
-  const landmarkErr = landmark.trim().length > 255 ? "255 caractères au plus." : null;
+  const shopErr = nameError(shopName);
+  const cityErr = city.trim().length > 80 ? tr("80 caractères au plus.", "80 characters at most.") : null;
+  const quartierErr = quartier.trim().length > 80 ? tr("80 caractères au plus.", "80 characters at most.") : null;
+  const landmarkErr = landmark.trim().length > 255 ? tr("255 caractères au plus.", "255 characters at most.") : null;
   const canSave = !shopErr && !cityErr && !quartierErr && !landmarkErr && bio.length <= BIO_MAX && !busy;
 
   async function save(e: React.FormEvent) {
@@ -130,22 +126,18 @@ export default function ProfilTailleur() {
           lng: position?.lng ?? null,
         })
       );
-      if (language !== user?.language) {
-        await UsersApi.patchMe({ language: language as "fr" | "en" });
-        await refresh();
-      }
       setEditing(false);
-      setNotice("Profil enregistré.");
+      setNotice(tr("Profil enregistré.", "Profile saved."));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Enregistrement impossible.");
+      setError(err instanceof Error ? err.message : tr("Enregistrement impossible.", "Could not save."));
     } finally {
       setBusy(false);
     }
   }
 
-  if (!loaded || !user) return <Spinner label="Chargement…" />;
+  if (!loaded || !user) return <Spinner />;
 
-  const atelier = profile?.shop_name?.trim() || user.full_name || "Mon atelier";
+  const atelier = profile?.shop_name?.trim() || user.full_name || tr("Mon atelier", "My workshop");
   const lieu = [profile?.city, profile?.quartier].filter((x) => x && x.trim()).join(", ");
 
   return (
@@ -155,13 +147,13 @@ export default function ProfilTailleur() {
           {atelier.charAt(0).toUpperCase()}
         </div>
         <h1 className="profileName">{atelier}</h1>
-        <p className="profileSub">{lieu ? `Atelier de couture · ${lieu}` : "Atelier de couture"}</p>
+        <p className="profileSub">{lieu || tr("Atelier de couture", "Tailoring workshop")}</p>
         <p className="profileSub">
           {user.full_name} · {user.phone}
         </p>
         {!editing && (
           <button className="profileEditChip" onClick={startEdit}>
-            Modifier mon atelier
+            {tr("Modifier mon atelier", "Edit workshop")}
           </button>
         )}
       </header>
@@ -173,7 +165,7 @@ export default function ProfilTailleur() {
         {editing && (
           <form className="card profileEditCard" onSubmit={save} noValidate>
             <label className="field">
-              <span className="fieldLabel">Nom de l&apos;atelier</span>
+              <span className="fieldLabel">{tr("Nom de l'atelier", "Workshop name")}</span>
               <Input
                 value={shopName}
                 onChange={(e) => setShopName(e.target.value)}
@@ -185,7 +177,7 @@ export default function ProfilTailleur() {
             </label>
             <div className="fieldRow">
               <label className="field">
-                <span className="fieldLabel">Ville</span>
+                <span className="fieldLabel">{tr("Ville", "City")}</span>
                 <Input
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
@@ -196,7 +188,7 @@ export default function ProfilTailleur() {
                 {cityErr && <span className="fieldError">{cityErr}</span>}
               </label>
               <label className="field">
-                <span className="fieldLabel">Quartier</span>
+                <span className="fieldLabel">{tr("Quartier", "Area")}</span>
                 <Input
                   value={quartier}
                   onChange={(e) => setQuartier(e.target.value)}
@@ -207,26 +199,26 @@ export default function ProfilTailleur() {
               </label>
             </div>
             <label className="field">
-              <span className="fieldLabel">Repère</span>
+              <span className="fieldLabel">{tr("Repère", "Landmark")}</span>
               <Input
                 value={landmark}
                 onChange={(e) => setLandmark(e.target.value)}
-                placeholder="Ex. Face pharmacie du marché, 1er étage"
+                placeholder={tr("Ex. face pharmacie du marché", "E.g. opposite the market pharmacy")}
                 maxLength={255}
                 aria-invalid={landmarkErr ? true : undefined}
               />
               {landmarkErr && <span className="fieldError">{landmarkErr}</span>}
             </label>
             <div className="field">
-              <span className="fieldLabel">Position de l&apos;atelier (facultatif)</span>
-              <span className="fieldHint">À relever depuis l&apos;atelier : les clients auront l&apos;itinéraire.</span>
+              <span className="fieldLabel">{tr("Position GPS (facultatif)", "GPS location (optional)")}</span>
+              <span className="fieldHint">{tr("À relever depuis l'atelier.", "Take it at the workshop.")}</span>
               <div className="tActionRow" style={{ marginTop: 6 }}>
                 <Button variant="secondary" onClick={() => void locate()} disabled={locating}>
-                  <IconLocate size={18} aria-hidden /> {locating ? "Recherche…" : position ? "Relever à nouveau" : "Utiliser ma position"}
+                  <IconLocate size={18} aria-hidden /> {locating ? tr("Recherche…", "Locating…") : position ? tr("Relever à nouveau", "Locate again") : tr("Utiliser ma position", "Use my location")}
                 </Button>
                 {position && (
-                  <Button variant="ghost" onClick={() => { setPosition(null); setPositionNote("Position effacée. Enregistrez pour valider."); }}>
-                    Effacer la position
+                  <Button variant="ghost" onClick={() => { setPosition(null); setPositionNote(tr("Position effacée. Enregistrez.", "Location cleared. Save to confirm.")); }}>
+                    {tr("Effacer", "Clear")}
                   </Button>
                 )}
               </div>
@@ -237,7 +229,7 @@ export default function ProfilTailleur() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Vérifier sur la carte ({position.lat.toFixed(5)}, {position.lng.toFixed(5)})
+                  {tr("Voir sur la carte", "View on map")}
                 </a>
               )}
               {positionNote && <span className="fieldHint" role="status">{positionNote}</span>}
@@ -249,100 +241,87 @@ export default function ProfilTailleur() {
                 onChange={(e) => setShowPhone(e.target.checked)}
                 style={{ width: 20, height: 20, accentColor: "var(--violet-primary)" }}
               />
-              <span>Afficher mon numéro aux clients (appel, WhatsApp)</span>
+              <span>{tr("Montrer mon numéro aux clients", "Show my number to clients")}</span>
             </label>
             <label className="field">
-              <span className="fieldLabel">Présentation</span>
+              <span className="fieldLabel">{tr("Présentation", "About")}</span>
               <Textarea
                 rows={3}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="Ex. Atelier de couture homme et femme à Douala, spécialités : boubous, robes de soirée."
+                placeholder={tr("Ex. boubous, robes de soirée…", "E.g. boubous, evening dresses…")}
                 maxLength={BIO_MAX}
               />
               <span className="fieldHint">
-                {bio.length} / {BIO_MAX} caractères
+                {bio.length} / {BIO_MAX}
               </span>
-            </label>
-            <label className="field">
-              <span className="fieldLabel">Langue</span>
-              <select className="input" value={language} onChange={(e) => setLanguage(e.target.value)}>
-                <option value="fr">Français</option>
-                <option value="en">English</option>
-              </select>
             </label>
             <div className="profileEditActions">
               <Button type="submit" disabled={!canSave}>
-                {busy ? "Enregistrement…" : "Enregistrer"}
+                {busy ? tr("Enregistrement…", "Saving…") : tr("Enregistrer", "Save")}
               </Button>
               <Button variant="secondary" onClick={() => setEditing(false)}>
-                Annuler
+                {tr("Annuler", "Cancel")}
               </Button>
             </div>
           </form>
         )}
 
         <div className="profileStats">
-          <ProfileStat value={counts.clients} label="Clients" Icon={IconUsers} />
-          <ProfileStat value={counts.jobs} label="Travaux en cours" Icon={IconOrders} />
-          <ProfileStat value={counts.patterns} label="Patrons" Icon={IconTailor} />
+          <ProfileStat value={counts.clients} label={tr("Clients", "Clients")} Icon={IconUsers} />
+          <ProfileStat value={counts.jobs} label={tr("Travaux en cours", "Jobs in progress")} Icon={IconOrders} />
+          <ProfileStat value={counts.patterns} label={tr("Patrons", "Patterns")} Icon={IconTailor} />
         </div>
 
-        <SettingsSection title="Mon atelier">
+        <SettingsSection title={tr("Mon atelier", "My workshop")}>
           <SettingsRow
             Icon={IconEdit}
-            label="Présentation"
-            hint={profile?.bio?.trim() || "Aucune présentation : quelques mots rassurent vos clients."}
+            label={tr("Présentation", "About")}
+            hint={profile?.bio?.trim() || tr("À compléter", "To fill in")}
             onClick={startEdit}
           />
           <SettingsRow
             Icon={IconLocation}
-            label="Adresse"
-            value={lieu || "À compléter"}
-            hint={[profile?.landmark?.trim(), profile && hasPosition(profile) ? "Position GPS enregistrée" : null].filter(Boolean).join(" · ") || undefined}
+            label={tr("Adresse", "Address")}
+            value={lieu || tr("À compléter", "To fill in")}
+            hint={[profile?.landmark?.trim(), profile && hasPosition(profile) ? tr("GPS enregistré", "GPS saved") : null].filter(Boolean).join(" · ") || undefined}
             onClick={startEdit}
           />
           <SettingsRow
             Icon={IconCall}
-            label="Numéro visible des clients"
-            value={profile?.show_phone === false ? "Masqué" : "Oui"}
-            onClick={startEdit}
-          />
-          <SettingsRow
-            Icon={IconLanguage}
-            label="Langue"
-            value={LANGUES[user.language ?? "fr"] ?? "Français"}
+            label={tr("Numéro visible", "Number visible")}
+            value={profile?.show_phone === false ? tr("Masqué", "Hidden") : tr("Oui", "Yes")}
             onClick={startEdit}
             last
           />
         </SettingsSection>
 
-        <SettingsSection title="Mon activité">
+        <SettingsSection title={tr("Mon activité", "My activity")}>
           <SettingsRow
             href="/tailleur/clients"
             Icon={IconUsers}
-            label="Carnet de clients"
+            label={tr("Clients", "Clients")}
             value={counts.clients > 0 ? String(counts.clients) : undefined}
           />
           <SettingsRow
             href="/tailleur/travaux"
             Icon={IconOrders}
-            label="Travaux"
-            value={counts.jobs > 0 ? `${counts.jobs} en cours` : undefined}
+            label={tr("Travaux", "Jobs")}
+            value={counts.jobs > 0 ? String(counts.jobs) : undefined}
           />
           <SettingsRow
             href="/tailleur/patrons"
             Icon={IconTailor}
-            label="Patrons"
+            label={tr("Patrons", "Patterns")}
             value={counts.patterns > 0 ? String(counts.patterns) : undefined}
           />
-          <SettingsRow href="/tailleur/commandes" Icon={IconOrders} label="Commandes reçues via Sur-MeZur" />
-          <SettingsRow href="/tailleur/finances" Icon={IconWallet} label="Recettes de l'atelier" last />
+          <SettingsRow href="/tailleur/commandes" Icon={IconOrders} label={tr("Commandes Sur-MeZur", "Sur-MeZur orders")} />
+          <SettingsRow href="/tailleur/finances" Icon={IconWallet} label={tr("Recettes", "Income")} last />
         </SettingsSection>
 
-        <SettingsSection title="Compte">
-          <SettingsRow href="/changer-mot-de-passe" Icon={IconKey} label="Changer mon mot de passe" />
-          <SettingsRow Icon={IconLogout} label="Se déconnecter" danger onClick={logout} last />
+        <SettingsSection title={tr("Compte", "Account")}>
+          <SettingsRow href="/changer-mot-de-passe" Icon={IconKey} label={tr("Changer mon mot de passe", "Change password")} />
+          <SettingsRow Icon={IconLogout} label={tr("Se déconnecter", "Sign out")} danger onClick={logout} last />
         </SettingsSection>
       </div>
     </div>

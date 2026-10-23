@@ -31,13 +31,13 @@ export default function Mesurer() {
     else if (user.role === "tailor") router.replace("/tailleur/mesurer");
   }, [loading, user, router]);
 
-  if (loading) return <Spinner label="Chargement…" />;
+  if (loading) return <Spinner />;
   if (registered && !measuresHere) {
     return (
-      <SignedInNotice message="La prise de mesure se fait avec un compte client ou tailleur, ou sans compte. Choisissez « Changer de compte » pour l'essayer en visiteur." />
+      <SignedInNotice />
     );
   }
-  if (registered) return <Spinner label="Chargement…" />;
+  if (registered) return <Spinner />;
 
   return (
     <div className="flowWrap section">

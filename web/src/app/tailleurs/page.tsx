@@ -8,6 +8,7 @@
  * fiche d'un modele) suit jusqu'au formulaire de commande.
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -50,7 +51,7 @@ function TailleursInner() {
           setError("");
         })
         .catch((e) => {
-          setError(e instanceof Error ? e.message : "Impossible de charger les tailleurs.");
+          setError(e instanceof Error ? e.message : tr("Chargement impossible.", "Could not load."));
           setList([]);
         });
     }, 250);
@@ -77,7 +78,7 @@ function TailleursInner() {
       setSort("proximity");
     } catch (e) {
       setSort("rating");
-      setNotice(`${e instanceof Error ? e.message : "Position indisponible."} Tri par note.`);
+      setNotice(`${e instanceof Error ? e.message : tr("Position indisponible.", "Location unavailable.")} ${tr("Tri par note.", "Sorted by rating.")}`);
     }
   }
 
@@ -85,19 +86,19 @@ function TailleursInner() {
 
   return (
     <>
-      <PageHeader title="Tailleurs" />
+      <PageHeader title={tr("Tailleurs", "Tailors")} />
       <div className="container section stack">
         {modele && (
-          <div className="banner bannerInfo">Choisissez le tailleur qui coudra votre modèle.</div>
+          <div className="banner bannerInfo">{tr("Choisissez votre tailleur.", "Choose your tailor.")}</div>
         )}
         <label className="field" style={{ marginBottom: 0 }}>
-          <span className="fieldLabel">Rechercher</span>
+          <span className="fieldLabel">{tr("Rechercher", "Search")}</span>
           <div style={{ position: "relative" }}>
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Nom de l'atelier, quartier, spécialité…"
-              aria-label="Rechercher un tailleur"
+              placeholder={tr("Atelier, quartier…", "Workshop, area…")}
+              aria-label={tr("Rechercher un tailleur", "Search tailors")}
               maxLength={80}
               style={{ paddingLeft: 38 }}
             />
@@ -108,19 +109,19 @@ function TailleursInner() {
         </label>
         <div className="galleryFilterBar tFilterPair">
           <label className={`filterSelect ${city ? "filterSelectOn" : ""}`}>
-            <span>Ville</span>
+            <span>{tr("Ville", "City")}</span>
             <Select value={city} onChange={(e) => setCity(e.target.value)}>
-              <option value="">Toutes les villes</option>
+              <option value="">{tr("Toutes", "All")}</option>
               {cities.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </Select>
           </label>
           <label className={`filterSelect ${sort !== "rating" ? "filterSelectOn" : ""}`}>
-            <span>Trier</span>
+            <span>{tr("Trier", "Sort")}</span>
             <Select value={sort} onChange={(e) => void changeSort(e.target.value as Sort)}>
-              <option value="rating">Mieux notés</option>
-              <option value="proximity">Plus proches</option>
+              <option value="rating">{tr("Mieux notés", "Top rated")}</option>
+              <option value="proximity">{tr("Plus proches", "Nearest")}</option>
             </Select>
           </label>
         </div>
@@ -128,15 +129,14 @@ function TailleursInner() {
         <ErrorBanner message={error} />
 
         {list === null ? (
-          <Spinner label="Chargement…" />
+          <Spinner />
         ) : list.length === 0 ? (
           <EmptyState
             icon={<IconTailor size={30} strokeWidth={1.6} />}
-            title="Aucun tailleur trouvé"
-            body={q || city ? "Essayez une autre recherche ou une autre ville." : "Les tailleurs inscrits apparaîtront ici."}
+            title={tr("Aucun tailleur trouvé", "No tailors found")}
           />
         ) : (
-          <ul className="tList" aria-label="Tailleurs">
+          <ul className="tList" aria-label={tr("Tailleurs", "Tailors")}>
             {list.map((t) => {
               const lieu = tailorPlace(t);
               const distance = formatDistance(t.distance_km);
@@ -154,7 +154,7 @@ function TailleursInner() {
                     <span className="tRowMain">
                       <span className="tRowTitle">{t.shop_name}</span>
                       {t.verification_enabled !== false && t.verification_status === "approved" && (
-                        <> <Badge tone="success">Vérifié</Badge></>
+                        <> <Badge tone="success">{tr("Vérifié", "Verified")}</Badge></>
                       )}
                       <br />
                       <span className="tRowSub">
@@ -163,7 +163,7 @@ function TailleursInner() {
                             <IconLocation size={13} aria-hidden /> {lieu}
                           </>
                         )}
-                        {distance && <> · à {distance}</>}
+                        {distance && <> · {distance}</>}
                         {t.rating_avg > 0 && (
                           <>
                             {lieu || distance ? " · " : ""}
@@ -185,7 +185,7 @@ function TailleursInner() {
 
 export default function Tailleurs() {
   return (
-    <Suspense fallback={<Spinner label="Chargement…" />}>
+    <Suspense fallback={<Spinner />}>
       <TailleursInner />
     </Suspense>
   );

@@ -18,7 +18,7 @@
   padding-bottom: 12px;
   /* Le degrade de fond doit couvrir toute la zone, sinon le contenu qui defile
      apparait derriere le bouton. */
-  background: linear-gradient(to top, var(--bg) 60%, rgba(255, 255, 255, 0));
+  background: linear-gradient(to top, var(--bg) 60%, transparent);
 }
 
 /* Hors coquille (ecrans d'authentification), il n'y a pas de barre d'onglets. */

@@ -26,6 +26,7 @@ import {
   IconShield,
   IconTailor,
 } from "@/components/icons";
+import { tr } from "@/lib/i18n";
 
 export default function Profil() {
   const { user, loading, refresh, logout } = useAuth();
@@ -54,7 +55,7 @@ export default function Profil() {
     if (user) void loadCounts();
   }, [user, loadCounts]);
 
-  if (loading || !user) return <Spinner label="Chargement…" />;
+  if (loading || !user) return <Spinner />;
 
   const nameErr = fullName.trim() ? nameError(fullName) : null;
   const emailErr = emailError(email);
@@ -67,19 +68,19 @@ export default function Profil() {
       await refresh();
       setEditing(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Enregistrement impossible.");
+      setError(e instanceof Error ? e.message : tr("Enregistrement impossible.", "Could not save."));
     } finally {
       setBusy(false);
     }
   }
 
   async function purge() {
-    if (!window.confirm("Supprimer définitivement les photos utilisées pour vos mesures ? Vos mensurations, elles, sont conservées.")) return;
+    if (!window.confirm(tr("Supprimer vos photos de mesure ? Vos mesures sont conservées.", "Delete your measurement photos? Your measurements are kept."))) return;
     try {
       await UsersApi.purgePhotos();
-      setNotice("Vos photos ont été supprimées.");
+      setNotice(tr("Photos supprimées.", "Photos deleted."));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Suppression impossible.");
+      setError(e instanceof Error ? e.message : tr("Suppression impossible.", "Could not delete."));
     }
   }
 
@@ -101,7 +102,7 @@ export default function Profil() {
               setEditing(true);
             }}
           >
-            Modifier mon profil
+            {tr("Modifier mon profil", "Edit profile")}
           </button>
         )}
       </header>
@@ -113,7 +114,7 @@ export default function Profil() {
         {editing && (
           <div className="card profileEditCard">
             <label className="field">
-              <span className="fieldLabel">Nom complet</span>
+              <span className="fieldLabel">{tr("Nom complet", "Full name")}</span>
               <input
                 className="input"
                 value={fullName}
@@ -124,7 +125,7 @@ export default function Profil() {
               {nameErr && <span className="fieldError">{nameErr}</span>}
             </label>
             <label className="field">
-              <span className="fieldLabel">Adresse e-mail</span>
+              <span className="fieldLabel">{tr("E-mail", "E-mail")}</span>
               <input
                 className="input"
                 type="email"
@@ -138,59 +139,59 @@ export default function Profil() {
             </label>
             <div className="profileEditActions">
               <Button onClick={save} disabled={busy || nameError(fullName) !== null || emailErr !== null}>
-                {busy ? "Enregistrement…" : "Enregistrer"}
+                {busy ? tr("Enregistrement…", "Saving…") : tr("Enregistrer", "Save")}
               </Button>
               <Button variant="secondary" onClick={() => setEditing(false)}>
-                Annuler
+                {tr("Annuler", "Cancel")}
               </Button>
             </div>
           </div>
         )}
 
         <div className="profileStats">
-          <Stat value={counts.measures} label="Mesures" Icon={IconMeasure} />
-          <Stat value={counts.liked} label="Favoris" Icon={IconModels} />
-          <Stat value={counts.mine} label="Mes modèles" Icon={IconCatalog} />
+          <Stat value={counts.measures} label={tr("Mesures", "Measurements")} Icon={IconMeasure} />
+          <Stat value={counts.liked} label={tr("Favoris", "Saved")} Icon={IconModels} />
+          <Stat value={counts.mine} label={tr("Mes modèles", "My styles")} Icon={IconCatalog} />
         </div>
 
-        <SettingsSection title="Mon compte">
+        <SettingsSection title={tr("Mon compte", "My account")}>
           <SettingsRow
             href="/mesures"
             Icon={IconMeasure}
-            label="Mes mesures"
+            label={tr("Mes mesures", "My measurements")}
             value={counts.measures > 0 ? String(counts.measures) : undefined}
           />
           <SettingsRow
             href="/modeles?favoris=1"
             Icon={IconModels}
-            label="Modèles enregistrés"
+            label={tr("Modèles enregistrés", "Saved styles")}
             value={counts.liked > 0 ? String(counts.liked) : undefined}
           />
           <SettingsRow
             href="/modeles/proposer"
             Icon={IconCatalog}
-            label="Proposer un modèle"
+            label={tr("Proposer un modèle", "Suggest a style")}
             last
           />
         </SettingsSection>
 
-        <SettingsSection title="Couture">
-          <SettingsRow href="/commandes" Icon={IconOrders} label="Mes commandes" />
-          <SettingsRow href="/tailleurs" Icon={IconTailor} label="Trouver un tailleur" last />
+        <SettingsSection title={tr("Couture", "Tailoring")}>
+          <SettingsRow href="/commandes" Icon={IconOrders} label={tr("Mes commandes", "My orders")} />
+          <SettingsRow href="/tailleurs" Icon={IconTailor} label={tr("Trouver un tailleur", "Find a tailor")} last />
         </SettingsSection>
 
-        <SettingsSection title="Confidentialité">
+        <SettingsSection title={tr("Confidentialité", "Privacy")}>
           <SettingsRow
             Icon={IconShield}
-            label="Supprimer mes photos"
-            hint="Vos mensurations sont conservées."
+            label={tr("Supprimer mes photos", "Delete my photos")}
+            hint={tr("Vos mesures sont conservées.", "Your measurements are kept.")}
             onClick={purge}
             last
           />
         </SettingsSection>
 
         <SettingsSection>
-          <SettingsRow Icon={IconLogout} label="Se déconnecter" danger onClick={logout} last />
+          <SettingsRow Icon={IconLogout} label={tr("Se déconnecter", "Sign out")} danger onClick={logout} last />
         </SettingsSection>
       </div>
     </div>

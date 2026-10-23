@@ -23,6 +23,7 @@ import { ModelCard } from "@/components/ModelCard";
 import { getSelection, onSelectionChange } from "@/lib/selection";
 import { Button, Spinner } from "@/components/ui";
 import { IconChevronRight, IconOrders, IconSearch } from "@/components/icons";
+import { tr } from "@/lib/i18n";
 
 export default function Accueil() {
   const { user } = useAuth();
@@ -77,43 +78,37 @@ export default function Accueil() {
     <div className="home">
       <div className="homeTopRow">
         <div>
-          <p className="homeHello">Bonjour{firstName ? `, ${firstName}` : ""}</p>
+          <p className="homeHello">{tr("Bonjour", "Hello")}{firstName ? `, ${firstName}` : ""}</p>
           <p className="homeBrand">Sur-MeZur</p>
         </div>
       </div>
 
       <Link href="/modeles" className="homeSearchBar">
         <IconSearch size={16} aria-hidden />
-        <span>Rechercher un modèle</span>
+        <span>{tr("Rechercher un modèle", "Search styles")}</span>
       </Link>
 
       {/* Rappel de mesure : la raison d'etre de cette version web. */}
       <section className="homeMeasureCta">
         <div>
-          <h2>{latest ? "Vos mesures sont prêtes" : "Prenez vos mesures"}</h2>
-          <p>
-            {latest
-              ? "Consultez-les, ou téléchargez vos fiches à remettre au tailleur."
-              : "Deux photos suffisent pour obtenir vos douze mesures de couture."}
-          </p>
+          <h2>{latest ? tr("Vos mesures sont prêtes", "Your measurements are ready") : tr("Prenez vos mesures", "Take your measurements")}</h2>
+          <p>{latest ? tr("À remettre au tailleur.", "Ready for your tailor.") : tr("Deux photos suffisent.", "Two photos are enough.")}</p>
         </div>
         <Link
           href={latest ? `/mesures/${latest.id}` : "/mesures/nouvelle"}
           style={{ display: "contents" }}
         >
-          <Button block>{latest ? "Voir mes mesures" : "Commencer"}</Button>
+          <Button block>{latest ? tr("Voir mes mesures", "View my measurements") : tr("Commencer", "Start")}</Button>
         </Link>
       </section>
 
       {openOrders > 0 && (
-        <Link href="/commandes" className="tRow" aria-label="Voir mes commandes">
+        <Link href="/commandes" className="tRow">
           <IconOrders size={20} aria-hidden />
           <span className="tRowMain">
             <span className="tRowTitle">
-              Mes commandes ({openOrders} en cours)
+              {tr(`Mes commandes (${openOrders} en cours)`, `My orders (${openOrders} in progress)`)}
             </span>
-            <br />
-            <span className="tRowSub">Suivre la confection, écrire au tailleur.</span>
           </span>
           <IconChevronRight size={18} aria-hidden />
         </Link>
@@ -122,21 +117,18 @@ export default function Accueil() {
       {/* Les mesures ont une suite : les envoyer a un tailleur. */}
       <section className="homeContribute">
         <div>
-          <h2>Faire coudre par un tailleur</h2>
-          <p className="muted">
-            Trouvez un atelier près de chez vous et envoyez-lui vos mesures, avec le modèle choisi.
-          </p>
+          <h2>{tr("Faire coudre par un tailleur", "Have it made by a tailor")}</h2>
         </div>
         <Link href="/tailleurs" style={{ display: "contents" }}>
-          <Button variant="secondary">Voir les tailleurs</Button>
+          <Button variant="secondary">{tr("Voir les tailleurs", "See tailors")}</Button>
         </Link>
       </section>
 
       {/* Les modeles enregistres (coeur) d'abord : c'est ce que la personne
           a deja choisi, il doit etre a portee de main. */}
-      <ModelSection title="Mes modèles enregistrés" models={saved} href="/modeles?favoris=1" selection={selection} />
+      <ModelSection title={tr("Mes modèles enregistrés", "My saved styles")} models={saved} href="/modeles?favoris=1" selection={selection} />
 
-      <ModelSection title="Les plus aimés" models={popular} href="/modeles?tri=populaire" selection={selection} />
+      <ModelSection title={tr("Les plus aimés", "Most liked")} models={popular} href="/modeles?tri=populaire" selection={selection} />
 
       {categories.map((cat) => (
         <ModelSection
@@ -150,13 +142,10 @@ export default function Accueil() {
 
       <section className="homeContribute">
         <div>
-          <h2>Un modèle à partager ?</h2>
-          <p className="muted">
-            Proposez-le au catalogue : il sera visible par toute la communauté.
-          </p>
+          <h2>{tr("Un modèle à partager ?", "A style to share?")}</h2>
         </div>
         <Link href="/modeles/proposer" style={{ display: "contents" }}>
-          <Button variant="ghost">Proposer un modèle</Button>
+          <Button variant="ghost">{tr("Proposer un modèle", "Suggest a style")}</Button>
         </Link>
       </section>
     </div>
@@ -183,7 +172,7 @@ function ModelSection({
       <div className="homeSectionHead">
         <h2 className="homeSectionTitle">{title}</h2>
         <Link href={href} className="homeSeeAll">
-          Voir plus <IconChevronRight size={14} aria-hidden />
+          {tr("Voir plus", "See more")} <IconChevronRight size={14} aria-hidden />
         </Link>
       </div>
       {models === null ? (

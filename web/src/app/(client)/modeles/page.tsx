@@ -16,14 +16,15 @@ import { ModelCard } from "@/components/ModelCard";
 import { getSelection, onSelectionChange } from "@/lib/selection";
 import { Button, EmptyState, ErrorBanner, Input, PageHeader, Select, Spinner } from "@/components/ui";
 import { IconModels, IconSearch } from "@/components/icons";
+import { tr } from "@/lib/i18n";
 
-const GENRES: Record<string, string> = { female: "Femme", male: "Homme", unisex: "Mixte" };
+const GENRES: Record<string, [string, string]> = { female: ["Femme", "Women"], male: ["Homme", "Men"], unisex: ["Mixte", "Unisex"] };
 
 /** Nom de categorie, precise du genre quand deux categories portent le meme
  *  nom (« Haut » femme et « Haut » homme). */
 function categoryLabel(c: Category, all: Category[]): string {
   const homonyme = all.some((o) => o.id !== c.id && o.name === c.name);
-  return homonyme && GENRES[c.gender] ? `${c.name} · ${GENRES[c.gender]}` : c.name;
+  return homonyme && GENRES[c.gender] ? `${c.name} · ${tr(...GENRES[c.gender])}` : c.name;
 }
 
 function GalerieInner() {
@@ -64,7 +65,7 @@ function GalerieInner() {
       .then((list) => !cancelled && setModels(list))
       .catch((e) => {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : "Catalogue indisponible.");
+        setError(e instanceof Error ? e.message : tr("Catalogue indisponible.", "Catalogue unavailable."));
         setModels([]);
       });
     return () => {
@@ -91,14 +92,14 @@ function GalerieInner() {
 
   return (
     <>
-      <PageHeader title={likedOnly ? "Modèles enregistrés" : "Modèles"} />
+      <PageHeader title={likedOnly ? tr("Modèles enregistrés", "Saved styles") : tr("Modèles", "Styles")} />
       <div className="container section">
         <Input
           type="search"
-          placeholder="Rechercher un modèle"
+          placeholder={tr("Rechercher un modèle", "Search styles")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Rechercher un modèle"
+          aria-label={tr("Rechercher un modèle", "Search styles")}
         />
 
         {/* Menus deroulants : la place des filtres reste la meme quel que
@@ -106,9 +107,9 @@ function GalerieInner() {
             plusieurs lignes). Un filtre actif est mis en couleur. */}
         <div className="galleryFilterBar">
           <label className={`filterSelect filterSelectWide ${categoryId ? "filterSelectOn" : ""}`}>
-            <span>Catégorie</span>
+            <span>{tr("Catégorie", "Category")}</span>
             <Select value={categoryId ?? ""} onChange={(e) => setParam("categorie", e.target.value || null)}>
-              <option value="">Toutes catégories</option>
+              <option value="">{tr("Toutes", "All")}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {categoryLabel(c, categories)}
@@ -117,17 +118,17 @@ function GalerieInner() {
             </Select>
           </label>
           <label className={`filterSelect ${likedOnly ? "filterSelectOn" : ""}`}>
-            <span>Afficher</span>
+            <span>{tr("Afficher", "Show")}</span>
             <Select value={likedOnly ? "1" : ""} onChange={(e) => setParam("favoris", e.target.value || null)}>
-              <option value="">Tous</option>
-              <option value="1">Enregistrés</option>
+              <option value="">{tr("Tous", "All")}</option>
+              <option value="1">{tr("Enregistrés", "Saved")}</option>
             </Select>
           </label>
           <label className={`filterSelect ${sort === "popular" ? "filterSelectOn" : ""}`}>
-            <span>Trier par</span>
+            <span>{tr("Trier", "Sort")}</span>
             <Select value={sort === "popular" ? "populaire" : ""} onChange={(e) => setParam("tri", e.target.value || null)}>
-              <option value="">Récents</option>
-              <option value="populaire">Plus aimés</option>
+              <option value="">{tr("Récents", "Newest")}</option>
+              <option value="populaire">{tr("Plus aimés", "Most liked")}</option>
             </Select>
           </label>
         </div>
@@ -136,7 +137,10 @@ function GalerieInner() {
           <div className="selectionBar">
             <IconModels size={18} aria-hidden />
             <span>
-              {selection.length} modèle{selection.length > 1 ? "s" : ""} dans votre sélection
+              {tr(
+                `${selection.length} modèle${selection.length > 1 ? "s" : ""} dans votre sélection`,
+                `${selection.length} style${selection.length > 1 ? "s" : ""} selected`
+              )}
             </span>
           </div>
         )}
@@ -144,21 +148,15 @@ function GalerieInner() {
         <ErrorBanner message={error} />
 
         {shown === null ? (
-          <Spinner label="Chargement du catalogue…" />
+          <Spinner />
         ) : shown.length === 0 ? (
           <EmptyState
             icon={<IconSearch size={30} strokeWidth={1.6} />}
-            title={likedOnly ? "Aucun modèle enregistré" : "Aucun modèle"}
-            body={
-              query
-                ? "Aucun modèle ne correspond à votre recherche."
-                : likedOnly
-                  ? "Touchez le cœur d'un modèle pour l'enregistrer : il apparaîtra ici et sur votre accueil."
-                  : "Le catalogue est vide pour ce filtre."
-            }
+            title={likedOnly ? tr("Aucun modèle enregistré", "No saved styles") : tr("Aucun modèle", "No styles")}
+            body={likedOnly && !query ? tr("Touchez le cœur d'un modèle pour l'enregistrer.", "Tap the heart on a style to save it.") : undefined}
             action={
               <Link href="/modeles/proposer">
-                <Button variant="ghost">Proposer un modèle</Button>
+                <Button variant="ghost">{tr("Proposer un modèle", "Suggest a style")}</Button>
               </Link>
             }
           />
@@ -177,7 +175,7 @@ function GalerieInner() {
 export default function Galerie() {
   // `useSearchParams` impose une frontiere Suspense en App Router.
   return (
-    <Suspense fallback={<Spinner label="Chargement…" />}>
+    <Suspense fallback={<Spinner />}>
       <GalerieInner />
     </Suspense>
   );

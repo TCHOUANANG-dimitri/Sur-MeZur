@@ -21,6 +21,7 @@ import { formatCm, presentableGroups } from "@/lib/measurements";
 import { Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { IconMeasure, IconModels, IconPrint } from "@/components/icons";
 import { getSelection, onSelectionChange } from "@/lib/selection";
+import { tr } from "@/lib/i18n";
 
 function DetailMesureInner() {
   const { id } = useParams<{ id: string }>();
@@ -38,7 +39,7 @@ function DetailMesureInner() {
     withRetry(() => MeasurementsApi.list())
       .then((list) => setMeasurement(list.find((m) => m.id === id) ?? null))
       .catch((e) => {
-        setError(friendlyError(e, "réessayez"));
+        setError(friendlyError(e, tr("réessayez", "try again")));
         setMeasurement(null);
       });
   }, [id]);
@@ -58,15 +59,15 @@ function DetailMesureInner() {
     return onSelectionChange(sync);
   }, []);
 
-  if (measurement === undefined) return <Spinner label="Chargement de vos mesures&hellip;" />;
+  if (measurement === undefined) return <Spinner />;
 
   if (measurement === null) {
     return (
       <>
-        <PageHeader title="Mes mesures" back />
+        <PageHeader title={tr("Mes mesures", "My measurements")} back />
         <div className="container section">
           <ErrorBanner message={error} />
-          <EmptyState icon={<IconMeasure size={30} strokeWidth={1.6} />} title="Ces mesures n'existent pas" />
+          <EmptyState icon={<IconMeasure size={30} strokeWidth={1.6} />} title={tr("Mesures introuvables", "Measurements not found")} />
         </div>
       </>
     );
@@ -76,16 +77,8 @@ function DetailMesureInner() {
 
   return (
     <>
-      <PageHeader title="Vos mesures" back />
+      <PageHeader title={tr("Vos mesures", "Your measurements")} back />
       <div className="container section">
-        <div className="resultIntro">
-          <h2>Voici vos mesures</h2>
-          <p className="muted">
-            Elles sont pretes a etre remises a votre tailleur. Chaque mesure indique
-            l&apos;endroit du corps ou elle se prend, pour que vous puissiez la verifier au
-            metre ruban si vous le souhaitez.
-          </p>
-        </div>
 
         {model && (
           <div className="card cardFlat resultModel">
@@ -100,7 +93,7 @@ function DetailMesureInner() {
               aria-label={model.name}
             />
             <div>
-              <span className="fieldHint">Modele retenu</span>
+              <span className="fieldHint">{tr("Modèle retenu", "Chosen style")}</span>
               <strong style={{ display: "block" }}>{model.name}</strong>
             </div>
           </div>
@@ -109,11 +102,11 @@ function DetailMesureInner() {
         {groups.length === 0 ? (
           <EmptyState
             icon={<IconMeasure size={30} strokeWidth={1.6} />}
-            title="Aucune mesure exploitable"
-            body="L'analyse n'a rien pu retenir de ces photos. Reprenez-les en veillant a etre entierement dans le cadre."
+            title={tr("Aucune mesure exploitable", "No usable measurements")}
+            body={tr("Reprenez les photos, corps entier dans le cadre.", "Retake the photos, whole body in frame.")}
             action={
               <Link href="/mesures/nouvelle">
-                <Button>Reprendre mes photos</Button>
+                <Button>{tr("Reprendre mes photos", "Retake photos")}</Button>
               </Link>
             }
           />
@@ -129,7 +122,6 @@ function DetailMesureInner() {
                       <span className="measureValue">{formatCm(value)}</span>
                     </div>
                     <p className="measureWhere">{info.where}</p>
-                    <p className="measurePurpose">{info.purpose}</p>
                   </div>
                 ))}
               </div>
@@ -148,10 +140,8 @@ function DetailMesureInner() {
                   <IconPrint size={20} strokeWidth={1.9} />
                 </span>
                 <span className="downloadText">
-                  <strong>Fiche de mesures</strong>
-                  <span className="fieldHint">
-                    Vos douze mesures, expliquées. À remettre au tailleur.
-                  </span>
+                  <strong>{tr("Fiche de mesures", "Measurement sheet")}</strong>
+                  <span className="fieldHint">{tr("À remettre au tailleur.", "For your tailor.")}</span>
                 </span>
               </Link>
 
@@ -160,20 +150,16 @@ function DetailMesureInner() {
                   <IconModels size={20} strokeWidth={1.9} />
                 </span>
                 <span className="downloadText">
-                  <strong>Mes modèles</strong>
+                  <strong>{tr("Mes modèles", "My styles")}</strong>
                   <span className="fieldHint">
                     {selectionCount > 0
-                      ? `${selectionCount} modèle${selectionCount > 1 ? "s" : ""} retenu${selectionCount > 1 ? "s" : ""} : photos à télécharger, fiche d'ajustements si besoin.`
-                      : "Aucun modèle retenu pour l'instant."}
+                      ? tr(`${selectionCount} modèle${selectionCount > 1 ? "s" : ""} retenu${selectionCount > 1 ? "s" : ""}`, `${selectionCount} style${selectionCount > 1 ? "s" : ""} chosen`)
+                      : tr("Aucun pour l'instant.", "None yet.")}
                   </span>
                 </span>
               </Link>
             </div>
 
-            <p className="muted downloadNote">
-              Ce sont deux documents distincts : vos mesures d&apos;un côté, les modèles à
-              coudre de l&apos;autre.
-            </p>
           </>
         )}
       </div>
@@ -183,7 +169,7 @@ function DetailMesureInner() {
 
 export default function DetailMesure() {
   return (
-    <Suspense fallback={<Spinner label="Chargement&hellip;" />}>
+    <Suspense fallback={<Spinner />}>
       <DetailMesureInner />
     </Suspense>
   );

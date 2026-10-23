@@ -14,17 +14,18 @@ import { MEASURE_ORDER, MEASURES } from "@/lib/measurements";
 import { measureError } from "@/lib/validation";
 import { Badge, Button, EmptyState, Input, Spinner } from "@/components/ui";
 import { IconSearch, IconUsers } from "@/components/icons";
+import { locale, tr } from "@/lib/i18n";
 
 export function formatFcfa(value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
-  return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
+  return `${new Intl.NumberFormat(locale()).format(value)} FCFA`;
 }
 
 export function formatDateFR(value: string | null | undefined): string {
   if (!value) return "—";
   const date = new Date(value.length <= 10 ? `${value}T12:00:00` : value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  return date.toLocaleDateString(locale(), { day: "numeric", month: "short", year: "numeric" });
 }
 
 /** « Dans 3 j », « Aujourd'hui », « En retard de 2 j ». */
@@ -33,10 +34,10 @@ export function dueLabel(dueDate: string | null | undefined): string | null {
   const due = new Date(`${dueDate}T23:59:59`);
   if (Number.isNaN(due.getTime())) return null;
   const days = Math.ceil((due.getTime() - Date.now()) / 86400000);
-  if (days < 0) return `En retard de ${-days} j`;
-  if (days === 0) return "Aujourd'hui";
-  if (days === 1) return "Demain";
-  return `Dans ${days} j`;
+  if (days < 0) return tr(`En retard de ${-days} j`, `${-days} d late`);
+  if (days === 0) return tr("Aujourd'hui", "Today");
+  if (days === 1) return tr("Demain", "Tomorrow");
+  return tr(`Dans ${days} j`, `In ${days} d`);
 }
 
 export function Stat({ label, value, alert, href }: { label: string; value: React.ReactNode; alert?: boolean; href?: string }) {
@@ -82,36 +83,38 @@ export function BigAction({
   );
 }
 
-const JOB_STATUS: Record<string, { label: string; tone: "success" | "pending" | "error" | "neutral" }> = {
-  todo: { label: "À faire", tone: "pending" },
-  doing: { label: "En cours", tone: "neutral" },
-  ready: { label: "Prêt", tone: "success" },
-  delivered: { label: "Livré", tone: "success" },
+type Tone = "success" | "pending" | "error" | "neutral";
+
+const JOB_STATUS: Record<string, { fr: string; en: string; tone: Tone }> = {
+  todo: { fr: "À faire", en: "To do", tone: "pending" },
+  doing: { fr: "En cours", en: "In progress", tone: "neutral" },
+  ready: { fr: "Prêt", en: "Ready", tone: "success" },
+  delivered: { fr: "Livré", en: "Delivered", tone: "success" },
 };
 
 export function JobBadge({ status }: { status: string }) {
   const m = JOB_STATUS[status];
-  return <Badge tone={m?.tone ?? "neutral"}>{m?.label ?? status}</Badge>;
+  return <Badge tone={m?.tone ?? "neutral"}>{m ? tr(m.fr, m.en) : status}</Badge>;
 }
 
-const ORDER_STATUS: Record<string, { label: string; tone: "success" | "pending" | "error" | "neutral" }> = {
-  new: { label: "Nouvelle", tone: "pending" },
-  in_progress: { label: "En cours", tone: "neutral" },
-  ready_for_pickup: { label: "Prête", tone: "pending" },
-  finished_delivered: { label: "Livrée", tone: "success" },
-  finished_not_delivered: { label: "Non retirée", tone: "error" },
-  cancelled: { label: "Annulée", tone: "neutral" },
+const ORDER_STATUS: Record<string, { fr: string; en: string; tone: Tone }> = {
+  new: { fr: "Nouvelle", en: "New", tone: "pending" },
+  in_progress: { fr: "En cours", en: "In progress", tone: "neutral" },
+  ready_for_pickup: { fr: "Prête", en: "Ready", tone: "pending" },
+  finished_delivered: { fr: "Livrée", en: "Delivered", tone: "success" },
+  finished_not_delivered: { fr: "Non retirée", en: "Not collected", tone: "error" },
+  cancelled: { fr: "Annulée", en: "Cancelled", tone: "neutral" },
 };
 
 export function OrderBadge({ status }: { status: string }) {
   const m = ORDER_STATUS[status];
-  return <Badge tone={m?.tone ?? "neutral"}>{m?.label ?? status}</Badge>;
+  return <Badge tone={m?.tone ?? "neutral"}>{m ? tr(m.fr, m.en) : status}</Badge>;
 }
 
 export function PatternBadge({ status }: { status: string }) {
-  if (status === "ready") return <Badge tone="success">Prêt</Badge>;
-  if (status === "failed") return <Badge tone="error">Échec</Badge>;
-  return <Badge tone="pending">En cours</Badge>;
+  if (status === "ready") return <Badge tone="success">{tr("Prêt", "Ready")}</Badge>;
+  if (status === "failed") return <Badge tone="error">{tr("Échec", "Failed")}</Badge>;
+  return <Badge tone="pending">{tr("En cours", "In progress")}</Badge>;
 }
 
 /** Recherche + selection d'un client du carnet. */
@@ -134,25 +137,24 @@ export function ClientPicker({ value, onChange }: { value: string; onChange: (id
 
   return (
     <div className="field">
-      <span className="fieldLabel">Client du carnet</span>
+      <span className="fieldLabel">{tr("Client du carnet", "Client")}</span>
       <div className="tSearch">
         <Input
-          placeholder="Rechercher par nom ou téléphone…"
+          placeholder={tr("Nom ou téléphone…", "Name or phone…")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Rechercher un client"
+          aria-label={tr("Rechercher un client", "Search a client")}
         />
       </div>
       {clients === null ? (
-        <Spinner label="Chargement…" />
+        <Spinner />
       ) : clients.length === 0 ? (
         <EmptyState
           icon={<IconUsers size={26} strokeWidth={1.6} />}
-          title="Aucun client"
-          body={query ? "Aucun client ne correspond. Ajoutez-le depuis le carnet." : "Ajoutez votre premier client depuis le carnet."}
+          title={tr("Aucun client", "No clients")}
           action={
             <Link href="/tailleur/clients">
-              <Button variant="secondary">Ouvrir le carnet</Button>
+              <Button variant="secondary">{tr("Ouvrir le carnet", "Open client list")}</Button>
             </Link>
           }
         />
@@ -191,7 +193,7 @@ export function ClientPicker({ value, onChange }: { value: string; onChange: (id
 export function ManualMeasureForm({
   onSubmit,
   busy,
-  submitLabel = "Enregistrer",
+  submitLabel,
 }: {
   onSubmit: (data: Record<string, number>, heightCm: number) => void | Promise<void>;
   busy?: boolean;
@@ -216,7 +218,7 @@ export function ManualMeasureForm({
   }
   const count = Object.keys(parsed).length;
   const heightNum = Number(height.replace(",", "."));
-  const heightErr = height.trim() && !(heightNum >= 100 && heightNum <= 230) ? "Entre 100 et 230 cm." : null;
+  const heightErr = height.trim() && !(heightNum >= 100 && heightNum <= 230) ? tr("Entre 100 et 230 cm.", "Between 100 and 230 cm.") : null;
   const valid = count >= 1 && !heightErr && height.trim() !== "" && Object.keys(errors).length === 0;
 
   return (
@@ -228,7 +230,7 @@ export function ManualMeasureForm({
       noValidate
     >
       <div className="field">
-        <span className="fieldLabel">Taille du client (cm)</span>
+        <span className="fieldLabel">{tr("Taille du client (cm)", "Client's height (cm)")}</span>
         <Input
           type="number"
           inputMode="numeric"
@@ -261,10 +263,12 @@ export function ManualMeasureForm({
         ))}
       </div>
       <p className="muted">
-        {count === 0 ? "Saisissez au moins une mesure." : `${count} mesure${count > 1 ? "s" : ""} saisie${count > 1 ? "s" : ""}.`}
+        {count === 0
+          ? tr("Au moins une mesure.", "At least one measurement.")
+          : tr(`${count} mesure${count > 1 ? "s" : ""}`, `${count} measurement${count > 1 ? "s" : ""}`)}
       </p>
       <Button type="submit" block disabled={!valid || busy}>
-        {busy ? "Enregistrement…" : submitLabel}
+        {busy ? tr("Enregistrement…", "Saving…") : submitLabel ?? tr("Enregistrer", "Save")}
       </Button>
     </form>
   );

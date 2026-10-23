@@ -1,3 +1,5 @@
+import { tr } from "../i18n";
+
 const ACCESS_KEY = "sm_access_token";
 const REFRESH_KEY = "sm_refresh_token";
 
@@ -202,7 +204,7 @@ async function rawRequest(
     setTokens(null, null);
     clearRefreshTimer();
     onAuthFailureCallback?.();
-    throw new ApiError(401, "Session expirée. Veuillez vous reconnecter.");
+    throw new ApiError(401, tr("Session expirée. Reconnectez-vous.", "Session expired. Please sign in again."));
   }
 
   if (!res.ok) {

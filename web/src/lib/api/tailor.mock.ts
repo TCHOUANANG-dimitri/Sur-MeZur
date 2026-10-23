@@ -446,14 +446,6 @@ export const MockTailorApi = {
     await wait();
     throw new Error("Indisponible en simulation.");
   },
-  orderChat: async () => {
-    await wait();
-    return [];
-  },
-  sendOrderChat: async () => {
-    await wait();
-    throw new Error("Indisponible en simulation.");
-  },
   orderClient: async () => {
     await wait();
     throw new Error("Indisponible en simulation.");

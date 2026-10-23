@@ -8,6 +8,7 @@
  * avec le numero de la demande.
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useState } from "react";
 import { PublicApi } from "@/lib/api/endpoints";
@@ -18,12 +19,12 @@ import { COUNTRIES, splitPhone } from "@/lib/countries";
 import { emailError, phoneError } from "@/lib/validation";
 
 const CATEGORIES = [
-  { code: "question", name: "Question" },
-  { code: "probleme", name: "Problème avec le site" },
-  { code: "mesures", name: "Mesures ou photos" },
-  { code: "compte", name: "Mon compte" },
-  { code: "suggestion", name: "Suggestion" },
-  { code: "autre", name: "Autre" },
+  { code: "question", fr: "Question", en: "Question" },
+  { code: "probleme", fr: "Problème avec le site", en: "Problem with the site" },
+  { code: "mesures", fr: "Mesures ou photos", en: "Measurements or photos" },
+  { code: "compte", fr: "Mon compte", en: "My account" },
+  { code: "suggestion", fr: "Suggestion", en: "Suggestion" },
+  { code: "autre", fr: "Autre", en: "Other" },
 ];
 
 export default function Contact() {
@@ -62,7 +63,7 @@ export default function Contact() {
       });
       setTicketNumber(res.number);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Envoi impossible. Réessayez.");
+      setError(err instanceof Error ? err.message : tr("Envoi impossible. Réessayez.", "Could not send. Try again."));
     } finally {
       setBusy(false);
     }
@@ -70,32 +71,30 @@ export default function Contact() {
 
   return (
     <main className="containerNarrow section">
-      <h1>Contact</h1>
-      <p className="muted">Une question, un problème ? Écrivez-nous, on vous répond.</p>
+      <h1>{tr("Contact", "Contact")}</h1>
       <ErrorBanner message={error} />
       {ticketNumber !== null ? (
         <>
           <InfoBanner>
             <span>
-              Message envoyé. Votre demande porte le <strong>n° {ticketNumber}</strong> :
-              gardez-le pour le suivi.
+              {tr("Message envoyé. Demande", "Message sent. Request")} <strong>n° {ticketNumber}</strong>.
             </span>
           </InfoBanner>
           <p>
-            <Link href="/" className="authLink">Retour à l&apos;accueil</Link>
+            <Link href="/" className="authLink">{tr("Retour à l'accueil", "Back to home")}</Link>
           </p>
         </>
       ) : (
         <form onSubmit={submit} noValidate>
           <label className="field">
-            <span className="fieldLabel">Votre nom</span>
+            <span className="fieldLabel">{tr("Votre nom", "Your name")}</span>
             <input className="input" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
           </label>
           {!user && (
             <>
-              <PhoneField label="Téléphone" value={phone} onChange={setPhone} error={phoneErr} />
+              <PhoneField label={tr("Téléphone", "Phone")} value={phone} onChange={setPhone} error={phoneErr} />
               <label className="field">
-                <span className="fieldLabel">E-mail <span className="fieldOptional">(si pas de téléphone)</span></span>
+                <span className="fieldLabel">E-mail <span className="fieldOptional">{tr("(si pas de téléphone)", "(if no phone)")}</span></span>
                 <input
                   className="input"
                   type="email"
@@ -109,25 +108,25 @@ export default function Contact() {
               </label>
               {!reachable && !phoneErr && !emailErr && (
                 <p className="fieldHint" style={{ marginTop: -8 }}>
-                  Laissez un numéro ou une adresse e-mail pour recevoir la réponse.
+                  {tr("Un numéro ou un e-mail pour la réponse.", "A phone or e-mail for the reply.")}
                 </p>
               )}
             </>
           )}
           <label className="field">
-            <span className="fieldLabel">Catégorie</span>
+            <span className="fieldLabel">{tr("Catégorie", "Category")}</span>
             <select className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
               {CATEGORIES.map((c) => (
-                <option key={c.code} value={c.code}>{c.name}</option>
+                <option key={c.code} value={c.code}>{tr(c.fr, c.en)}</option>
               ))}
             </select>
           </label>
           <label className="field">
-            <span className="fieldLabel">Objet</span>
+            <span className="fieldLabel">{tr("Objet", "Subject")}</span>
             <input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={120} />
           </label>
           <label className="field">
-            <span className="fieldLabel">Message</span>
+            <span className="fieldLabel">{tr("Message", "Message")}</span>
             <textarea
               className="input"
               rows={5}
@@ -137,7 +136,7 @@ export default function Contact() {
             />
           </label>
           <Button type="submit" block disabled={!canSubmit}>
-            {busy ? "Envoi…" : "Envoyer"}
+            {busy ? tr("Envoi…", "Sending…") : tr("Envoyer", "Send")}
           </Button>
         </form>
       )}

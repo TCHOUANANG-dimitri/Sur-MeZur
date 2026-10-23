@@ -23,6 +23,7 @@ import { getSelection } from "@/lib/selection";
 import { useAuth } from "@/components/AuthProvider";
 import { Button, EmptyState, PageHeader, Spinner } from "@/components/ui";
 import { IconPrint } from "@/components/icons";
+import { locale, tr } from "@/lib/i18n";
 
 function FicheInner() {
   const { id } = useParams<{ id: string }>();
@@ -54,12 +55,12 @@ function FicheInner() {
     );
   }, [modeleId]);
 
-  if (measurement === undefined) return <Spinner label="Preparation de la fiche&hellip;" />;
+  if (measurement === undefined) return <Spinner />;
   if (measurement === null) {
     return (
       <>
-        <PageHeader title="Fiche" back />
-        <EmptyState icon={<IconPrint size={30} strokeWidth={1.6} />} title="Fiche indisponible" />
+        <PageHeader title={tr("Fiche", "Sheet")} back />
+        <EmptyState icon={<IconPrint size={30} strokeWidth={1.6} />} title={tr("Fiche indisponible", "Sheet unavailable")} />
       </>
     );
   }
@@ -68,7 +69,7 @@ function FicheInner() {
   // L'API ne renvoie pas la date de la prise de mesure : la fiche date donc
   // son EDITION, ce qui est exact et utile a un tailleur, plutot que
   // d'afficher une date de prise que nous n'avons pas.
-  const editee = new Date().toLocaleDateString("fr-FR", {
+  const editee = new Date().toLocaleDateString(locale(), {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -76,35 +77,25 @@ function FicheInner() {
 
   return (
     <>
-      <PageHeader title="Fiche de mesures" back />
+      <PageHeader title={tr("Fiche de mesures", "Measurement sheet")} back />
 
       <div className="container section">
         <div className="ficheSwitch no-print">
           {models.length > 0 ? (
-            <span>
-              {models.length} modèle{models.length > 1 ? "s" : ""} retenu
-              {models.length > 1 ? "s" : ""}.{" "}
-              <Link href={`/mesures/${measurement.id}/modeles`}>
-                Voir mes modèles
-              </Link>{" "}
-              — leurs photos et, si besoin, une fiche d&apos;ajustements par modèle.
-            </span>
+            <Link href={`/mesures/${measurement.id}/modeles`}>
+              {tr(`Voir mes modèles (${models.length})`, `See my styles (${models.length})`)}
+            </Link>
           ) : (
-            <span>
-              Aucun modèle retenu.{" "}
-              <Link href="/modeles">Choisissez-en un ou plusieurs</Link> pour obtenir aussi
-              leur fiche.
-            </span>
+            <Link href="/modeles">{tr("Choisir un modèle", "Choose a style")}</Link>
           )}
         </div>
 
         <div className="ficheActions no-print">
           <Button block onClick={() => window.print()}>
-            Enregistrer en PDF
+            {tr("Enregistrer en PDF", "Save as PDF")}
           </Button>
           <p className="fieldHint" style={{ textAlign: "center" }}>
-            Dans la fenetre qui s&apos;ouvre, choisissez &laquo;&nbsp;Enregistrer au format
-            PDF&nbsp;&raquo; comme destination.
+            {tr("Destination : « Enregistrer au format PDF ».", "Destination: “Save as PDF”.")}
           </p>
         </div>
 
@@ -112,23 +103,23 @@ function FicheInner() {
           <header className="ficheHeader">
             <div>
               <span className="ficheBrand">Sur-MeZur</span>
-              <h1 className="ficheTitle">Fiche de mesures</h1>
+              <h1 className="ficheTitle">{tr("Fiche de mesures", "Measurement sheet")}</h1>
             </div>
             <div className="ficheMeta">
               {user?.full_name && <div><strong>{user.full_name}</strong></div>}
-              <div>Fiche editee le {editee}</div>
-              <div>Prise de mesures n&deg;{measurement.version}</div>
+              <div>{tr(`Éditée le ${editee}`, `Issued ${editee}`)}</div>
+              <div>{tr("Mesures n°", "Measurements #")}{measurement.version}</div>
             </div>
           </header>
 
           <section className="ficheContext">
             <div>
-              <span className="ficheLabel">Taille</span>
+              <span className="ficheLabel">{tr("Taille", "Height")}</span>
               <span className="ficheValue">{measurement.height_cm} cm</span>
             </div>
             {measurement.weight_kg != null && (
               <div>
-                <span className="ficheLabel">Poids</span>
+                <span className="ficheLabel">{tr("Poids", "Weight")}</span>
                 <span className="ficheValue">{measurement.weight_kg} kg</span>
               </div>
             )}
@@ -154,12 +145,11 @@ function FicheInner() {
           ))}
 
           {groups.length === 0 && (
-            <p className="muted">Aucune mesure n&apos;est encore disponible pour cette prise.</p>
+            <p className="muted">{tr("Aucune mesure disponible.", "No measurements available.")}</p>
           )}
 
           <footer className="ficheFooter">
-            Mesures obtenues a partir de deux photographies. A verifier au metre ruban avant
-            la coupe si le vetement est ajuste.
+            {tr("Mesures prises par photo : à vérifier au mètre pour un vêtement ajusté.", "Measured from photos: check with a tape for fitted garments.")}
           </footer>
         </article>
       </div>
@@ -169,7 +159,7 @@ function FicheInner() {
 
 export default function Fiche() {
   return (
-    <Suspense fallback={<Spinner label="Chargement&hellip;" />}>
+    <Suspense fallback={<Spinner />}>
       <FicheInner />
     </Suspense>
   );

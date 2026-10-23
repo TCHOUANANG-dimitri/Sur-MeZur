@@ -6,9 +6,10 @@
  * c'est rappele sur chaque ecran.
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { TailorApi } from "@/lib/api/tailor";
+import { TailorApi, garmentLabel } from "@/lib/api/tailor";
 import type { TailorPattern } from "@/lib/api/tailor";
 import { Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { IconTailor } from "@/components/icons";
@@ -22,42 +23,41 @@ export default function Patrons() {
     TailorApi.patterns()
       .then(setPatterns)
       .catch((e) => {
-        setError(e instanceof Error ? e.message : "Chargement impossible.");
+        setError(e instanceof Error ? e.message : tr("Chargement impossible.", "Could not load."));
         setPatterns([]);
       });
   }, []);
 
   async function remove(id: string) {
-    if (!window.confirm("Supprimer ce patron ?")) return;
+    if (!window.confirm(tr("Supprimer ce patron ?", "Delete this pattern?"))) return;
     try {
       await TailorApi.deletePattern(id);
       setPatterns((list) => list?.filter((p) => p.id !== id) ?? null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Suppression impossible.");
+      setError(e instanceof Error ? e.message : tr("Suppression impossible.", "Could not delete."));
     }
   }
 
   return (
     <div className="tPage">
       <PageHeader
-        title="Patrons"
+        title={tr("Patrons", "Patterns")}
         action={
           <Link href="/tailleur/patrons/nouveau" className="btn btnSecondary">
-            + Nouveau
+            {tr("+ Nouveau", "+ New")}
           </Link>
         }
       />
       <ErrorBanner message={error} />
       {patterns === null ? (
-        <Spinner label="Chargement…" />
+        <Spinner />
       ) : patterns.length === 0 ? (
         <EmptyState
           icon={<IconTailor size={30} strokeWidth={1.6} />}
-          title="Aucun patron"
-          body="Photographiez un modèle : recevez les pièces du patron."
+          title={tr("Aucun patron", "No patterns")}
           action={
             <Link href="/tailleur/patrons/nouveau">
-              <Button>Créer un patron</Button>
+              <Button>{tr("Créer un patron", "Create a pattern")}</Button>
             </Link>
           }
         />
@@ -66,12 +66,12 @@ export default function Patrons() {
           {patterns.map((p) => (
             <li key={p.id} className="tRow">
               <Link href={`/tailleur/patrons/${p.id}`} className="tRowMain" style={{ textDecoration: "none", color: "inherit" }}>
-                <span className="tRowTitle">{p.garment_type}</span>
+                <span className="tRowTitle">{p.base_label ?? garmentLabel(p.garment_type)}</span>
                 <br />
                 <span className="tRowSub">{formatDateFR(p.created_at)}</span>
               </Link>
               <PatternBadge status={p.status} />
-              <Button variant="ghost" onClick={() => void remove(p.id)} aria-label={`Supprimer le patron ${p.garment_type}`}>
+              <Button variant="ghost" onClick={() => void remove(p.id)} aria-label={tr("Supprimer", "Delete")}>
                 ✕
               </Button>
             </li>

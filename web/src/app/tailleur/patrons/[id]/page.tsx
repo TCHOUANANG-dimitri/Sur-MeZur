@@ -12,25 +12,24 @@
  * que les mesures, ou des pages blanches.
  */
 
-const PDFS: { type: string; label: string; aide: string }[] = [
-  { type: "tracage", label: "Fiche de traçage", aide: "une page par pièce : cotes et points à reporter à la craie" },
-  { type: "a4", label: "Patron A4 à assembler", aide: "taille réelle, à imprimer à 100 % et à coller" },
-  { type: "plein", label: "Patron pleine taille", aide: "une seule grande page, pour un traceur ou une imprimerie" },
+const PDFS: { type: string; label: [string, string]; aide: [string, string] }[] = [
+  { type: "tracage", label: ["Fiche de traçage", "Tracing sheet"], aide: ["une page par pièce, avec les cotes", "one page per piece, with measurements"] },
+  { type: "a4", label: ["Patron A4 à assembler", "A4 pattern to assemble"], aide: ["taille réelle, imprimer à 100 %", "full size, print at 100%"] },
+  { type: "plein", label: ["Patron pleine taille", "Full-size pattern"], aide: ["une grande page (traceur, imprimerie)", "one large page (plotter, print shop)"] },
 ];
 
+import { langue, tr } from "@/lib/i18n";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { TailorApi } from "@/lib/api/tailor";
+import { TailorApi, garmentLabel } from "@/lib/api/tailor";
 import type { TailorPattern } from "@/lib/api/tailor";
 import { Button, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { PatternBadge } from "../../_components";
 
-const LIBELLES_GARMENT: Record<string, string> = {
-  jupe: "Jupe", robe: "Robe", kaba: "Kaba", haut: "Haut / blouse", tunique: "Tunique homme",
-  pantalon: "Pantalon", chemise: "Chemise", boubou: "Boubou", agbada: "Agbada",
+const cm = (v: number) => {
+  const s = v.toFixed(1);
+  return `${langue() === "en" ? s : s.replace(".", ",")} cm`;
 };
-
-const cm = (v: number) => `${v.toFixed(1).replace(".", ",")} cm`;
 
 export default function PatronDetail() {
   const { id } = useParams<{ id: string }>();
@@ -61,7 +60,7 @@ export default function PatronDetail() {
           }, 2000);
         }
       })
-      .catch((e) => alive && setError(e instanceof Error ? e.message : "Chargement impossible."));
+      .catch((e) => alive && setError(e instanceof Error ? e.message : tr("Chargement impossible.", "Could not load.")));
     return () => {
       alive = false;
       if (timer) clearInterval(timer);
@@ -81,7 +80,7 @@ export default function PatronDetail() {
         revoke = url;
         setSvgUrl(url);
       })
-      .catch(() => alive && setError("Patron indisponible."));
+      .catch(() => alive && setError(tr("Patron indisponible.", "Pattern unavailable.")));
     return () => {
       alive = false;
       if (revoke) URL.revokeObjectURL(revoke);
@@ -94,59 +93,59 @@ export default function PatronDetail() {
     try {
       await TailorApi.downloadPatternPdf(id, type);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Téléchargement impossible.");
+      setError(e instanceof Error ? e.message : tr("Téléchargement impossible.", "Could not download."));
     } finally {
       setTelechargement("");
     }
   }
 
   async function remove() {
-    if (!id || !window.confirm("Supprimer ce patron ?")) return;
+    if (!id || !window.confirm(tr("Supprimer ce patron ?", "Delete this pattern?"))) return;
     try {
       await TailorApi.deletePattern(id);
       router.replace("/tailleur/patrons");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Suppression impossible.");
+      setError(e instanceof Error ? e.message : tr("Suppression impossible.", "Could not delete."));
     }
   }
 
   if (!pattern) {
     return (
       <>
-        <PageHeader title="Patron" back />
-        {error ? <ErrorBanner message={error} /> : <Spinner label="Chargement…" />}
+        <PageHeader title={tr("Patron", "Pattern")} back />
+        {error ? <ErrorBanner message={error} /> : <Spinner />}
       </>
     );
   }
 
-  const nomVetement = pattern.base_label ?? LIBELLES_GARMENT[pattern.garment_type] ?? pattern.garment_type;
+  const nomVetement = pattern.base_label ?? garmentLabel(pattern.garment_type);
 
   return (
     <div className="tPage">
-      <PageHeader title={`Patron — ${nomVetement}`} back />
+      <PageHeader title={`${tr("Patron", "Pattern")} — ${nomVetement}`} back />
       <ErrorBanner message={error} />
       <p>
         <PatternBadge status={pattern.status} />
       </p>
 
       {pattern.status === "pending" && (
-        <Spinner label="Génération en cours… Le patron s'affichera ici." />
+        <Spinner label={tr("Génération en cours…", "Generating…")} />
       )}
       {pattern.status === "failed" && (
-        <p className="muted">{pattern.error_message || "La génération a échoué."}</p>
+        <p className="muted">{pattern.error_message || tr("La génération a échoué.", "Generation failed.")}</p>
       )}
 
       {pattern.status === "ready" && (
         <>
           {pattern.pdf_types && pattern.pdf_types.length > 0 && (
-            <section aria-label="Télécharger le patron" className="no-print" style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+            <section aria-label={tr("Télécharger le patron", "Download the pattern")} className="no-print" style={{ display: "grid", gap: 8, marginBottom: 12 }}>
               {PDFS.filter((d) => pattern.pdf_types?.includes(d.type)).map((d) => (
                 <div key={d.type}>
                   <Button variant={d.type === "tracage" ? "primary" : "secondary"} block
                           onClick={() => telecharger(d.type)} disabled={telechargement === d.type}>
-                    {telechargement === d.type ? "Téléchargement…" : `${d.label} (PDF)`}
+                    {telechargement === d.type ? tr("Téléchargement…", "Downloading…") : `${tr(...d.label)} (PDF)`}
                   </Button>
-                  <span className="muted" style={{ fontSize: 13 }}>{d.aide}</span>
+                  <span className="muted" style={{ fontSize: 13 }}>{tr(...d.aide)}</span>
                 </div>
               ))}
             </section>
@@ -156,29 +155,29 @@ export default function PatronDetail() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={svgUrl} alt={`Patron ${nomVetement}`} />
             ) : (
-              <Spinner label="Chargement du patron…" />
+              <Spinner />
             )}
           </div>
           <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-            Aperçu à l&apos;écran : pour couper, utilisez les PDF. Pincez l&apos;image pour l&apos;agrandir.
+            {tr("Aperçu : pour couper, utilisez les PDF.", "Preview: use the PDFs to cut.")}
           </p>
           {pattern.pieces && pattern.pieces.length > 0 && (
-            <section aria-label="Pièces du patron">
-              <h2 style={{ fontSize: 18 }}>Pièces ({pattern.pieces.length})</h2>
+            <section aria-label={tr("Pièces du patron", "Pattern pieces")}>
+              <h2 style={{ fontSize: 18 }}>{tr("Pièces", "Pieces")} ({pattern.pieces.length})</h2>
               <ul>
                 {(pattern.piecesDetail ?? []).map((piece) => (
                   <li key={piece.nom}>
                     <strong>{piece.nom}</strong>
-                    {piece.consigne ? ` — ${piece.consigne}` : piece.quantite > 1 ? ` — couper ${piece.quantite}` : ""}
-                    {piece.largeur_cm > 0 && ` — ${cm(piece.largeur_cm)} × ${cm(piece.hauteur_cm)} (fini)`}
+                    {piece.consigne ? ` — ${piece.consigne}` : piece.quantite > 1 ? ` — ${tr("couper", "cut")} ${piece.quantite}` : ""}
+                    {piece.largeur_cm > 0 && ` — ${cm(piece.largeur_cm)} × ${cm(piece.hauteur_cm)}`}
                   </li>
                 ))}
               </ul>
             </section>
           )}
           {pattern.controles && pattern.controles.some((c) => c.statut === "a_verifier" || c.statut === "echec") && (
-            <section aria-label="Points à vérifier">
-              <h2 style={{ fontSize: 18 }}>À vérifier</h2>
+            <section aria-label={tr("À vérifier", "To check")}>
+              <h2 style={{ fontSize: 18 }}>{tr("À vérifier", "To check")}</h2>
               <ul>
                 {pattern.controles.filter((c) => c.statut === "a_verifier" || c.statut === "echec").map((c) => (
                   <li key={c.controle}>{c.controle} : {c.detail}</li>
@@ -187,8 +186,8 @@ export default function PatronDetail() {
             </section>
           )}
           {((pattern.remarques?.length ?? 0) > 0 || pattern.controles?.some((c) => c.statut === "info")) && (
-            <section aria-label="À savoir">
-              <h2 style={{ fontSize: 18 }}>À savoir</h2>
+            <section aria-label={tr("À savoir", "Notes")}>
+              <h2 style={{ fontSize: 18 }}>{tr("À savoir", "Notes")}</h2>
               <ul>
                 {pattern.controles?.filter((c) => c.statut === "info").map((c) => (
                   <li key={c.controle}>{c.controle} : {c.detail}</li>
@@ -198,7 +197,7 @@ export default function PatronDetail() {
             </section>
           )}
           <div>
-            <Button variant="ghost" onClick={remove}>Supprimer ce patron</Button>
+            <Button variant="ghost" onClick={remove}>{tr("Supprimer ce patron", "Delete pattern")}</Button>
           </div>
         </>
       )}

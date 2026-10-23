@@ -7,6 +7,7 @@ import type { Measurement } from "@/lib/api/types";
 import { presentableMeasures } from "@/lib/measurements";
 import { Badge, Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { IconMeasure } from "@/components/icons";
+import { tr } from "@/lib/i18n";
 
 export default function MesMesures() {
   const [list, setList] = useState<Measurement[] | null>(null);
@@ -16,27 +17,27 @@ export default function MesMesures() {
     MeasurementsApi.list()
       .then(setList)
       .catch((e) => {
-        setError(e instanceof Error ? e.message : "Impossible de charger vos mesures.");
+        setError(e instanceof Error ? e.message : tr("Chargement impossible.", "Could not load."));
         setList([]);
       });
   }, []);
 
   return (
     <>
-      <PageHeader title="Mes mesures" />
+      <PageHeader title={tr("Mes mesures", "My measurements")} />
       <div className="container section">
         <ErrorBanner message={error} />
 
         {list === null ? (
-          <Spinner label="Chargement&hellip;" />
+          <Spinner />
         ) : list.length === 0 ? (
           <EmptyState
             icon={<IconMeasure size={30} strokeWidth={1.6} />}
-            title="Aucune mesure pour l'instant"
-            body="Prenez deux photos et obtenez vos douze mesures de couture en moins d'une minute."
+            title={tr("Aucune mesure", "No measurements yet")}
+            body={tr("Deux photos suffisent.", "Two photos are enough.")}
             action={
               <Link href="/mesures/nouvelle">
-                <Button>Prendre mes mesures</Button>
+                <Button>{tr("Prendre mes mesures", "Take my measurements")}</Button>
               </Link>
             }
           />
@@ -52,13 +53,13 @@ export default function MesMesures() {
                           (voir MeasurementOut cote backend) : on identifie donc
                           la prise par son numero plutot que d'afficher une date
                           inventee. */}
-                      <strong>Prise de mesures n&deg;{m.version}</strong>
+                      <strong>{tr("Mesures n°", "Measurements #")}{m.version}</strong>
                       <div className="fieldHint">
-                        {count} mesure{count > 1 ? "s" : ""} &middot; {m.height_cm} cm
+                        {count} {tr(count > 1 ? "mesures" : "mesure", count > 1 ? "measurements" : "measurement")} &middot; {m.height_cm} cm
                         {m.weight_kg != null ? ` · ${m.weight_kg} kg` : ""}
                       </div>
                     </div>
-                    {m.is_active && <Badge tone="success">Actuelles</Badge>}
+                    {m.is_active && <Badge tone="success">{tr("Actuelles", "Current")}</Badge>}
                   </Link>
                 );
               })}
@@ -66,7 +67,7 @@ export default function MesMesures() {
 
             <div className="actionBar">
               <Link href="/mesures/nouvelle" style={{ display: "contents" }}>
-                <Button block>Nouvelle prise de mesures</Button>
+                <Button block>{tr("Nouvelles mesures", "New measurements")}</Button>
               </Link>
             </div>
           </>

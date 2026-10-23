@@ -3,7 +3,6 @@ import type {
   Accessory,
   Avatar,
   Category,
-  ChatMessage,
   ClientProfile,
   Delivery,
   Fabric,
@@ -252,10 +251,6 @@ export const OrdersApi = {
     api.post<Modification>(`/modifications/${modificationId}/accept`),
   refuseModification: (modificationId: string) =>
     api.post<Modification>(`/modifications/${modificationId}/refuse`),
-
-  chat: (orderId: string) => api.get<ChatMessage[]>(`/orders/${orderId}/chat`),
-  sendChat: (orderId: string, body: string) =>
-    api.post<ChatMessage>(`/orders/${orderId}/chat`, { body }),
 
   pattern: (orderId: string) => api.get<Pattern>(`/orders/${orderId}/pattern`),
   review: (orderId: string, body: { stars: number; comment?: string }) =>

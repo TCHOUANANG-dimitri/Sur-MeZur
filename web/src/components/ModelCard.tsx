@@ -23,6 +23,7 @@ import { CatalogApi } from "@/lib/api/endpoints";
 import { cacheModels, rememberSuite } from "@/lib/modelSuite";
 import type { GarmentModel } from "@/lib/api/types";
 import { IconCheck, IconHeart } from "./icons";
+import { tr } from "@/lib/i18n";
 
 export function ModelCard({
   model,
@@ -88,7 +89,7 @@ export function ModelCard({
         aria-label={model.name}
       >
         {selected && (
-          <span className="modelCardBadge" aria-label="Dans votre sélection">
+          <span className="modelCardBadge" aria-label={tr("Dans votre sélection", "In your selection")}>
             <IconCheck size={14} strokeWidth={3} aria-hidden />
           </span>
         )}
@@ -98,7 +99,7 @@ export function ModelCard({
             className={`modelCardSave ${saved ? "modelCardSaveOn" : ""}`}
             onClick={toggle}
             aria-pressed={saved}
-            aria-label={saved ? `Retirer ${model.name} des modèles enregistrés` : `Enregistrer ${model.name}`}
+            aria-label={saved ? tr(`Retirer ${model.name} des enregistrés`, `Remove ${model.name} from saved`) : tr(`Enregistrer ${model.name}`, `Save ${model.name}`)}
           >
             <IconHeart size={18} strokeWidth={2.2} aria-hidden />
           </button>

@@ -24,6 +24,7 @@ import { photoFileName, watermarkedPhoto } from "@/lib/watermark";
 import { useAuth } from "@/components/AuthProvider";
 import { Button, EmptyState, ErrorBanner, PageHeader, Spinner, Textarea } from "@/components/ui";
 import { IconDownload, IconEdit, IconModels, IconPrint } from "@/components/icons";
+import { locale, tr } from "@/lib/i18n";
 
 /*
  * Ajustements POUR CHAQUE MODELE (preferences, tissu, finitions). Ils vivent
@@ -138,7 +139,7 @@ export default function FicheModeles() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 30_000);
     } catch {
-      setError("La photo n'a pas pu être préparée. Réessayez dans un instant.");
+      setError(tr("Photo indisponible. Réessayez.", "Photo unavailable. Try again."));
     } finally {
       setBusy(null);
     }
@@ -160,21 +161,20 @@ export default function FicheModeles() {
   }
 
   if (measurement === undefined || models === null) {
-    return <Spinner label="Préparation…" />;
+    return <Spinner />;
   }
 
   if (!models.length) {
     return (
       <>
-        <PageHeader title="Mes modèles" back />
+        <PageHeader title={tr("Mes modèles", "My styles")} back />
         <div className="container section">
           <EmptyState
             icon={<IconModels size={30} strokeWidth={1.6} />}
-            title="Aucun modèle retenu"
-            body="Ajoutez un ou plusieurs modèles à votre sélection depuis le catalogue, puis revenez ici."
+            title={tr("Aucun modèle retenu", "No styles chosen")}
             action={
               <Link href="/modeles">
-                <Button>Parcourir les modèles</Button>
+                <Button>{tr("Parcourir les modèles", "Browse styles")}</Button>
               </Link>
             }
           />
@@ -183,7 +183,7 @@ export default function FicheModeles() {
     );
   }
 
-  const editee = new Date().toLocaleDateString("fr-FR", {
+  const editee = new Date().toLocaleDateString(locale(), {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -196,29 +196,21 @@ export default function FicheModeles() {
           <strong>{user.full_name}</strong>
         </div>
       )}
-      <div>Fiche éditée le {editee}</div>
-      {measurement && <div>Prise de mesures n&deg;{measurement.version}</div>}
+      <div>{tr(`Éditée le ${editee}`, `Issued ${editee}`)}</div>
+      {measurement && <div>{tr("Mesures n°", "Measurements #")}{measurement.version}</div>}
     </div>
   );
 
   return (
     <>
-      <PageHeader title="Mes modèles" back />
+      <PageHeader title={tr("Mes modèles", "My styles")} back />
 
       <div className="container section no-print">
-        <div className="ficheSwitch">
-          <span>
-            Téléchargez la photo de chaque modèle pour la montrer au tailleur. Des précisions sur la
-            confection ? Ajoutez vos ajustements : vous obtiendrez une fiche pour ce modèle.
-            {measurement && (
-              <>
-                {" "}
-                Vos mesures :{" "}
-                <Link href={`/mesures/${measurement.id}/fiche`}>fiche de mesures</Link>.
-              </>
-            )}
-          </span>
-        </div>
+        {measurement && (
+          <div className="ficheSwitch">
+            <Link href={`/mesures/${measurement.id}/fiche`}>{tr("Ma fiche de mesures", "My measurement sheet")}</Link>
+          </div>
+        )}
 
         <ErrorBanner message={error} />
 
@@ -243,14 +235,14 @@ export default function FicheModeles() {
                     <Button
                       onClick={() => downloadPhoto(m)}
                       disabled={!photo || busy !== null}
-                      title={photo ? undefined : "Ce modèle n'a pas de photo."}
+                      title={photo ? undefined : tr("Pas de photo.", "No photo.")}
                     >
                       <IconDownload size={17} aria-hidden />
-                      {busy === `photo-${m.id}` ? "Préparation…" : "Télécharger la photo"}
+                      {busy === `photo-${m.id}` ? tr("Préparation…", "Preparing…") : tr("Télécharger la photo", "Download photo")}
                     </Button>
                     {!open && (
                       <Button variant="ghost" onClick={() => setEditing((e) => ({ ...e, [m.id]: true }))}>
-                        <IconEdit size={17} aria-hidden /> Préciser des ajustements
+                        <IconEdit size={17} aria-hidden /> {tr("Ajouter des ajustements", "Add adjustments")}
                       </Button>
                     )}
                   </div>
@@ -258,12 +250,12 @@ export default function FicheModeles() {
                   {open && (
                     <div className="modelSheetNotes">
                       <label className="fieldLabel" htmlFor={`note-${m.id}`}>
-                        Vos ajustements
+                        {tr("Vos ajustements", "Your adjustments")}
                       </label>
                       <Textarea
                         id={`note-${m.id}`}
                         rows={4}
-                        placeholder="Ex. : manches plus courtes, ourlet à 3 cm, doublure, boutons dorés…"
+                        placeholder={tr("Ex. manches plus courtes, doublure…", "E.g. shorter sleeves, lining…")}
                         value={note}
                         onChange={(e) => setModelNote(m.id, e.target.value)}
                       />
@@ -273,12 +265,8 @@ export default function FicheModeles() {
                         disabled={!note.trim() || busy !== null}
                       >
                         <IconPrint size={17} aria-hidden />
-                        {busy === `fiche-${m.id}` ? "Préparation…" : "Télécharger la fiche (PDF)"}
+                        {busy === `fiche-${m.id}` ? tr("Préparation…", "Preparing…") : tr("Télécharger la fiche (PDF)", "Download sheet (PDF)")}
                       </Button>
-                      <p className="fieldHint">
-                        Page 1 : le modèle en grand. Page 2 : vos ajustements. Dans la fenêtre qui
-                        s&apos;ouvre, choisissez «&nbsp;Enregistrer au format PDF&nbsp;».
-                      </p>
                     </div>
                   )}
                 </div>
@@ -294,7 +282,7 @@ export default function FicheModeles() {
             <header className="ficheHeader">
               <div>
                 <span className="ficheBrand">Sur-MeZur</span>
-                <h1 className="ficheTitle">Modèle à coudre</h1>
+                <h1 className="ficheTitle">{tr("Modèle à coudre", "Style to sew")}</h1>
               </div>
               {meta}
             </header>
@@ -323,7 +311,7 @@ export default function FicheModeles() {
             <header className="ficheHeader">
               <div>
                 <span className="ficheBrand">Sur-MeZur</span>
-                <h1 className="ficheTitle">Ajustements</h1>
+                <h1 className="ficheTitle">{tr("Ajustements", "Adjustments")}</h1>
               </div>
               {meta}
             </header>
@@ -334,13 +322,13 @@ export default function FicheModeles() {
             <p className="ficheModeleNotes">{notes[print.model.id]}</p>
             {print.model.description && (
               <p className="ficheModelDesc">
-                <strong>Description du modèle : </strong>
+                <strong>{tr("Description : ", "Description: ")}</strong>
                 {print.model.description}
               </p>
             )}
             <footer className="ficheFooter">
-              À présenter au tailleur avec la fiche de mesures
-              {measurement ? ` (prise de mesures n°${measurement.version})` : ""}.
+              {tr("À présenter avec la fiche de mesures", "Show with the measurement sheet")}
+              {measurement ? ` (n°${measurement.version})` : ""}.
             </footer>
           </section>
         </article>

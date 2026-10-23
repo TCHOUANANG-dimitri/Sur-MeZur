@@ -13,6 +13,7 @@
  * montants sont des entiers et l'avance ne depasse pas le prix.
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
@@ -27,10 +28,10 @@ import { JobBadge, dueLabel, formatDateFR, formatFcfa } from "../_components";
 
 type Filter = "all" | "week" | "late" | TailorJobStatus;
 
-const NEXT_STATUS: Record<TailorJobStatus, { next: TailorJobStatus; label: string } | null> = {
-  todo: { next: "doing", label: "Commencer" },
-  doing: { next: "ready", label: "Marquer prêt" },
-  ready: { next: "delivered", label: "Marquer livré" },
+const NEXT_STATUS: Record<TailorJobStatus, { next: TailorJobStatus; fr: string; en: string } | null> = {
+  todo: { next: "doing", fr: "Commencer", en: "Start" },
+  doing: { next: "ready", fr: "Marquer prêt", en: "Mark ready" },
+  ready: { next: "delivered", fr: "Marquer livré", en: "Mark delivered" },
   delivered: null,
 };
 
@@ -62,7 +63,7 @@ function TravauxInner() {
             : { status: filter };
       setJobs(await TailorApi.jobs(query));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Chargement impossible.");
+      setError(e instanceof Error ? e.message : tr("Chargement impossible.", "Could not load."));
       setJobs([]);
     }
   }, [filter]);
@@ -88,13 +89,13 @@ function TravauxInner() {
   const nameErr = nouveauClient && clientName.trim() ? nameError(clientName) : null;
   const phoneErr = nouveauClient && splitPhone(clientPhone).local ? phoneError(clientPhone) : null;
   const descriptionErr =
-    description.trim() && description.trim().length < 3 ? "Décrivez le vêtement en quelques mots." : null;
+    description.trim() && description.trim().length < 3 ? tr("Quelques mots.", "A few words.") : null;
   const today = todayISO();
-  const dateErr = dueDate && dueDate < today ? "La date de livraison ne peut pas être passée." : null;
+  const dateErr = dueDate && dueDate < today ? tr("Date passée.", "Date in the past.") : null;
   const priceErr = amountError(price);
   const depositErr =
     amountError(deposit) ??
-    (price && deposit && !priceErr && Number(deposit) > Number(price) ? "L'avance ne peut pas dépasser le prix." : null);
+    (price && deposit && !priceErr && Number(deposit) > Number(price) ? tr("Avance supérieure au prix.", "Advance above the price.") : null);
   const canCreate =
     (!nouveauClient || (!nameError(clientName) && !phoneError(clientPhone))) &&
     description.trim().length >= 3 &&
@@ -128,7 +129,7 @@ function TravauxInner() {
       setShowForm(false);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Création impossible.");
+      setError(err instanceof Error ? err.message : tr("Création impossible.", "Could not create."));
     } finally {
       setBusy(false);
     }
@@ -141,17 +142,17 @@ function TravauxInner() {
       await TailorApi.patchJob(job.id, { status: step.next });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Mise à jour impossible.");
+      setError(e instanceof Error ? e.message : tr("Mise à jour impossible.", "Could not update."));
     }
   }
 
   async function remove(job: TailorJob) {
-    if (!window.confirm(`Supprimer « ${job.description} » ?`)) return;
+    if (!window.confirm(tr(`Supprimer « ${job.description} » ?`, `Delete “${job.description}”?`))) return;
     try {
       await TailorApi.deleteJob(job.id);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Suppression impossible.");
+      setError(e instanceof Error ? e.message : tr("Suppression impossible.", "Could not delete."));
     }
   }
 
@@ -163,10 +164,10 @@ function TravauxInner() {
   return (
     <div className="tPage">
       <PageHeader
-        title="Travaux"
+        title={tr("Travaux", "Jobs")}
         action={
           <Button variant="secondary" onClick={() => setShowForm((s) => !s)}>
-            {showForm ? "Fermer" : "+ Nouveau"}
+            {showForm ? tr("Fermer", "Close") : tr("+ Nouveau", "+ New")}
           </Button>
         }
       />
@@ -175,7 +176,7 @@ function TravauxInner() {
       {showForm && (
         <form onSubmit={create} className="card" noValidate>
           <label className="field">
-            <span className="fieldLabel">Client</span>
+            <span className="fieldLabel">{tr("Client", "Client")}</span>
             <select
               className="input"
               value={clientId}
@@ -184,7 +185,7 @@ function TravauxInner() {
                 setClientName(clients.find((c) => c.id === e.target.value)?.name ?? "");
               }}
             >
-              <option value="">Nouveau client</option>
+              <option value="">{tr("Nouveau client", "New client")}</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -196,7 +197,7 @@ function TravauxInner() {
           {nouveauClient && (
             <>
               <label className="field">
-                <span className="fieldLabel">Nom du client</span>
+                <span className="fieldLabel">{tr("Nom du client", "Client name")}</span>
                 <Input
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
@@ -206,26 +207,23 @@ function TravauxInner() {
                 />
                 {nameErr && <span className="fieldError">{nameErr}</span>}
               </label>
-              <PhoneField label="Téléphone du client" value={clientPhone} onChange={setClientPhone} error={phoneErr} />
-              <p className="fieldHint" style={{ marginTop: -8 }}>
-                Le client est ajouté à votre carnet.
-              </p>
+              <PhoneField label={tr("Téléphone du client", "Client phone")} value={clientPhone} onChange={setClientPhone} error={phoneErr} />
             </>
           )}
           <label className="field">
-            <span className="fieldLabel">Description du vêtement</span>
+            <span className="fieldLabel">{tr("Vêtement", "Garment")}</span>
             <Textarea
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ex. Robe de soirée en wax, manches longues"
+              placeholder={tr("Ex. robe en wax, manches longues", "E.g. wax dress, long sleeves")}
               maxLength={2000}
               aria-invalid={descriptionErr ? true : undefined}
             />
             {descriptionErr && <span className="fieldError">{descriptionErr}</span>}
           </label>
           <label className="field">
-            <span className="fieldLabel">Date de livraison</span>
+            <span className="fieldLabel">{tr("Livraison", "Due date")}</span>
             <Input
               type="date"
               min={today}
@@ -237,7 +235,7 @@ function TravauxInner() {
           </label>
           <div className="fieldRow">
             <label className="field">
-              <span className="fieldLabel">Prix convenu (FCFA)</span>
+              <span className="fieldLabel">{tr("Prix (FCFA)", "Price (FCFA)")}</span>
               <Input
                 inputMode="numeric"
                 value={price}
@@ -248,7 +246,7 @@ function TravauxInner() {
               {priceErr && <span className="fieldError">{priceErr}</span>}
             </label>
             <label className="field">
-              <span className="fieldLabel">Avance reçue (FCFA)</span>
+              <span className="fieldLabel">{tr("Avance (FCFA)", "Advance (FCFA)")}</span>
               <Input
                 inputMode="numeric"
                 value={deposit}
@@ -260,10 +258,10 @@ function TravauxInner() {
             </label>
           </div>
           {reste !== null && (
-            <p className="muted">Reste à payer : <strong>{formatFcfa(reste)}</strong> (simple note, aucun paiement dans l&apos;application).</p>
+            <p className="muted">{tr("Reste", "Balance")} : <strong>{formatFcfa(reste)}</strong></p>
           )}
           <Button type="submit" block disabled={!canCreate}>
-            {busy ? "Création…" : "Ajouter le travail"}
+            {busy ? tr("Création…", "Creating…") : tr("Ajouter le travail", "Add job")}
           </Button>
         </form>
       )}
@@ -271,30 +269,26 @@ function TravauxInner() {
       {/* Menu deroulant, comme le catalogue : la place reste la meme quel que
           soit le nombre de filtres. */}
       <label className={`filterSelect ${filter !== "all" ? "filterSelectOn" : ""}`}>
-        <span>Afficher</span>
+        <span>{tr("Afficher", "Show")}</span>
         <Select value={filter} onChange={(e) => setFilter(e.target.value as Filter)}>
-          <option value="all">Tous les travaux</option>
-          <optgroup label="Échéance">
-            <option value="week">À livrer cette semaine</option>
-            <option value="late">En retard</option>
+          <option value="all">{tr("Tous", "All")}</option>
+          <optgroup label={tr("Échéance", "Due")}>
+            <option value="week">{tr("Cette semaine", "This week")}</option>
+            <option value="late">{tr("En retard", "Late")}</option>
           </optgroup>
-          <optgroup label="Statut">
-            <option value="todo">À faire</option>
-            <option value="doing">En cours</option>
-            <option value="ready">Prêts</option>
-            <option value="delivered">Livrés</option>
+          <optgroup label={tr("Statut", "Status")}>
+            <option value="todo">{tr("À faire", "To do")}</option>
+            <option value="doing">{tr("En cours", "In progress")}</option>
+            <option value="ready">{tr("Prêts", "Ready")}</option>
+            <option value="delivered">{tr("Livrés", "Delivered")}</option>
           </optgroup>
         </Select>
       </label>
 
       {jobs === null ? (
-        <Spinner label="Chargement…" />
+        <Spinner />
       ) : jobs.length === 0 ? (
-        <EmptyState
-          icon={<IconOrders size={30} strokeWidth={1.6} />}
-          title="Aucun travail ici"
-          body="Ajoutez un travail : client, description, date de livraison."
-        />
+        <EmptyState icon={<IconOrders size={30} strokeWidth={1.6} />} title={tr("Aucun travail", "No jobs")} />
       ) : (
         <ul className="tList">
           {jobs.map((job) => {
@@ -305,33 +299,33 @@ function TravauxInner() {
               <li key={job.id} className="card">
                 <div className="tHeader">
                   <span style={{ flex: 1 }}>
-                    <strong>{job.client_name || "Client retiré du carnet"}</strong>
+                    <strong>{job.client_name || tr("Client retiré", "Removed client")}</strong>
                     <br />
                     <span className="tRowSub">{job.description}</span>
                   </span>
                   <JobBadge status={job.status} />
                 </div>
                 <p className="tRowSub" style={{ margin: "8px 0" }}>
-                  Échéance : {job.due_date ? `${formatDateFR(job.due_date)} (${dueLabel(job.due_date)})` : "—"}
-                  {job.price != null && <> · Prix : {formatFcfa(job.price)}</>}
-                  {job.deposit != null && <> · Avance : {formatFcfa(job.deposit)}</>}
-                  {resteJob !== null && <> · Reste : <strong>{formatFcfa(resteJob)}</strong></>}
+                  {tr("Échéance", "Due")} : {job.due_date ? `${formatDateFR(job.due_date)} (${dueLabel(job.due_date)})` : "—"}
+                  {job.price != null && <> · {tr("Prix", "Price")} : {formatFcfa(job.price)}</>}
+                  {job.deposit != null && <> · {tr("Avance", "Advance")} : {formatFcfa(job.deposit)}</>}
+                  {resteJob !== null && <> · {tr("Reste", "Balance")} : <strong>{formatFcfa(resteJob)}</strong></>}
                 </p>
                 <div className="tActionRow">
                   {step ? (
                     <Button variant="secondary" onClick={() => void advance(job)}>
-                      {step.label}
+                      {tr(step.fr, step.en)}
                     </Button>
                   ) : (
-                    <span className="tRowSub">Travail terminé.</span>
+                    <span className="tRowSub">{tr("Terminé.", "Done.")}</span>
                   )}
                   {(job.price == null || (job.deposit ?? 0) < job.price) && (
                     <Link href={`/tailleur/finances?travail=${job.id}`} className="btn btnSecondary">
-                      Encaisser un paiement
+                      {tr("Encaisser", "Record payment")}
                     </Link>
                   )}
                   <Button variant="ghost" onClick={() => void remove(job)}>
-                    Supprimer
+                    {tr("Supprimer", "Delete")}
                   </Button>
                 </div>
               </li>
@@ -345,7 +339,7 @@ function TravauxInner() {
 
 export default function Travaux() {
   return (
-    <Suspense fallback={<Spinner label="Chargement…" />}>
+    <Suspense fallback={<Spinner />}>
       <TravauxInner />
     </Suspense>
   );

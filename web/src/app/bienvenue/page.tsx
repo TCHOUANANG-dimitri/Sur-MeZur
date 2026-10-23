@@ -13,6 +13,7 @@
  * stockage est indisponible, on remontre simplement la presentation.
  */
 
+import { tr } from "@/lib/i18n";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,24 +24,25 @@ import { homeFor } from "@/lib/home";
 
 const VU = "smz_onboarding_vu";
 
+// Textes lus a l'affichage (accesseurs) : ils suivent la langue du telephone.
 const ECRANS = [
   {
     image: "/onboarding/mesure.webp",
-    alt: "Une couturière photographie son client, cadré sur une silhouette.",
-    titre: "Vos mesures en 2 photos",
-    texte: "Une photo de face, une de profil : Sur-MeZur calcule les 12 mesures de couture. Sans mètre ruban.",
+    get alt() { return tr("Une couturière photographie son client.", "A tailor photographs a client."); },
+    get titre() { return tr("Vos mesures en 2 photos", "Your measurements in 2 photos"); },
+    get texte() { return tr("Face et profil : 12 mesures de couture, sans mètre ruban.", "Front and side: 12 tailoring measurements, no tape needed."); },
   },
   {
     image: "/onboarding/tailleur.webp",
-    alt: "Un tailleur consulte son téléphone dans son atelier.",
-    titre: "Tailleurs : votre carnet de clients",
-    texte: "Les mesures de chaque client, ses travaux et leurs échéances, au même endroit. Partagées en un clic sur WhatsApp.",
+    get alt() { return tr("Un tailleur consulte son téléphone.", "A tailor checks his phone."); },
+    get titre() { return tr("Tailleurs : vos clients", "Tailors: your clients"); },
+    get texte() { return tr("Mesures, travaux et échéances au même endroit.", "Measurements, jobs and due dates in one place."); },
   },
   {
     image: "/onboarding/modeles.webp",
-    alt: "Une robe en pagne violet sur un mannequin.",
-    titre: "Des modèles et leurs patrons",
-    texte: "Gardez les modèles qui vous plaisent, envoyez votre fiche à votre tailleur, et obtenez le patron coté du vêtement.",
+    get alt() { return tr("Une robe en pagne violet sur un mannequin.", "A purple wax-print dress on a mannequin."); },
+    get titre() { return tr("Modèles et patrons", "Styles and patterns"); },
+    get texte() { return tr("Choisissez un modèle, envoyez vos mesures à un tailleur.", "Pick a style, send your measurements to a tailor."); },
   },
 ];
 
@@ -80,7 +82,7 @@ export default function Bienvenue() {
     setPret(true);
   }, [loading, user, router]);
 
-  if (!pret) return <div className="obScreen obScreenLoading"><Spinner label="Chargement…" /></div>;
+  if (!pret) return <div className="obScreen obScreenLoading"><Spinner /></div>;
 
   const dernier = i === ECRANS.length - 1;
   const aller = (n: number) => setI(Math.max(0, Math.min(ECRANS.length - 1, n)));
@@ -104,14 +106,14 @@ export default function Bienvenue() {
         <Image src="/logo-mark.png" alt="Sur-MeZur" width={38} height={40} priority />
         {!dernier && (
           <button type="button" className="obSkip" onClick={() => aller(ECRANS.length - 1)}>
-            Passer
+            {tr("Passer", "Skip")}
           </button>
         )}
       </div>
 
       <div className="obTrack" style={{ transform: `translateX(-${i * 100}%)` }}>
         {ECRANS.map((e, n) => (
-          <section key={e.titre} className="obSlide" aria-hidden={n !== i} aria-roledescription="diapositive">
+          <section key={e.image} className="obSlide" aria-hidden={n !== i} aria-roledescription={tr("diapositive", "slide")}>
             <div className="obPhoto">
               <Image src={e.image} alt={e.alt} fill sizes="(max-width: 600px) 100vw, 480px" priority={n === 0} />
             </div>
@@ -122,14 +124,14 @@ export default function Bienvenue() {
       </div>
 
       <div className="obBottom">
-        <div className="obDots" role="tablist" aria-label="Écrans de présentation">
+        <div className="obDots" role="tablist" aria-label={tr("Présentation", "Introduction")}>
           {ECRANS.map((e, n) => (
             <button
-              key={e.titre}
+              key={e.image}
               type="button"
               role="tab"
               aria-selected={n === i}
-              aria-label={`Écran ${n + 1}`}
+              aria-label={`${n + 1}`}
               className={`obDot ${n === i ? "obDotActive" : ""}`}
               onClick={() => aller(n)}
             />
@@ -139,19 +141,19 @@ export default function Bienvenue() {
         {dernier ? (
           <div className="obActions">
             <button type="button" className="btn btnPrimary btnBlock" onClick={() => finir("/inscription")}>
-              Créer un compte
+              {tr("Créer un compte", "Create an account")}
             </button>
             <button type="button" className="btn btnSecondary btnBlock" onClick={() => finir("/connexion")}>
-              J&apos;ai déjà un compte
+              {tr("J'ai déjà un compte", "I already have an account")}
             </button>
             <Link href="/mesurer" className="obTry" onClick={() => marquerVu()}>
-              Essayer sans compte
+              {tr("Essayer sans compte", "Try without an account")}
             </Link>
           </div>
         ) : (
           <div className="obActions">
             <button type="button" className="btn btnPrimary btnBlock" onClick={() => aller(i + 1)}>
-              Suivant
+              {tr("Suivant", "Next")}
             </button>
           </div>
         )}

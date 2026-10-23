@@ -21,6 +21,7 @@
  * formulaire hors du cadre. Voir `.authLogo` dans auth.css.
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -76,7 +77,7 @@ function ConnexionInner() {
       const res = await AuthApi.login(phone.trim(), password, guestClaimToken());
       if (res.mfa_required) {
         if (!res.mfa_token) {
-          setError("Vérification supplémentaire requise. Réessayez.");
+          setError(tr("Vérification requise. Réessayez.", "Verification required. Try again."));
         } else {
           setMfaToken(res.mfa_token);
         }
@@ -85,7 +86,7 @@ function ConnexionInner() {
       setTokens(res.access_token, res.refresh_token);
       await afterTokens(res.role, res.must_change_password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Connexion impossible.");
+      setError(err instanceof Error ? err.message : tr("Connexion impossible.", "Could not sign in."));
     } finally {
       setBusy(false);
     }
@@ -101,7 +102,7 @@ function ConnexionInner() {
       setTokens(res.access_token, res.refresh_token);
       await afterTokens(res.role, res.must_change_password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Code invalide ou expiré.");
+      setError(err instanceof Error ? err.message : tr("Code invalide ou expiré.", "Invalid or expired code."));
     } finally {
       setBusy(false);
     }
@@ -114,9 +115,8 @@ function ConnexionInner() {
     const suiteAutorisee = next && pathAllowedFor(user.role, next) ? next : null;
     return (
       <SignedInNotice
-        message="Pour vous connecter avec un autre compte, choisissez « Changer de compte »."
         continueTo={suiteAutorisee ?? undefined}
-        continueLabel={suiteAutorisee ? "Continuer" : undefined}
+        continueLabel={suiteAutorisee ? tr("Continuer", "Continue") : undefined}
       />
     );
   }
@@ -125,13 +125,10 @@ function ConnexionInner() {
     <main className="authScreen">
       {mfaToken ? (
         <form className="authForm" onSubmit={submitMfa} noValidate>
-          <h1 className="authTitle">Code de vérification</h1>
-          <p className="authSubtitle">
-            Votre compte est protégé : saisissez le code à 6 chiffres.
-          </p>
+          <h1 className="authTitle">{tr("Code de vérification", "Verification code")}</h1>
           <ErrorBanner message={error} />
           <label className="field">
-            <span className="fieldLabel">Code à 6 chiffres</span>
+            <span className="fieldLabel">{tr("Code à 6 chiffres", "6-digit code")}</span>
             <input
               className="input mfaCode"
               inputMode="numeric"
@@ -142,11 +139,11 @@ function ConnexionInner() {
             />
           </label>
           <Button type="submit" block disabled={mfaCode.length !== 6 || busy}>
-            {busy ? "Vérification…" : "Vérifier"}
+            {busy ? tr("Vérification…", "Checking…") : tr("Vérifier", "Verify")}
           </Button>
           <div className="authLinks">
             <button type="button" className="authLink" onClick={() => { setMfaToken(null); setMfaCode(""); }}>
-              Retour
+              {tr("Retour", "Back")}
             </button>
           </div>
         </form>
@@ -163,30 +160,30 @@ function ConnexionInner() {
             />
           </div>
 
-          <h1 className="authTitle">Connexion</h1>
+          <h1 className="authTitle">{tr("Connexion", "Sign in")}</h1>
 
           <ErrorBanner message={error} />
 
-          <PhoneField label="Numéro de téléphone" value={phone} onChange={setPhone} />
+          <PhoneField label={tr("Numéro de téléphone", "Phone number")} value={phone} onChange={setPhone} />
 
           <div className="field">
-            <span className="fieldLabel">Mot de passe</span>
+            <span className="fieldLabel">{tr("Mot de passe", "Password")}</span>
             <PasswordInput value={password} onChange={setPassword} />
           </div>
 
           <Button type="submit" block disabled={!canSubmit}>
-            {busy ? "Connexion…" : "Se connecter"}
+            {busy ? tr("Connexion…", "Signing in…") : tr("Se connecter", "Sign in")}
           </Button>
 
           <div className="authLinks">
             <Link href="/mot-de-passe-oublie" className="authLink">
-              Mot de passe oublié ?
+              {tr("Mot de passe oublié ?", "Forgot password?")}
             </Link>
             <Link
               href={next ? `/inscription?suite=${encodeURIComponent(next)}` : "/inscription"}
               className="authLink"
             >
-              Créer un compte
+              {tr("Créer un compte", "Create an account")}
             </Link>
           </div>
         </form>

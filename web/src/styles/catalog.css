@@ -29,14 +29,14 @@
   height: 40px;
   border: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--surface-glass);
   color: var(--indigo-text);
   box-shadow: 0 2px 8px rgba(31, 42, 68, 0.18);
   cursor: pointer;
   transition: transform 0.15s ease, color 0.15s ease;
 }
 .modelCardSave:active { transform: scale(0.9); }
-.modelCardSaveOn { color: #e11d48; }
+.modelCardSaveOn { color: var(--like); }
 .modelCardSaveOn svg { fill: currentColor; }
 
 .modelCardBadge {
@@ -401,9 +401,9 @@
 }
 
 .likeBtnActive {
-  background: #fff1f2;
-  border-color: #e11d48;
-  color: #e11d48;
+  background: var(--like-bg);
+  border-color: var(--like);
+  color: var(--like);
 }
 .likeBtnActive svg { fill: currentColor; }
 

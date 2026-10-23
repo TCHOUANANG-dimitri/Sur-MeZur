@@ -14,7 +14,8 @@
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { Button } from "./ui";
-import { homeFor, ROLE_NAME } from "@/lib/home";
+import { homeFor, roleName } from "@/lib/home";
+import { tr } from "@/lib/i18n";
 
 export function SignedInNotice({
   title,
@@ -38,24 +39,24 @@ export function SignedInNotice({
   const { user, logout } = useAuth();
   const router = useRouter();
   if (!user) return null;
-  const role = ROLE_NAME[user.role] ?? user.role;
+  const role = roleName(user.role);
 
   return (
     <div className="containerNarrow section">
       <div className="card" style={{ padding: 24 }}>
-        <h1 style={{ fontSize: 24 }}>{title ?? "Vous êtes déjà connecté"}</h1>
+        <h1 style={{ fontSize: 24 }}>{title ?? tr("Vous êtes déjà connecté", "You are already signed in")}</h1>
         <p style={{ marginTop: 12 }}>
-          Compte ouvert : <strong>{user.full_name}</strong> ({role}).
+          <strong>{user.full_name}</strong> ({role})
         </p>
         {message && <p className="muted" style={{ marginTop: 8 }}>{message}</p>}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 20 }}>
           <Button onClick={() => router.replace(continueTo ?? homeFor(user.role))}>
-            {continueLabel ?? "Aller à mon espace"}
+            {continueLabel ?? tr("Aller à mon espace", "Go to my space")}
           </Button>
           {/* Deconnexion sur place : la page demandee s'affiche ensuite telle
               qu'un visiteur la voit (formulaire, mesure sans compte). */}
           <Button variant="secondary" onClick={() => logout({ to: switchTo ?? null })}>
-            Changer de compte
+            {tr("Changer de compte", "Switch account")}
           </Button>
         </div>
       </div>

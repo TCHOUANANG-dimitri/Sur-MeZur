@@ -8,6 +8,7 @@
  * /mesurer : une consigne corrigee l'est ainsi pour tout le monde.
  */
 
+import { tr } from "@/lib/i18n";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { MeasureFlow } from "@/components/MeasureFlow";
@@ -19,7 +20,7 @@ function NouvelleMesureInner() {
 
   return (
     <>
-      <PageHeader title="Prendre mes mesures" back />
+      <PageHeader title={tr("Prendre mes mesures", "Take my measurements")} back />
       <div className="flowWrap section">
         <MeasureFlow
           onDone={(id) =>
@@ -34,7 +35,7 @@ function NouvelleMesureInner() {
 export default function NouvelleMesure() {
   // `useSearchParams` impose une frontiere Suspense en App Router.
   return (
-    <Suspense fallback={<Spinner label="Chargement…" />}>
+    <Suspense fallback={<Spinner />}>
       <NouvelleMesureInner />
     </Suspense>
   );

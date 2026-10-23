@@ -9,6 +9,7 @@
  * (`?suite=…`) ou a l'espace du role.
  */
 
+import { tr } from "@/lib/i18n";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { UsersApi } from "@/lib/api/endpoints";
@@ -17,7 +18,7 @@ import { safeNext } from "@/lib/guest";
 import { destinationFor } from "@/lib/home";
 import { PasswordInput } from "@/components/fields";
 import { Button, ErrorBanner, InfoBanner } from "@/components/ui";
-import { PASSWORD_HINT, passwordError } from "@/lib/password";
+import { passwordError, passwordHint } from "@/lib/password";
 
 function ChangerMotDePasseInner() {
   const router = useRouter();
@@ -38,7 +39,7 @@ function ChangerMotDePasseInner() {
       setDone(true);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Changement impossible.");
+      setError(err instanceof Error ? err.message : tr("Changement impossible.", "Could not change."));
     } finally {
       setBusy(false);
     }
@@ -54,37 +55,37 @@ function ChangerMotDePasseInner() {
   return (
     <main className="authScreen">
       <form className="authForm" onSubmit={submit} noValidate>
-        <h1 className="authTitle">Changer mon mot de passe</h1>
+        <h1 className="authTitle">{tr("Changer mon mot de passe", "Change password")}</h1>
         {user?.must_change_password && !done && (
           <p className="authSubtitle">
-            Un mot de passe provisoire a été posé sur votre compte : choisissez-en un nouveau pour continuer.
+            {tr("Mot de passe provisoire : choisissez-en un nouveau.", "Temporary password: choose a new one.")}
           </p>
         )}
         <ErrorBanner message={error} />
         {done ? (
           <>
             <InfoBanner>
-              <span>Mot de passe changé. Vous pouvez reprendre votre parcours.</span>
+              <span>{tr("Mot de passe changé.", "Password changed.")}</span>
             </InfoBanner>
             <Button
               type="button"
               block
               onClick={() => router.replace(backTo)}
             >
-              Continuer
+              {tr("Continuer", "Continue")}
             </Button>
           </>
         ) : (
           <>
             <div className="field">
-              <span className="fieldLabel">Mot de passe actuel</span>
+              <span className="fieldLabel">{tr("Mot de passe actuel", "Current password")}</span>
               <PasswordInput value={current} onChange={setCurrent} autoComplete="current-password" />
             </div>
             <div className="field">
-              <span className="fieldLabel">Nouveau mot de passe</span>
+              <span className="fieldLabel">{tr("Nouveau mot de passe", "New password")}</span>
               <PasswordInput value={nextPassword} onChange={setNextPassword} autoComplete="new-password" />
               <span className="fieldHint">
-                {nextPassword.length > 0 ? (passwordError(nextPassword) ?? "Mot de passe valide.") : PASSWORD_HINT}
+                {passwordHint(nextPassword)}
               </span>
             </div>
             <Button
@@ -92,7 +93,7 @@ function ChangerMotDePasseInner() {
               block
               disabled={current.length === 0 || passwordError(nextPassword) !== null || busy}
             >
-              {busy ? "Changement…" : "Changer mon mot de passe"}
+              {busy ? tr("Changement…", "Changing…") : tr("Changer", "Change")}
             </Button>
           </>
         )}

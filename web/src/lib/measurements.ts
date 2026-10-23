@@ -21,6 +21,8 @@
  * endroit le soit partout.
  */
 
+import { langue, tr } from "./i18n";
+
 export type MeasureKey =
   | "neck"
   | "chest"
@@ -44,67 +46,29 @@ export interface MeasureInfo {
   purpose: string;
 }
 
+// Libelles dans la langue du telephone (lib/i18n) : lus au moment de
+// l'affichage, d'ou les accesseurs.
+function info(label: [string, string], where: [string, string], purpose: [string, string]): MeasureInfo {
+  return {
+    get label() { return tr(...label); },
+    get where() { return tr(...where); },
+    get purpose() { return tr(...purpose); },
+  };
+}
+
 export const MEASURES: Record<MeasureKey, MeasureInfo> = {
-  chest: {
-    label: "Tour de poitrine",
-    where: "Tout autour du buste, a l'endroit le plus fort de la poitrine, le metre bien horizontal.",
-    purpose: "Determine l'ampleur du haut du vetement.",
-  },
-  waist: {
-    label: "Tour de taille",
-    where: "A l'endroit le plus creux du buste, un peu au-dessus du nombril.",
-    purpose: "Sert au cintrage d'une chemise et a la ceinture d'un pantalon ou d'une jupe.",
-  },
-  hips: {
-    label: "Tour de hanches",
-    where: "Tout autour du bassin, a l'endroit le plus fort.",
-    purpose: "Donne l'aisance necessaire pour s'asseoir et marcher.",
-  },
-  neck: {
-    label: "Tour de cou",
-    where: "A la base du cou, la ou se pose le col d'une chemise.",
-    purpose: "Fixe la taille du col.",
-  },
-  shoulder: {
-    label: "Carrure",
-    where: "D'une pointe d'epaule a l'autre, en passant par le haut du dos.",
-    purpose: "Positionne les coutures d'epaules et l'emmanchure.",
-  },
-  back_length: {
-    label: "Longueur du dos",
-    where: "Du haut des epaules jusqu'a la taille, dans le dos.",
-    purpose: "Fixe la hauteur du buste du vetement.",
-  },
-  biceps: {
-    label: "Tour de bras",
-    where: "Au plus fort du bras, le bras relache le long du corps.",
-    purpose: "Determine la largeur de la manche en haut.",
-  },
-  wrist: {
-    label: "Tour de poignet",
-    where: "Juste au-dessus de la main, la ou se ferme un poignet de chemise.",
-    purpose: "Fixe la taille de la manchette.",
-  },
-  sleeve_length: {
-    label: "Longueur de manche",
-    where: "De l'epaule jusqu'au poignet, le bras legerement plie.",
-    purpose: "Determine ou la manche s'arrete sur la main.",
-  },
-  thigh: {
-    label: "Tour de cuisse",
-    where: "En haut de la cuisse, a l'endroit le plus fort.",
-    purpose: "Donne la largeur du pantalon en haut de jambe.",
-  },
-  inseam: {
-    label: "Longueur de jambe",
-    where: "De l'entrejambe jusqu'a la cheville, le long de l'interieur de la jambe.",
-    purpose: "Determine ou le pantalon tombe sur la chaussure.",
-  },
-  ankle: {
-    label: "Tour de cheville",
-    where: "Juste au-dessus du pied.",
-    purpose: "Fixe l'ouverture du bas du pantalon.",
-  },
+  chest: info(['Tour de poitrine', 'Chest'], ['Autour du buste, au plus fort de la poitrine.', 'Around the fullest part of the chest.'], ['Ampleur du haut.', 'Width of the top.']),
+  waist: info(['Tour de taille', 'Waist'], ['Au plus creux du buste, au-dessus du nombril.', 'At the narrowest point, above the navel.'], ['Cintrage et ceinture.', 'Shaping and waistband.']),
+  hips: info(['Tour de hanches', 'Hips'], ['Autour du bassin, au plus fort.', 'Around the fullest part of the hips.'], ["Aisance pour s'asseoir et marcher.", 'Room to sit and walk.']),
+  neck: info(['Tour de cou', 'Neck'], ['À la base du cou, là où se pose le col.', 'At the base of the neck, where a collar sits.'], ['Taille du col.', 'Collar size.']),
+  shoulder: info(['Carrure', 'Shoulder width'], ["D'une pointe d'épaule à l'autre, par le dos.", 'From one shoulder tip to the other, across the back.'], ["Coutures d'épaule et emmanchure.", 'Shoulder seams and armholes.']),
+  back_length: info(['Longueur du dos', 'Back length'], ['Du haut des épaules à la taille, dans le dos.', 'From the top of the shoulders to the waist, at the back.'], ['Hauteur du buste.', 'Bodice length.']),
+  biceps: info(['Tour de bras', 'Upper arm'], ['Au plus fort du bras, bras relâché.', 'Around the fullest part of the relaxed arm.'], ['Largeur du haut de manche.', 'Sleeve width at the top.']),
+  wrist: info(['Tour de poignet', 'Wrist'], ['Juste au-dessus de la main.', 'Just above the hand.'], ['Taille du poignet de manche.', 'Cuff size.']),
+  sleeve_length: info(['Longueur de manche', 'Sleeve length'], ["De l'épaule au poignet, bras un peu plié.", 'From shoulder to wrist, arm slightly bent.'], ["Où s'arrête la manche.", 'Where the sleeve ends.']),
+  thigh: info(['Tour de cuisse', 'Thigh'], ['En haut de la cuisse, au plus fort.', 'Around the top of the thigh.'], ['Largeur du haut de jambe.', 'Width at the top of the leg.']),
+  inseam: info(['Longueur de jambe', 'Inside leg'], ["De l'entrejambe à la cheville, côté intérieur.", 'From the crotch to the ankle, inside the leg.'], ['Où tombe le pantalon.', 'Where the trousers fall.']),
+  ankle: info(['Tour de cheville', 'Ankle'], ['Juste au-dessus du pied.', 'Just above the foot.'], ['Ouverture du bas de pantalon.', 'Trouser hem opening.']),
 };
 
 /**
@@ -114,14 +78,14 @@ export const MEASURES: Record<MeasureKey, MeasureInfo> = {
  */
 export interface MeasureGroup {
   id: string;
-  title: string;
+  readonly title: string;
   keys: MeasureKey[];
 }
 
 export const MEASURE_GROUPS: MeasureGroup[] = [
-  { id: "buste", title: "Buste et torse", keys: ["chest", "waist", "neck", "shoulder", "back_length"] },
-  { id: "bras", title: "Bras", keys: ["biceps", "sleeve_length", "wrist"] },
-  { id: "jambes", title: "Hanches et jambes", keys: ["hips", "thigh", "inseam", "ankle"] },
+  { id: "buste", get title() { return tr("Buste", "Upper body"); }, keys: ["chest", "waist", "neck", "shoulder", "back_length"] },
+  { id: "bras", get title() { return tr("Bras", "Arms"); }, keys: ["biceps", "sleeve_length", "wrist"] },
+  { id: "jambes", get title() { return tr("Hanches et jambes", "Hips and legs"); }, keys: ["hips", "thigh", "inseam", "ankle"] },
 ];
 
 /** Ordre canonique, a plat — utile pour un export ou un total. */
@@ -163,7 +127,8 @@ export function presentableGroups(data: Record<string, number> | null | undefine
  *  en couture, et afficher plus de decimales donnerait une fausse impression
  *  d'exactitude. */
 export function formatCm(value: number): string {
-  return `${value.toFixed(1).replace(".", ",")} cm`;
+  const v = value.toFixed(1);
+  return `${langue() === "en" ? v : v.replace(".", ",")} cm`;
 }
 
 /**

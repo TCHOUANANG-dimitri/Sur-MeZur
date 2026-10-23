@@ -15,7 +15,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { SignedInNotice } from "./SignedInNotice";
 import { Spinner } from "./ui";
-import { ROLE_AUDIENCE } from "@/lib/home";
+import { reservedTitle } from "@/lib/home";
+import { tr } from "@/lib/i18n";
 
 export function RequireRole({
   role,
@@ -41,12 +42,12 @@ export function RequireRole({
     // le message ci-dessous laisse choisir.
   }, [loading, user, role, router]);
 
-  if (loading) return <Spinner label="Chargement…" />;
+  if (loading) return <Spinner />;
   if (user && !user.is_guest && !user.must_change_password && user.role !== role) {
     return (
       <SignedInNotice
-        title={`Cette page est réservée aux ${ROLE_AUDIENCE[role]}`}
-        message="Allez à votre espace, ou changez de compte pour y accéder."
+        title={reservedTitle(role)}
+        message={tr("Allez à votre espace, ou changez de compte.", "Go to your space, or switch account.")}
         // Connexion, puis retour ici SEULEMENT si le nouveau compte y a droit
         // (destinationFor) : plus de boucle sur cet ecran.
         switchTo={

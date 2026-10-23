@@ -12,10 +12,11 @@
  * (la prise de mesure creera l'erreur explicite elle-meme le cas echeant).
  */
 
+import { tr } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { PublicApi } from "@/lib/api/endpoints";
 
-const MESSAGE_DEFAUT = "Le site est en maintenance. Revenez dans un moment.";
+
 
 export function MaintenanceScreen() {
   const [maintenance, setMaintenance] = useState<string | null>(null);
@@ -24,12 +25,12 @@ export function MaintenanceScreen() {
     let alive = true;
     PublicApi.config()
       .then((config) => {
-        if (alive && config.maintenance?.enabled) setMaintenance(config.maintenance.message || MESSAGE_DEFAUT);
+        if (alive && config.maintenance?.enabled) setMaintenance(config.maintenance.message || tr("Le site est en maintenance. Revenez dans un moment.", "The site is under maintenance. Please come back shortly."));
       })
       .catch(() => {
         /* backend injoignable : le site reste utilisable */
       });
-    const onMaintenance = (e: Event) => setMaintenance((e as CustomEvent<string>).detail || MESSAGE_DEFAUT);
+    const onMaintenance = (e: Event) => setMaintenance((e as CustomEvent<string>).detail || tr("Le site est en maintenance. Revenez dans un moment.", "The site is under maintenance. Please come back shortly."));
     window.addEventListener("smz:maintenance", onMaintenance);
     return () => {
       alive = false;
@@ -41,10 +42,10 @@ export function MaintenanceScreen() {
   return (
     <div className="maintenanceScreen" role="alert">
       <div className="maintenanceCard">
-        <h1>Sur-MeZur fait une pause</h1>
+        <h1>{tr("Sur-MeZur fait une pause", "Sur-MeZur is taking a break")}</h1>
         <p>{maintenance}</p>
         <button type="button" className="btn btnPrimary" onClick={() => window.location.reload()}>
-          Réessayer
+          {tr("Réessayer", "Try again")}
         </button>
       </div>
     </div>

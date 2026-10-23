@@ -2,40 +2,38 @@
 
 /**
  * Detail d'une commande cote client : suivi, tailleur (avec ses contacts),
- * modele et mesures envoyes, prix convenu une fois la commande acceptee,
- * discussion avec le tailleur. Annulation possible tant qu'elle attend.
+ * modele et mesures envoyes, prix convenu une fois la commande acceptee.
+ * Annulation possible tant qu'elle attend. Pas de messagerie dans l'app :
+ * le client joint le tailleur par appel ou WhatsApp.
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { CatalogApi, MeasurementsApi, OrdersApi, TailorsApi } from "@/lib/api/endpoints";
-import type { ChatMessage, GarmentModel, Measurement, Order, TailorContact, TailorProfile } from "@/lib/api/types";
-import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, ErrorBanner, Input, PageHeader, Spinner, Textarea } from "@/components/ui";
+import type { GarmentModel, Measurement, Order, TailorContact, TailorProfile } from "@/lib/api/types";
+import { Button, Card, ErrorBanner, PageHeader, Spinner, Textarea } from "@/components/ui";
 import { IconCall, IconChat } from "@/components/icons";
 import { formatCm, presentableGroups } from "@/lib/measurements";
 import { copyText, whatsappHref } from "@/lib/contact";
 import { tailorWhatsappMessage } from "@/lib/tailors";
 import { OrderBadge, formatDateFR, formatFcfa } from "@/app/tailleur/_components";
 
-const TRACKER: { key: string; label: string }[] = [
-  { key: "new", label: "Envoyée au tailleur" },
-  { key: "in_progress", label: "En confection" },
-  { key: "ready_for_pickup", label: "Prête" },
-  { key: "finished_delivered", label: "Livrée" },
+const TRACKER: { key: string; fr: string; en: string }[] = [
+  { key: "new", fr: "Envoyée", en: "Sent" },
+  { key: "in_progress", fr: "En confection", en: "Being made" },
+  { key: "ready_for_pickup", fr: "Prête", en: "Ready" },
+  { key: "finished_delivered", fr: "Livrée", en: "Delivered" },
 ];
 
 export default function CommandeClient() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [tailor, setTailor] = useState<TailorProfile | null>(null);
   const [contact, setContact] = useState<TailorContact | null>(null);
   const [model, setModel] = useState<GarmentModel | null>(null);
   const [measurement, setMeasurement] = useState<Measurement | null>(null);
-  const [chat, setChat] = useState<ChatMessage[]>([]);
-  const [message, setMessage] = useState("");
   const [showCancel, setShowCancel] = useState(false);
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
@@ -54,42 +52,13 @@ export default function CommandeClient() {
         .then((list) => setMeasurement(list.find((m) => m.id === o.measurement_id) ?? null))
         .catch(() => setMeasurement(null));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Commande introuvable.");
-    }
-  }, [id]);
-
-  const loadChat = useCallback(async () => {
-    if (!id) return;
-    try {
-      setChat(await OrdersApi.chat(id));
-    } catch {
-      /* la discussion reviendra a la prochaine actualisation */
+      setError(e instanceof Error ? e.message : tr("Commande introuvable.", "Order not found."));
     }
   }, [id]);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    void loadChat();
-    const timer = setInterval(() => void loadChat(), 5000);
-    return () => clearInterval(timer);
-  }, [loadChat]);
-
-  async function send(e: React.FormEvent) {
-    e.preventDefault();
-    if (!message.trim() || !id) return;
-    const body = message.trim();
-    setMessage("");
-    try {
-      await OrdersApi.sendChat(id, body);
-      await loadChat();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Message non envoyé.");
-      setMessage(body);
-    }
-  }
 
   async function cancel(e: React.FormEvent) {
     e.preventDefault();
@@ -100,7 +69,7 @@ export default function CommandeClient() {
       setOrder(await OrdersApi.cancel(id, reason.trim()));
       setShowCancel(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Annulation impossible.");
+      setError(err instanceof Error ? err.message : tr("Annulation impossible.", "Could not cancel."));
     } finally {
       setBusy(false);
     }
@@ -109,8 +78,8 @@ export default function CommandeClient() {
   if (!order) {
     return (
       <>
-        <PageHeader title="Commande" back />
-        <div className="container section">{error ? <ErrorBanner message={error} /> : <Spinner label="Chargement…" />}</div>
+        <PageHeader title={tr("Commande", "Order")} back />
+        <div className="container section">{error ? <ErrorBanner message={error} /> : <Spinner />}</div>
       </>
     );
   }
@@ -121,18 +90,18 @@ export default function CommandeClient() {
 
   return (
     <div className="tPage">
-      <PageHeader title={`Commande n° ${order.id.slice(0, 6).toUpperCase()}`} back />
+      <PageHeader title={`${tr("Commande", "Order")} n° ${order.id.slice(0, 6).toUpperCase()}`} back />
       <ErrorBanner message={error} />
       <div>
         <OrderBadge status={order.status} />
       </div>
 
       {order.status !== "cancelled" && (
-        <ol className="tTracker" aria-label="Suivi de la commande">
+        <ol className="tTracker" aria-label={tr("Suivi", "Progress")}>
           {TRACKER.map((step, i) => (
             <li key={step.key} className={i < activeStep ? "tTrackerDone" : i === activeStep ? "tTrackerNow" : ""}>
               <span className="tTrackerDot" aria-hidden>✓</span>
-              {step.label}
+              {tr(step.fr, step.en)}
             </li>
           ))}
         </ol>
@@ -140,25 +109,25 @@ export default function CommandeClient() {
 
       <Card>
         <p style={{ margin: 0 }}>
-          <strong>Tailleur :</strong>{" "}
+          <strong>{tr("Tailleur", "Tailor")} :</strong>{" "}
           {tailor ? <Link href={`/tailleurs/${tailor.id}`}>{tailor.shop_name}</Link> : "…"}
           <br />
-          <strong>Modèle :</strong> {model ? <Link href={`/modeles/${model.id}`}>{model.name}</Link> : order.garment_model_id ? "…" : "Aucun (à voir avec le tailleur)"}
+          <strong>{tr("Modèle", "Style")} :</strong> {model ? <Link href={`/modeles/${model.id}`}>{model.name}</Link> : order.garment_model_id ? "…" : tr("Aucun", "None")}
           <br />
           <span className="tRowSub">
-            Envoyée le {formatDateFR(order.created_at)}
-            {order.desired_date ? ` · Souhaitée le ${formatDateFR(order.desired_date)}` : ""}
-            {` · ${order.reception_mode === "delivery" ? "Livraison" : "Retrait à l'atelier"}`}
+            {formatDateFR(order.created_at)}
+            {order.desired_date ? ` · ${tr("pour le", "for")} ${formatDateFR(order.desired_date)}` : ""}
+            {` · ${order.reception_mode === "delivery" ? tr("Livraison", "Delivery") : tr("Retrait à l'atelier", "Pick-up")}`}
           </span>
         </p>
-        {order.budget_amount != null && <p className="tRowSub" style={{ margin: "6px 0 0" }}>Budget indiqué : {formatFcfa(order.budget_amount)}</p>}
+        {order.budget_amount != null && <p className="tRowSub" style={{ margin: "6px 0 0" }}>{tr("Budget", "Budget")} : {formatFcfa(order.budget_amount)}</p>}
         {order.agreed_price != null && (
           <p style={{ margin: "6px 0 0" }}>
-            Prix convenu : <strong>{formatFcfa(order.agreed_price)}</strong>
+            {tr("Prix convenu", "Agreed price")} : <strong>{formatFcfa(order.agreed_price)}</strong>
           </p>
         )}
-        {order.client_notes && <p className="tRowSub" style={{ margin: "6px 0 0", whiteSpace: "pre-line" }}>Votre message : {order.client_notes}</p>}
-        {order.decline_reason && <p className="tRowSub" style={{ margin: "6px 0 0" }}>Motif du refus : {order.decline_reason}</p>}
+        {order.client_notes && <p className="tRowSub" style={{ margin: "6px 0 0", whiteSpace: "pre-line" }}>{tr("Votre message", "Your message")} : {order.client_notes}</p>}
+        {order.decline_reason && <p className="tRowSub" style={{ margin: "6px 0 0" }}>{tr("Motif du refus", "Reason declined")} : {order.decline_reason}</p>}
       </Card>
 
       {phone && tailor && (
@@ -166,9 +135,9 @@ export default function CommandeClient() {
           <a
             className="btn btnSecondary"
             href={`tel:${phone.replace(/[^\d+]/g, "")}`}
-            onClick={() => void copyText(phone).then((ok) => setNotice(ok ? `Numéro ${phone} copié.` : ""))}
+            onClick={() => void copyText(phone).then((ok) => setNotice(ok ? tr(`Numéro ${phone} copié.`, `Number ${phone} copied.`) : ""))}
           >
-            <IconCall size={18} aria-hidden /> Appeler
+            <IconCall size={18} aria-hidden /> {tr("Appeler", "Call")}
           </a>
           <a className="btn btnWhatsapp" href={whatsappHref(phone, tailorWhatsappMessage(tailor.shop_name, order.id))}>
             <IconChat size={18} aria-hidden /> WhatsApp
@@ -179,7 +148,7 @@ export default function CommandeClient() {
 
       {measurement && (
         <details className="card">
-          <summary><strong>Mesures envoyées</strong> (prise n°{measurement.version})</summary>
+          <summary><strong>{tr("Mesures envoyées", "Measurements sent")}</strong> (n°{measurement.version})</summary>
           {presentableGroups(measurement.data).map((group) => (
             <div key={group.id}>
               <p className="tRowSub" style={{ margin: "8px 0 4px" }}>{group.title}</p>
@@ -193,47 +162,21 @@ export default function CommandeClient() {
         </details>
       )}
 
-      <section aria-labelledby="chat-titre">
-        <h2 id="chat-titre" style={{ fontSize: 18 }}>Discussion avec le tailleur</h2>
-        <div className="tChat">
-          {chat.length === 0 && <p className="muted">Aucun message. Écrivez le premier.</p>}
-          {chat.map((m) => (
-            <div key={m.id} className={`tMsg ${m.sender_id === user?.id ? "tMsgMine" : ""}`}>
-              {m.body}
-              <div className="tMsgDate">{formatDateFR(m.created_at)}</div>
-            </div>
-          ))}
-        </div>
-        {order.status !== "cancelled" && (
-          <form onSubmit={send} style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            <Input
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Écrire au tailleur…"
-              aria-label="Message au tailleur"
-              maxLength={2000}
-              style={{ flex: 1 }}
-            />
-            <Button type="submit" disabled={!message.trim()}>Envoyer</Button>
-          </form>
-        )}
-      </section>
-
       {order.status === "new" && (
         <div>
           {!showCancel ? (
-            <Button variant="ghost" onClick={() => setShowCancel(true)}>Annuler la commande</Button>
+            <Button variant="ghost" onClick={() => setShowCancel(true)}>{tr("Annuler la commande", "Cancel order")}</Button>
           ) : (
             <form onSubmit={cancel} className="card">
               <label className="field">
-                <span className="fieldLabel">Pourquoi annulez-vous ?</span>
+                <span className="fieldLabel">{tr("Pourquoi ?", "Why?")}</span>
                 <Textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} />
               </label>
               <div className="tActionRow">
                 <Button type="submit" variant="danger" disabled={reason.trim().length < 2 || busy}>
-                  Confirmer l&apos;annulation
+                  {tr("Confirmer", "Confirm")}
                 </Button>
-                <Button variant="ghost" onClick={() => setShowCancel(false)}>Garder</Button>
+                <Button variant="ghost" onClick={() => setShowCancel(false)}>{tr("Garder", "Keep")}</Button>
               </div>
             </form>
           )}

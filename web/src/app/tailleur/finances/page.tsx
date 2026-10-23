@@ -12,6 +12,7 @@
  * formulaire avec ce travail deja choisi.
  */
 
+import { locale, tr } from "@/lib/i18n";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { TailorApi } from "@/lib/api/tailor";
@@ -23,22 +24,25 @@ import { Stat, formatDateFR, formatFcfa } from "../_components";
 
 type Period = "month" | "last" | "3m" | "year" | "all";
 
-const PERIODS: { key: Period; label: string }[] = [
-  { key: "month", label: "Ce mois" },
-  { key: "last", label: "Mois dernier" },
-  { key: "3m", label: "3 derniers mois" },
-  { key: "year", label: "Cette année" },
-  { key: "all", label: "Tout" },
+const PERIODS: { key: Period; fr: string; en: string }[] = [
+  { key: "month", fr: "Ce mois", en: "This month" },
+  { key: "last", fr: "Mois dernier", en: "Last month" },
+  { key: "3m", fr: "3 derniers mois", en: "Last 3 months" },
+  { key: "year", fr: "Cette année", en: "This year" },
+  { key: "all", fr: "Tout", en: "All" },
 ];
 
-const METHODS: Record<string, string> = {
-  cash: "Espèces",
-  mobile_money: "Mobile Money",
-  virement: "Virement",
-  autre: "Autre",
+const METHODS: Record<string, [string, string]> = {
+  cash: ["Espèces", "Cash"],
+  mobile_money: ["Mobile Money", "Mobile Money"],
+  virement: ["Virement", "Bank transfer"],
+  autre: ["Autre", "Other"],
 };
+const methode = (m: string) => (METHODS[m] ? tr(...METHODS[m]) : m);
 
-const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+/** « oct. » / « Oct » : mois court dans la langue courante. */
+const moisCourt = (mois: string) =>
+  new Date(Number(mois.slice(0, 4)), Number(mois.slice(5)) - 1, 1).toLocaleDateString(locale(), { month: "short" });
 
 function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -97,7 +101,7 @@ function FinancesInner() {
       setData(d);
       setHistory(h);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Chargement impossible.");
+      setError(e instanceof Error ? e.message : tr("Chargement impossible.", "Could not load."));
     }
   }, [period]);
 
@@ -115,9 +119,9 @@ function FinancesInner() {
   const amountErr =
     amountError(amount, { min: 1 }) ??
     (amount && resteJob !== null && Number(amount) > resteJob
-      ? `Ce travail n'attend plus que ${formatFcfa(resteJob)}.`
+      ? tr(`Reste dû sur ce travail : ${formatFcfa(resteJob)}.`, `Balance due on this job: ${formatFcfa(resteJob)}.`)
       : null);
-  const dayErr = day > today ? "La date ne peut pas être dans le futur." : null;
+  const dayErr = day > today ? tr("Date future.", "Date in the future.") : null;
   const canSave = Boolean(amount) && !amountErr && Boolean(day) && !dayErr && label.length <= 255 && !busy;
 
   async function save(e: React.FormEvent) {
@@ -140,19 +144,19 @@ function FinancesInner() {
       setShowForm(false);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Enregistrement impossible.");
+      setError(err instanceof Error ? err.message : tr("Enregistrement impossible.", "Could not save."));
     } finally {
       setBusy(false);
     }
   }
 
   async function remove(id: string, what: string) {
-    if (!window.confirm(`Supprimer la recette « ${what} » ?`)) return;
+    if (!window.confirm(tr(`Supprimer « ${what} » ?`, `Delete “${what}”?`))) return;
     try {
       await TailorApi.deleteIncome(id);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Suppression impossible.");
+      setError(e instanceof Error ? e.message : tr("Suppression impossible.", "Could not delete."));
     }
   }
 
@@ -166,46 +170,43 @@ function FinancesInner() {
   if (!data) {
     return (
       <div className="tPage">
-        <PageHeader title="Recettes" back />
-        {error ? <ErrorBanner message={error} /> : <Spinner label="Chargement…" />}
+        <PageHeader title={tr("Recettes", "Income")} back />
+        {error ? <ErrorBanner message={error} /> : <Spinner />}
       </div>
     );
   }
 
   const diff = data.total_mois_courant - data.total_mois_precedent;
-  const periodLabel = PERIODS.find((p) => p.key === period)?.label.toLowerCase() ?? "";
+  const per = PERIODS.find((p) => p.key === period);
+  const periodLabel = per ? tr(per.fr, per.en) : "";
 
   return (
     <div className="tPage">
       <PageHeader
-        title="Recettes"
+        title={tr("Recettes", "Income")}
         back
         action={
           <Button variant="secondary" onClick={() => setShowForm((s) => !s)}>
-            {showForm ? "Fermer" : <><IconPlus size={16} aria-hidden /> Ajouter</>}
+            {showForm ? tr("Fermer", "Close") : <><IconPlus size={16} aria-hidden /> {tr("Ajouter", "Add")}</>}
           </Button>
         }
       />
       <ErrorBanner message={error} />
-      <p className="tRowSub" style={{ margin: 0 }}>
-        Ce que vous avez encaissé, noté par vous. Aucun paiement ne passe par l&apos;application.
-      </p>
 
-      <div className="tStats tStatsMoney" role="group" aria-label="Résumé des recettes">
-        <Stat label="Encaissé ce mois" value={formatFcfa(data.total_mois_courant)} />
-        <Stat label={`Encaissé (${periodLabel})`} value={formatFcfa(data.total_encaisse)} />
-        <Stat label="Reste à encaisser" value={formatFcfa(data.reste_a_encaisser)} alert={data.reste_a_encaisser > 0} />
+      <div className="tStats tStatsMoney" role="group" aria-label={tr("Résumé", "Summary")}>
+        <Stat label={tr("Ce mois", "This month")} value={formatFcfa(data.total_mois_courant)} />
+        <Stat label={periodLabel} value={formatFcfa(data.total_encaisse)} />
+        <Stat label={tr("Reste dû", "Balance due")} value={formatFcfa(data.reste_a_encaisser)} alert={data.reste_a_encaisser > 0} />
       </div>
       <p className="tRowSub" style={{ margin: 0 }}>
-        Mois dernier : {formatFcfa(data.total_mois_precedent)}
-        {(data.total_mois_precedent > 0 || data.total_mois_courant > 0) &&
-          ` · ce mois ${diff >= 0 ? "+" : "−"}${formatFcfa(Math.abs(diff))}`}
+        {tr("Mois dernier", "Last month")} : {formatFcfa(data.total_mois_precedent)}
+        {(data.total_mois_precedent > 0 || data.total_mois_courant > 0) && ` (${diff >= 0 ? "+" : "−"}${formatFcfa(Math.abs(diff))})`}
       </p>
 
       {showForm && (
         <form className="card" onSubmit={save} noValidate>
           <label className="field">
-            <span className="fieldLabel">Montant reçu (FCFA)</span>
+            <span className="fieldLabel">{tr("Montant (FCFA)", "Amount (FCFA)")}</span>
             <Input
               inputMode="numeric"
               value={amount}
@@ -217,53 +218,53 @@ function FinancesInner() {
             {amountErr && <span className="fieldError">{amountErr}</span>}
           </label>
           <label className="field">
-            <span className="fieldLabel">Travail concerné (facultatif)</span>
+            <span className="fieldLabel">{tr("Travail (facultatif)", "Job (optional)")}</span>
             <select className="input" value={jobId} onChange={(e) => setJobId(e.target.value)}>
-              <option value="">Aucun : autre recette</option>
+              <option value="">{tr("Aucun", "None")}</option>
               {jobs
                 .filter((j) => j.id === jobId || j.price == null || (j.deposit ?? 0) < j.price)
                 .map((j) => (
                   <option key={j.id} value={j.id}>
-                    {j.client_name || "Client"} — {j.description.slice(0, 40)}
-                    {j.price != null ? ` (reste ${formatFcfa(Math.max(0, j.price - (j.deposit ?? 0)))})` : ""}
+                    {j.client_name || tr("Client", "Client")} — {j.description.slice(0, 40)}
+                    {j.price != null ? ` (${tr("reste", "due")} ${formatFcfa(Math.max(0, j.price - (j.deposit ?? 0)))})` : ""}
                   </option>
                 ))}
             </select>
-            {job && <span className="fieldHint">L&apos;avance de ce travail sera mise à jour.</span>}
+
           </label>
           <div className="fieldRow">
             <label className="field">
-              <span className="fieldLabel">Date</span>
+              <span className="fieldLabel">{tr("Date", "Date")}</span>
               <Input type="date" max={today} value={day} onChange={(e) => setDay(e.target.value)} aria-invalid={dayErr ? true : undefined} />
               {dayErr && <span className="fieldError">{dayErr}</span>}
             </label>
             <label className="field">
-              <span className="fieldLabel">Mode</span>
+              <span className="fieldLabel">{tr("Mode", "Method")}</span>
               <select className="input" value={method} onChange={(e) => setMethod(e.target.value)}>
-                {Object.entries(METHODS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
+                {Object.keys(METHODS).map((k) => (
+                  <option key={k} value={k}>{methode(k)}</option>
                 ))}
               </select>
             </label>
           </div>
           <label className="field">
-            <span className="fieldLabel">Libellé (facultatif)</span>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={255} placeholder="Ex. Solde robe de Mme Awa, retouche" />
+            <span className="fieldLabel">{tr("Libellé (facultatif)", "Label (optional)")}</span>
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={255} placeholder={tr("Ex. solde robe, retouche", "E.g. dress balance, alteration")} />
           </label>
           <Button type="submit" block disabled={!canSave}>
-            {busy ? "Enregistrement…" : "Enregistrer la recette"}
+            {busy ? tr("Enregistrement…", "Saving…") : tr("Enregistrer", "Save")}
           </Button>
         </form>
       )}
 
       <section className="card" aria-labelledby="mois-titre">
-        <h2 id="mois-titre" style={{ fontSize: 16, margin: 0 }}>Six derniers mois</h2>
+        <h2 id="mois-titre" style={{ fontSize: 16, margin: 0 }}>{tr("Six derniers mois", "Last six months")}</h2>
         <ul className="tBars">
           {bars.months.map((m) => (
             <li key={m.mois} title={`${formatFcfa(m.total)}`}>
               <span className="tBarLabel">{m.total > 0 ? `${Math.round(m.total / 1000)}k` : ""}</span>
               <span className="tBar" style={{ height: `${(m.total / bars.max) * 80}%` }} aria-hidden />
-              <span className="tBarLabel">{MONTHS[Number(m.mois.slice(5)) - 1]}</span>
+              <span className="tBarLabel">{moisCourt(m.mois)}</span>
               <span className="srOnly">{formatFcfa(m.total)}</span>
             </li>
           ))}
@@ -271,10 +272,10 @@ function FinancesInner() {
       </section>
 
       <label className={`filterSelect ${period !== "3m" ? "filterSelectOn" : ""}`}>
-        <span>Période</span>
+        <span>{tr("Période", "Period")}</span>
         <Select value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
           {PERIODS.map((p) => (
-            <option key={p.key} value={p.key}>{p.label}</option>
+            <option key={p.key} value={p.key}>{tr(p.fr, p.en)}</option>
           ))}
         </Select>
       </label>
@@ -282,21 +283,20 @@ function FinancesInner() {
       {data.entrees.length === 0 ? (
         <EmptyState
           icon={<IconWallet size={30} strokeWidth={1.6} />}
-          title="Aucune recette sur cette période"
-          body="Notez chaque paiement reçu : avance, solde, retouche. Vous verrez ce que rapporte l'atelier."
+          title={tr("Aucune recette", "No income yet")}
         />
       ) : (
-        <ul className="tList" aria-label="Recettes">
+        <ul className="tList" aria-label={tr("Recettes", "Income")}>
           {data.entrees.map((e) => (
             <li key={e.id} className="tRow">
               <span className="tRowMain">
                 <span className="tRowTitle">{formatFcfa(e.amount)}</span>
                 <br />
                 <span className="tRowSub">
-                  {e.received_on ? formatDateFR(e.received_on) : ""} · {METHODS[e.method] ?? e.method} · {e.label}
+                  {e.received_on ? formatDateFR(e.received_on) : ""} · {methode(e.method)} · {e.label}
                 </span>
               </span>
-              <Button variant="ghost" onClick={() => void remove(e.id, e.label)} aria-label={`Supprimer la recette ${e.label}`}>
+              <Button variant="ghost" onClick={() => void remove(e.id, e.label)} aria-label={tr("Supprimer", "Delete")}>
                 <IconTrash size={18} aria-hidden />
               </Button>
             </li>
@@ -309,7 +309,7 @@ function FinancesInner() {
 
 export default function FinancesPage() {
   return (
-    <Suspense fallback={<Spinner label="Chargement…" />}>
+    <Suspense fallback={<Spinner />}>
       <FinancesInner />
     </Suspense>
   );

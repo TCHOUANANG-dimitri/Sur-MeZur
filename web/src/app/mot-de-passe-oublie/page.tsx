@@ -9,6 +9,7 @@
  * un oubli — elle devra disparaitre le jour ou les SMS partiront reellement.
  */
 
+import { tr } from "@/lib/i18n";
 import { homeFor } from "@/lib/home";
 import Link from "next/link";
 import Image from "next/image";
@@ -20,7 +21,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner, InfoBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
-import { PASSWORD_HINT, passwordError } from "@/lib/password";
+import { passwordError, passwordHint } from "@/lib/password";
 import { phoneError } from "@/lib/validation";
 
 export default function MotDePasseOublie() {
@@ -56,7 +57,7 @@ export default function MotDePasseOublie() {
         setOtpDisabled(true);
         setError("");
       } else {
-        setError(err instanceof Error ? err.message : "Aucun compte avec ce numéro.");
+        setError(err instanceof Error ? err.message : tr("Aucun compte avec ce numéro.", "No account with this number."));
       }
     } finally {
       setBusy(false);
@@ -74,7 +75,7 @@ export default function MotDePasseOublie() {
       await refresh();
       router.replace(homeFor(res.role));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Code invalide ou expiré.");
+      setError(err instanceof Error ? err.message : tr("Code invalide ou expiré.", "Invalid or expired code."));
     } finally {
       setBusy(false);
     }
@@ -93,35 +94,30 @@ export default function MotDePasseOublie() {
           />
         </div>
 
-        <h1 className="authTitle">Mot de passe oublié</h1>
+        <h1 className="authTitle">{tr("Mot de passe oublié", "Forgot password")}</h1>
 
         <ErrorBanner message={error} />
 
         {otpDisabled ? (
           <>
             <InfoBanner>
-              <span>
-                La réinitialisation par code est désactivée pour l&apos;instant. Contactez
-                le support : un mot de passe provisoire vous sera communiqué.
-              </span>
+              <span>{tr("Contactez le support : il vous donnera un mot de passe provisoire.", "Contact support: they'll give you a temporary password.")}</span>
             </InfoBanner>
             <Link href="/contact" style={{ display: "contents" }}>
-              <Button block>Contacter le support</Button>
+              <Button block>{tr("Contacter le support", "Contact support")}</Button>
             </Link>
           </>
         ) : step === "phone" ? (
           <>
-            <p className="authSubtitle">
-              Indiquez le numéro de votre compte, nous vous enverrons un code.
-            </p>
+            <p className="authSubtitle">{tr("Nous vous enverrons un code.", "We'll send you a code.")}</p>
             <PhoneField
-              label="Numéro de téléphone"
+              label={tr("Numéro de téléphone", "Phone number")}
               value={phone}
               onChange={setPhone}
               error={localDigits ? phoneError(phone) : null}
             />
             <Button type="submit" block disabled={phoneError(phone) !== null || busy}>
-              {busy ? "Envoi…" : "Recevoir un code"}
+              {busy ? tr("Envoi…", "Sending…") : tr("Recevoir un code", "Get a code")}
             </Button>
           </>
         ) : (
@@ -129,13 +125,13 @@ export default function MotDePasseOublie() {
             {devCode && (
               <InfoBanner>
                 <span>
-                  Code de vérification : <strong>{devCode}</strong>
+                  {tr("Code", "Code")} : <strong>{devCode}</strong>
                 </span>
               </InfoBanner>
             )}
 
             <label className="field">
-              <span className="fieldLabel">Code reçu</span>
+              <span className="fieldLabel">{tr("Code reçu", "Code received")}</span>
               <input
                 className="input"
                 inputMode="numeric"
@@ -147,20 +143,20 @@ export default function MotDePasseOublie() {
             </label>
 
             <div className="field">
-              <span className="fieldLabel">Nouveau mot de passe</span>
+              <span className="fieldLabel">{tr("Nouveau mot de passe", "New password")}</span>
               <PasswordInput value={password} onChange={setPassword} autoComplete="new-password" />
-              <span className="fieldHint">{password.length > 0 ? (passwordError(password) ?? "Mot de passe valide.") : PASSWORD_HINT}</span>
+              <span className="fieldHint">{passwordHint(password)}</span>
             </div>
 
             <Button type="submit" block disabled={code.length < 4 || passwordError(password) !== null || busy}>
-              {busy ? "Validation…" : "Changer mon mot de passe"}
+              {busy ? tr("Validation…", "Saving…") : tr("Changer mon mot de passe", "Change password")}
             </Button>
           </>
         )}
 
         <div className="authLinks">
           <Link href="/connexion" className="authLink">
-            Retour à la connexion
+            {tr("Retour à la connexion", "Back to sign in")}
           </Link>
         </div>
       </form>

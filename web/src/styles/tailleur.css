@@ -30,7 +30,7 @@
 /* Statistiques d'accueil */
 .tStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .tStat {
-  background: linear-gradient(180deg, #fff, var(--bg-alt));
+  background: linear-gradient(180deg, var(--surface), var(--bg-alt));
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   padding: 12px;
@@ -63,7 +63,7 @@
 }
 .tBigBtn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(91, 33, 182, 0.28); }
 .tBigBtn:active { transform: translateY(0); }
-.tBigBtnSecondary { background: var(--surface); color: var(--violet-deep); border: 1.5px solid var(--violet-primary); box-shadow: var(--shadow-sm); }
+.tBigBtnSecondary { background: var(--surface); color: var(--violet-text); border: 1.5px solid var(--violet-primary); box-shadow: var(--shadow-sm); }
 .tBigBtnSecondary:hover { background: var(--violet-tint); }
 .tBigBtnIcon {
   flex: none;
@@ -110,7 +110,7 @@ a.tRow:hover, button.tRow:hover { border-color: var(--violet-vivid); }
   height: 44px;
   border-radius: 50%;
   background: var(--violet-tint);
-  color: var(--violet-deep);
+  color: var(--violet-text);
   font-weight: 700;
 }
 
@@ -142,16 +142,6 @@ a.tRow:hover, button.tRow:hover { border-color: var(--violet-vivid); }
 }
 
 /* Messagerie commande */
-.tChat { display: grid; gap: 8px; }
-.tMsg {
-  max-width: 85%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-size: 15px;
-}
-.tMsgDate { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
 
 /* Patron assemble, a la largeur de l'ecran (le pincement du navigateur
    suffit pour zoomer). */
@@ -266,7 +256,6 @@ a.tRow:hover, button.tRow:hover { border-color: var(--violet-vivid); }
 .tBars li { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; min-width: 0; }
 .tBar { width: 100%; max-width: 36px; border-radius: 6px 6px 0 0; background: var(--violet-primary); min-height: 2px; }
 .tBarLabel { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
-.tMsgMine { justify-self: end; background: var(--violet-tint); }
 .tStatsMoney .tStatValue { font-size: 17px; line-height: 1.2; word-break: break-word; }
 .srOnly {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;

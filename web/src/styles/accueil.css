@@ -183,7 +183,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--pending);
-  background: #fef3c7;
+  background: var(--warn-bg);
   border-radius: var(--radius-chip);
   padding: 4px 12px;
   margin-bottom: 10px;

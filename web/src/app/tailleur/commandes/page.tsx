@@ -2,10 +2,11 @@
 
 /**
  * Commandes recues via Sur-MeZur (B3.6) : accepter ou refuser (avec motif),
- * faire avancer le statut, messagerie, mesures du client et modele demande.
+ * faire avancer le statut, mesures du client et modele demande.
  * Ni offre, ni devis, ni paiement.
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TailorApi } from "@/lib/api/tailor";
@@ -15,11 +16,11 @@ import { IconOrders } from "@/components/icons";
 import { OrderBadge, formatDateFR } from "../_components";
 
 const FILTERS = [
-  { key: "all", label: "Toutes" },
-  { key: "new", label: "Nouvelles" },
-  { key: "in_progress", label: "En cours" },
-  { key: "ready_for_pickup", label: "Prêtes" },
-  { key: "finished_delivered", label: "Livrées" },
+  { key: "all", fr: "Toutes", en: "All" },
+  { key: "new", fr: "Nouvelles", en: "New" },
+  { key: "in_progress", fr: "En cours", en: "In progress" },
+  { key: "ready_for_pickup", fr: "Prêtes", en: "Ready" },
+  { key: "finished_delivered", fr: "Livrées", en: "Delivered" },
 ];
 
 export default function Commandes() {
@@ -31,7 +32,7 @@ export default function Commandes() {
     TailorApi.orders()
       .then(setOrders)
       .catch((e) => {
-        setError(e instanceof Error ? e.message : "Chargement impossible.");
+        setError(e instanceof Error ? e.message : tr("Chargement impossible.", "Could not load."));
         setOrders([]);
       });
   }, []);
@@ -40,22 +41,21 @@ export default function Commandes() {
 
   return (
     <div className="tPage">
-      <PageHeader title="Commandes reçues" back />
+      <PageHeader title={tr("Commandes reçues", "Orders received")} back />
       <ErrorBanner message={error} />
-      <div className="tFilters" role="group" aria-label="Filtrer les commandes">
+      <div className="tFilters" role="group" aria-label={tr("Filtrer", "Filter")}>
         {FILTERS.map((f) => (
           <Chip key={f.key} active={filter === f.key} onClick={() => setFilter(f.key)}>
-            {f.label}
+            {tr(f.fr, f.en)}
           </Chip>
         ))}
       </div>
       {orders === null ? (
-        <Spinner label="Chargement…" />
+        <Spinner />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<IconOrders size={30} strokeWidth={1.6} />}
-          title="Aucune commande ici"
-          body="Les commandes envoyées par les clients via Sur-MeZur apparaîtront ici."
+          title={tr("Aucune commande", "No orders")}
         />
       ) : (
         <ul className="tList">
@@ -63,11 +63,11 @@ export default function Commandes() {
             <li key={o.id}>
               <Link href={`/tailleur/commandes/${o.id}`} className="tRow">
                 <span className="tRowMain">
-                  <span className="tRowTitle">Commande n°{o.id.slice(0, 8)}</span>
+                  <span className="tRowTitle">{tr("Commande", "Order")} n°{o.id.slice(0, 6).toUpperCase()}</span>
                   <br />
                   <span className="tRowSub">
-                    Passée le {formatDateFR(o.created_at)}
-                    {o.desired_date ? ` · Souhaitée le ${formatDateFR(o.desired_date)}` : ""}
+                    {formatDateFR(o.created_at)}
+                    {o.desired_date ? ` · ${tr("pour le", "for")} ${formatDateFR(o.desired_date)}` : ""}
                   </span>
                 </span>
                 <OrderBadge status={o.status} />

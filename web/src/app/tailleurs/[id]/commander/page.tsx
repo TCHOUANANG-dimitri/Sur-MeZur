@@ -12,6 +12,7 @@
  * d'un modele) le preselectionne.
  */
 
+import { tr } from "@/lib/i18n";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -48,7 +49,7 @@ function CommanderInner() {
 
   useEffect(() => {
     if (!id) return;
-    TailorsApi.get(id).then(setTailor).catch((e) => setError(e instanceof Error ? e.message : "Tailleur introuvable."));
+    TailorsApi.get(id).then(setTailor).catch((e) => setError(e instanceof Error ? e.message : tr("Tailleur introuvable.", "Tailor not found.")));
     TailorsApi.contact(id).then(setContact).catch(() => setContact(null));
     MeasurementsApi.list()
       .then((list) => {
@@ -80,7 +81,7 @@ function CommanderInner() {
   }, [modeleParam]);
 
   const today = todayISO();
-  const dateErr = date && date < today ? "La date souhaitée ne peut pas être passée." : null;
+  const dateErr = date && date < today ? tr("Date passée.", "Date in the past.") : null;
   const budgetErr = amountError(budget);
   const canSend = Boolean(measurementId) && !dateErr && !budgetErr && note.length <= NOTE_MAX && !busy;
 
@@ -102,7 +103,7 @@ function CommanderInner() {
       setSent(order);
       window.scrollTo({ top: 0 });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Envoi impossible.");
+      setError(err instanceof Error ? err.message : tr("Envoi impossible.", "Could not send."));
     } finally {
       setBusy(false);
     }
@@ -111,8 +112,8 @@ function CommanderInner() {
   if (!tailor || measures === null) {
     return (
       <>
-        <PageHeader title="Envoyer mes mesures" back />
-        <div className="container section">{error ? <ErrorBanner message={error} /> : <Spinner label="Chargement…" />}</div>
+        <PageHeader title={tr("Envoyer mes mesures", "Send my measurements")} back />
+        <div className="container section">{error ? <ErrorBanner message={error} /> : <Spinner />}</div>
       </>
     );
   }
@@ -121,20 +122,23 @@ function CommanderInner() {
     const model = models.find((m) => m.id === sent.garment_model_id);
     return (
       <>
-        <PageHeader title="Commande envoyée" />
+        <PageHeader title={tr("Commande envoyée", "Order sent")} />
         <div className="container section stack">
           <EmptyState
             icon={<IconCheck size={30} strokeWidth={1.8} />}
-            title={`Envoyée à ${tailor.shop_name}`}
-            body={`Commande n° ${sent.id.slice(0, 6).toUpperCase()} : vos mesures${model ? ` et le modèle « ${model.name} »` : ""} sont chez le tailleur. Il l'acceptera et fixera le prix avec vous.`}
+            title={tr(`Envoyée à ${tailor.shop_name}`, `Sent to ${tailor.shop_name}`)}
+            body={tr(
+              `N° ${sent.id.slice(0, 6).toUpperCase()}${model ? ` · ${model.name}` : ""}. Le tailleur fixera le prix avec vous.`,
+              `No. ${sent.id.slice(0, 6).toUpperCase()}${model ? ` · ${model.name}` : ""}. The tailor will agree the price with you.`
+            )}
           />
           {contact?.phone && (
             <a className="btn btnWhatsapp btnBlock" href={whatsappHref(contact.phone, tailorWhatsappMessage(tailor.shop_name, sent.id))}>
-              <IconChat size={18} aria-hidden /> Prévenir le tailleur sur WhatsApp
+              <IconChat size={18} aria-hidden /> {tr("Prévenir sur WhatsApp", "Tell them on WhatsApp")}
             </a>
           )}
           <Link href={`/commandes/${sent.id}`} style={{ display: "contents" }}>
-            <Button block variant={contact?.phone ? "secondary" : "primary"}>Voir ma commande</Button>
+            <Button block variant={contact?.phone ? "secondary" : "primary"}>{tr("Voir ma commande", "View my order")}</Button>
           </Link>
         </div>
       </>
@@ -143,39 +147,38 @@ function CommanderInner() {
 
   return (
     <>
-      <PageHeader title="Envoyer mes mesures" back />
+      <PageHeader title={tr("Envoyer mes mesures", "Send my measurements")} back />
       <form className="container section stack" onSubmit={send} noValidate>
         <p className="muted" style={{ margin: 0 }}>
-          À <strong>{tailor.shop_name}</strong>. Le tailleur reçoit vos mesures et, si vous en choisissez un, le modèle.
+          {tr("À", "To")} <strong>{tailor.shop_name}</strong>
         </p>
         <ErrorBanner message={error} />
 
         {measures.length === 0 ? (
           <EmptyState
             icon={<IconMeasure size={30} strokeWidth={1.6} />}
-            title="Prenez d'abord vos mesures"
-            body="Deux photos suffisent : vos douze mesures de couture en moins d'une minute."
+            title={tr("Prenez d'abord vos mesures", "Take your measurements first")}
             action={
               <Link href="/mesures/nouvelle">
-                <Button>Prendre mes mesures</Button>
+                <Button>{tr("Prendre mes mesures", "Take my measurements")}</Button>
               </Link>
             }
           />
         ) : (
           <>
             <fieldset className="tPick">
-              <legend>Fiche de mesures</legend>
+              <legend>{tr("Mesures", "Measurements")}</legend>
               {measures.map((m) => {
                 const count = presentableMeasures(m.data as Record<string, number>).length;
                 return (
                   <label key={m.id} className="tPickItem">
                     <input type="radio" name="mesure" value={m.id} checked={measurementId === m.id} onChange={() => setMeasurementId(m.id)} />
                     <span>
-                      <strong>Prise de mesures n°{m.version}</strong>
-                      {m.is_active && " (actuelles)"}
+                      <strong>{tr("Mesures n°", "Measurements #")}{m.version}</strong>
+                      {m.is_active && tr(" (actuelles)", " (current)")}
                       <br />
                       <span className="tRowSub">
-                        {count} mesure{count > 1 ? "s" : ""} · {m.height_cm} cm
+                        {count} · {m.height_cm} cm
                       </span>
                     </span>
                   </label>
@@ -184,10 +187,10 @@ function CommanderInner() {
             </fieldset>
 
             <fieldset className="tPick">
-              <legend>Modèle (facultatif)</legend>
+              <legend>{tr("Modèle (facultatif)", "Style (optional)")}</legend>
               <label className="tPickItem">
                 <input type="radio" name="modele" value="" checked={!modelId} onChange={() => setModelId("")} />
-                <span>Aucun modèle : j&apos;en parlerai avec le tailleur</span>
+                <span>{tr("Aucun modèle", "No style")}</span>
               </label>
               {models.map((m) => (
                 <label key={m.id} className="tPickItem">
@@ -207,26 +210,26 @@ function CommanderInner() {
               ))}
               {models.length === 0 && (
                 <p className="fieldHint" style={{ margin: 0 }}>
-                  Ajoutez des modèles depuis le <Link href="/modeles">catalogue</Link> (cœur ou « Mes modèles ») pour les envoyer.
+                  <Link href="/modeles">{tr("Choisir dans le catalogue", "Choose from the catalogue")}</Link>
                 </p>
               )}
             </fieldset>
 
             <Card>
               <label className="field">
-                <span className="fieldLabel">Réception</span>
+                <span className="fieldLabel">{tr("Réception", "Collection")}</span>
                 <select className="input" value={reception} onChange={(e) => setReception(e.target.value as "pickup" | "delivery")}>
-                  <option value="pickup">Je passe le chercher à l&apos;atelier</option>
-                  <option value="delivery">Livraison</option>
+                  <option value="pickup">{tr("Retrait à l'atelier", "Pick-up at the workshop")}</option>
+                  <option value="delivery">{tr("Livraison", "Delivery")}</option>
                 </select>
               </label>
               <label className="field">
-                <span className="fieldLabel">Date souhaitée (facultatif)</span>
+                <span className="fieldLabel">{tr("Date souhaitée (facultatif)", "Wanted by (optional)")}</span>
                 <Input type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={dateErr ? true : undefined} />
                 {dateErr && <span className="fieldError">{dateErr}</span>}
               </label>
               <label className="field">
-                <span className="fieldLabel">Budget indicatif en FCFA (facultatif)</span>
+                <span className="fieldLabel">{tr("Budget FCFA (facultatif)", "Budget FCFA (optional)")}</span>
                 <Input
                   inputMode="numeric"
                   value={budget}
@@ -237,20 +240,20 @@ function CommanderInner() {
                 {budgetErr && <span className="fieldError">{budgetErr}</span>}
               </label>
               <label className="field" style={{ marginBottom: 0 }}>
-                <span className="fieldLabel">Message au tailleur (facultatif)</span>
+                <span className="fieldLabel">{tr("Message (facultatif)", "Message (optional)")}</span>
                 <Textarea
                   rows={3}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   maxLength={NOTE_MAX}
-                  placeholder="Tissu, occasion, détails du modèle…"
+                  placeholder={tr("Tissu, occasion…", "Fabric, occasion…")}
                 />
               </label>
             </Card>
 
             <div className="actionBar">
               <Button type="submit" block disabled={!canSend}>
-                {busy ? "Envoi…" : "Envoyer au tailleur"}
+                {busy ? tr("Envoi…", "Sending…") : tr("Envoyer au tailleur", "Send to tailor")}
               </Button>
             </div>
           </>
@@ -263,7 +266,7 @@ function CommanderInner() {
 export default function Commander() {
   return (
     <RequireRole role="client">
-      <Suspense fallback={<Spinner label="Chargement…" />}>
+      <Suspense fallback={<Spinner />}>
         <CommanderInner />
       </Suspense>
     </RequireRole>
