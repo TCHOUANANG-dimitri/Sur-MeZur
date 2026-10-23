@@ -26,6 +26,7 @@ import { Suspense, useEffect, useState } from "react";
 import { AuthApi, PublicApi, type PublicConfig } from "@/lib/api/endpoints";
 import { setTokens, startAuthTimer } from "@/lib/api/client";
 import { guestClaimToken, safeNext } from "@/lib/guest";
+import { destinationFor } from "@/lib/home";
 import { readAcquisition } from "@/lib/acquisition";
 import { useAuth } from "@/components/AuthProvider";
 import { SignedInNotice } from "@/components/SignedInNotice";
@@ -141,10 +142,9 @@ function InscriptionInner() {
       await refresh();
       if (res.must_change_password) {
         router.replace("/changer-mot-de-passe");
-      } else if (res.role === "tailor" || role === "tailor") {
-        router.replace("/tailleur");
       } else {
-        router.replace(next ?? "/accueil");
+        // `suite` seulement si le nouveau compte y a droit (lib/home).
+        router.replace(destinationFor(res.role ?? role, next));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Création du compte impossible.");

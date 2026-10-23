@@ -203,11 +203,50 @@ def api() -> None:
     check(p2["status"] == "ready" and p2["result"]["base"]["id"] == "pantalon_droit", "base par defaut")
     check(p2["result"]["corps_garmentcode"]["height"]["valeur"] == 178, "taille du carnet utilisee")
 
-    # Categorie sans modele de base : l'apercu prend le relais.
+    # Toutes les categories ont un modele de base : plus d'apercu en mode « on ».
+    check(all(c["bases"] and not c["a_venir"] for c in cat_api["categories"]), "chaque categorie a son modele")
     p3 = ok(client.post("/api/tailor/patterns", files={"image": ("r.png", b"\x89PNG\r\n\x1a\n" + b"\0" * 64, "image/png")},
-                        data={"garment_type": "boubou", "measurements": json.dumps({"chest": 100})}, headers=TH),
-            "boubou", 201).json()
-    check(p3["engine"] == "preview-v0", "boubou en apercu")
+                        data={"garment_type": "boubou", "measurements": json.dumps({"chest": 100, "waist": 90})},
+                        headers=TH), "boubou", 201).json()
+    check(p3["engine"] == "garmentcode-v1", "boubou trace par le moteur")
+
+    # Chemise : col, pied de col, patte, poignets ; trois PDF ; pas de tuiles.
+    pc = ok(client.post("/api/tailor/patterns", data={"garment_type": "chemise", "tailor_client_id": c["id"]},
+                        headers=TH), "chemise du carnet", 201).json()
+    pc = ok(client.get(f"/api/tailor/patterns/{pc['id']}", headers=TH), "chemise lue").json()
+    noms = {x["nom"] for x in pc["result"]["pieces"]}
+    check(pc["engine"] == "garmentcode-v1" and pc["status"] == "ready", "chemise tracee")
+    check({"Devant", "Dos", "Manche", "Col", "Pied de col", "Patte de boutonnage", "Poignet"} <= noms,
+          f"pieces de chemise : {sorted(noms)}")
+    devant = next(x for x in pc["result"]["pieces"] if x["nom"] == "Devant")
+    check(devant["quantite"] == 2 and "vis-à-vis" in devant["consigne"], "devants ouverts, coupes par 2")
+    pied = next(x for x in pc["result"]["pieces"] if x["nom"] == "Pied de col")
+    check(38 <= pied["largeur_cm"] <= 52, f"pied de col plausible : {pied['largeur_cm']} cm")
+    check(set(pc["pdf_urls"] or {}) == {"tracage", "a4", "plein"}, "chemise : trois PDF")
+    svg_c = ok(client.get(pc["svg_url"], headers=TH), "svg chemise").text
+    check("Découpe A4" not in svg_c and "Pied de col" in svg_c, "chemise : patron assemble, sans tuiles")
+
+    # Mode apercu (reglage admin) : rectangles, mais dessines comme les autres.
+    invalidate()
+    with SessionLocal() as db:
+        set_setting(db, "features", {"pattern_generation": "preview"}, None)
+        db.commit()
+    invalidate()
+    pa = ok(client.post("/api/tailor/patterns", files={"image": ("r.png", b"\x89PNG\r\n\x1a\n" + b"\0" * 64, "image/png")},
+                        data={"garment_type": "agbada", "measurements": json.dumps({"chest": 100})}, headers=TH),
+            "agbada en apercu", 201).json()
+    pa = ok(client.get(f"/api/tailor/patterns/{pa['id']}", headers=TH), "apercu lu").json()
+    check(pa["engine"] == "preview-v0" and pa["status"] == "ready", "apercu pret")
+    check(set(pa["pdf_urls"] or {}) == {"tracage", "a4", "plein"}, "apercu : trois PDF")
+    for k, url in (pa["pdf_urls"] or {}).items():
+        check(ok(client.get(url, headers=TH), f"pdf apercu {k}").content[:5] == b"%PDF-", f"pdf apercu {k} valide")
+    svg_a = ok(client.get(pa["svg_url"], headers=TH), "svg apercu").text
+    check("Découpe A4" not in svg_a and "CARRÉ TEST" in svg_a, "apercu : patron assemble, sans tuiles")
+    invalidate()
+    with SessionLocal() as db:
+        set_setting(db, "features", {"pattern_generation": "on"}, None)
+        db.commit()
+    invalidate()
 
     # Mesure aberrante : echec avec un message lisible.
     p4 = ok(client.post("/api/tailor/patterns", data={"garment_type": "jupe",

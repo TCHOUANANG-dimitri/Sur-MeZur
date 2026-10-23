@@ -225,3 +225,43 @@ def _tiles(layout: list[dict]) -> list[dict]:
             x += PAGE_W_MM
         y += PAGE_H_MM
     return tiles
+
+def preview_files(garment_type: str, measurements: dict, title: str = "Patron") -> tuple[dict[str, bytes], dict]:
+    """Patron d'apercu dessine comme les autres : les rectangles de base
+    deviennent des pieces cotees, puis le meme export que le moteur
+    garmentcode-v1 — patron assemble a l'ecran (jamais de tuiles A4 vides),
+    fiche de tracage, PDF 1:1 en pages A4 et pleine page. Rend (fichiers,
+    fiche technique)."""
+    from app.services.patrons.export import pdf_echelle, pdf_tracage, svg_patron
+    from app.services.patrons.geometrie import rectangle
+
+    _, tech = generate_preview_svg(garment_type, measurements, title=title)
+    couture = SEAM_MM / 10
+    pieces = [
+        rectangle(f"apercu_{i}", p["label"], round(p["w_mm"] / 10, 1), round(p["h_mm"] / 10, 1),
+                  p["quantite"], None, couture)
+        for i, p in enumerate(tech["pieces"])
+    ]
+    mesures = ", ".join(f"{k} {str(v).replace('.', ',')}" for k, v in tech["mesures_cm"].items())
+    lignes = [
+        f"Patron Sur-MeZur — {title.replace('Patron — ', '')} (rectangles de base)",
+        f"Échelle 1:1, cotes en cm sur la ligne de couture — valeur de couture {str(couture).replace('.', ',')} cm "
+        "comprise dans la ligne de coupe.",
+        f"Mesures : {mesures}" if mesures else "Mesures : —",
+        f"Aisance : {EASE_MM // 10} cm par demi-tour — {datetime.now(timezone.utc).strftime('%d/%m/%Y')}",
+    ]
+    remarques = [
+        "Patron de base fait de rectangles : tracer l'encolure, l'emmanchure et les pinces selon votre méthode.",
+    ]
+    if tech.get("estimated_values"):
+        remarques.append("Certaines mesures manquaient et ont été estimées : vérifiez-les avant de couper.")
+    a4, _ = pdf_echelle(pieces, lignes)
+    plein, _ = pdf_echelle(pieces, lignes, pleine_page=True)
+    tech.pop("pages", None)
+    tech["remarques"] = remarques
+    return {
+        "svg": svg_patron(pieces, lignes).encode("utf-8"),
+        "a4.pdf": a4,
+        "plein.pdf": plein,
+        "tracage.pdf": pdf_tracage(pieces, lignes, couture, [], remarques),
+    }, tech

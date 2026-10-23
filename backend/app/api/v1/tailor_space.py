@@ -51,7 +51,7 @@ from app.models.users import TailorProfile, User
 from app.services.patrons import vision
 from app.services.activity import platform_of, utcnow
 from app.services import patrons, tailor_finance
-from app.services.pattern_engine import GARMENT_TYPES, PREVIEW_NOTE, generate_preview_svg
+from app.services.pattern_engine import GARMENT_TYPES, PREVIEW_NOTE, preview_files
 from app.services.phone import normalize_phone
 from app.services.platform_settings import get_setting as get_platform_setting
 from app.services.storage import delete_upload, save_upload
@@ -800,9 +800,12 @@ def _pattern_out(r: TailorPatternRequest) -> dict:
         "error_message": r.error_message,
         "image_url": f"/api/tailor/patterns/{r.id}/image" if r.image_url else None,
         "svg_url": f"/api/tailor/patterns/{r.id}/svg" if r.status == "ready" else None,
+        # Tout patron pret a ses PDF (moteur ou apercu) ; un ancien apercu,
+        # genere avant l'export commun, n'en a pas : on ne liste que l'existant.
         "pdf_urls": (
-            {k: f"/api/tailor/patterns/{r.id}/pdf?type={k}" for k in PATTERN_PDFS}
-            if r.status == "ready" and r.engine == patrons.MOTEUR else None
+            {k: f"/api/tailor/patterns/{r.id}/pdf?type={k}" for k in PATTERN_PDFS
+             if _tailor_store("patterns", f"{r.id}_{k}.pdf").exists()} or None
+            if r.status == "ready" else None
         ),
         "created_at": r.created_at,
     }
@@ -857,8 +860,9 @@ def _run_pattern_job(request_id: str) -> None:
                     _tailor_store("patterns", f"{r.id}.svg" if nom == "svg" else f"{r.id}_{nom}").write_bytes(contenu)
                 tech = patron.fiche()
             else:
-                svg, tech = generate_preview_svg(r.garment_type, measurements, title=f"Patron — {r.garment_type}")
-                _tailor_store("patterns", f"{r.id}.svg").write_text(svg, encoding="utf-8")
+                contenus, tech = preview_files(r.garment_type, measurements, title=f"Patron — {r.garment_type}")
+                for nom, contenu in contenus.items():
+                    _tailor_store("patterns", f"{r.id}.svg" if nom == "svg" else f"{r.id}_{nom}").write_bytes(contenu)
                 tech["note"] = PREVIEW_NOTE
             if demande:
                 tech["demande"] = demande

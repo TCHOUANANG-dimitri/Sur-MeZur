@@ -29,7 +29,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { MeasurementsApi } from "@/lib/api/endpoints";
 import type { JobStatus } from "@/lib/api/types";
 import { ensureSession } from "@/lib/guest";
-import { UnreadablePhotoError, compressForMeasurement } from "@/lib/imageCompress";
+import { compressForMeasurement, photoErrorMessage } from "@/lib/imageCompress";
 import { ApiError } from "@/lib/api/client";
 import { friendlyError, withRetry } from "@/lib/retry";
 import { useAuth } from "./AuthProvider";
@@ -427,11 +427,7 @@ function PhotoPicker({
       onPick(await compressForMeasurement(f));
     } catch (e) {
       setPreview(null);
-      setPickError(
-        e instanceof UnreadablePhotoError
-          ? "Cette photo n'a pas pu être lue. Choisissez-la à nouveau, ou prenez-la avec l'appareil."
-          : "Cette photo n'a pas pu être préparée. Essayez-en une autre."
-      );
+      setPickError(photoErrorMessage(e));
     } finally {
       setPreparing(false);
     }

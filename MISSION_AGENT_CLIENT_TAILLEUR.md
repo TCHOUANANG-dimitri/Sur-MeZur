@@ -1,7 +1,14 @@
-# Mission : relier clients et tailleurs, localisation, finances du tailleur
+# Missions pour l'agent de développement Sur-MeZur
 
-Consignes pour l'agent qui réalisera ces travaux. Lis tout avant de commencer.
-Rédigé le 2026-10-22, état du dépôt : commit qui ajoute ce fichier.
+Consignes pour l'agent qui réalise les travaux. Ce fichier s'allonge mission
+après mission : la plus récente est en haut. Lis les règles (§0), puis la
+mission **en cours**. Les missions réalisées restent plus bas, comme référence
+sur le code existant : ne les refais pas.
+
+| Mission | Sujet | État |
+|---|---|---|
+| 2 | Changement de compte, photos refusées, patrons (chemise, affichage, impression) | Réalisée le 2026-10-23 (voir « Bilan » en fin de mission 2) |
+| 1 | Annuaire des tailleurs, commande avec mesures, contact, localisation, recettes | Réalisée (commit 3245b24) |
 
 ## 0. Règles non négociables
 
@@ -10,7 +17,145 @@ Rédigé le 2026-10-22, état du dépôt : commit qui ajoute ce fichier.
 - **Ne lance aucune commande sur le VPS.** C'est l'utilisateur qui les exécute, notamment `sudo bash /srv/surmezur/app/deploy/contabo/mettre_a_jour.sh`.
 - **Git.** Pas de commit ni de push sans l'accord explicite de l'utilisateur. Pas de force push, pas de réécriture d'historique. Les fichiers `landing/AGENTS.md` et `landing/CLAUDE.md` restent hors commit.
 - **Langue.** Réponses, textes de l'interface et messages de commit en français.
-- **Tests.** Teste dans un vrai navigateur avant d'annoncer que c'est fini (voir §6).
+- **Tests.** Teste dans un vrai navigateur avant d'annoncer que c'est fini (voir §6 de la mission 1 pour la méthode).
+- **Pièges connus du banc de test web.**
+  - `next start` fige l'adresse de l'API au moment du `next build` (`API_ORIGIN`, par défaut `http://localhost:8000`). Lance donc l'API de test sur le port 8000, ou refais le build avec la bonne variable.
+  - `playwright-core` n'est pas installé globalement : `npm i --no-save playwright-core@1.48.2` dans un dossier de travail temporaire, avec Edge (`C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`).
+  - Le scénario de la mission 1, `relations_test.js`, doit continuer de passer.
+
+---
+
+# Mission 2 — À FAIRE : changement de compte, photos refusées, patrons
+
+Demandée le 2026-10-23 par l'utilisateur, depuis son téléphone Android (application TWA). Six problèmes.
+
+## 2.1 « Cette page est réservée aux tailleurs » revient sans arrêt après un changement de compte
+
+**Constat.** Sur le même téléphone, on passe d'un compte tailleur à un compte administrateur. L'écran « Cette page est réservée aux tailleurs — Compte ouvert : Admin Sur-MeZur (administrateur) » apparaît alors à chaque fois. « Changer de compte » ne fait que relancer la boucle.
+
+**Cause probable (à confirmer en le reproduisant)**, dans `web/src/app/connexion/page.tsx` :
+- Quand la session tailleur expire ou qu'on se déconnecte sur une page `/tailleur/...`, `RequireRole` (`web/src/components/RequireRole.tsx`) renvoie vers `/connexion?suite=/tailleur/...`.
+- Après la connexion, `destinationFor(role, next)` renvoie vers `suite` **quel que soit le rôle du nouveau compte** : `return next ?? homeFor(role)`. Un administrateur est donc renvoyé sur `/tailleur/...`, où `RequireRole` affiche l'écran « réservée aux tailleurs ».
+- Sur cet écran, `SignedInNotice` fait `logout({ to: null })` : on reste sur `/tailleur/...` sans session. On retombe donc sur `/connexion?suite=/tailleur/...`, et la boucle recommence.
+
+**À faire.**
+1. Dans `connexion`, n'utiliser `suite` que si la page est permise au rôle du compte qui vient de se connecter :
+   - `/tailleur...` pour un tailleur ;
+   - `/admin...` pour un administrateur ;
+   - les pages client (`/accueil`, `/modeles`, `/mesures`, `/commandes`, `/profil`) pour un client ;
+   - les pages publiques (`/tailleurs`, `/fiches`, `/infos`…) pour tout le monde.
+   Sinon, aller à `homeFor(role)`. Mets cette règle dans `web/src/lib/home.ts`, par exemple `pathAllowedFor(role, path)`, à côté de `homeFor`, et sers-t'en aussi dans `inscription` si elle utilise `suite`.
+2. Dans `SignedInNotice`, quand il est affiché par `RequireRole` (page d'un autre rôle), « Changer de compte » doit mener à `/connexion` **avec** `suite` vers la page demandée. Le point 1 garantit qu'on n'y retourne que si le nouveau compte y a droit.
+3. Vérifie qu'aucune autre mémoire ne renvoie vers l'ancien espace : `localStorage`, service worker (`SwRegister.tsx`), `start_url` de la TWA (`/bienvenue`), `HomeRedirect.tsx`.
+4. **Test navigateur.** Enchaîne : tailleur connecté sur `/tailleur/patrons`, déconnexion, connexion en administrateur → on arrive sur `/admin`. Puis administrateur → tailleur, et tailleur → client. Aucun écran « réservée aux … » ne doit s'afficher.
+
+## 2.2 Retirer le texte jaune en haut de « Nouveau patron » (et de la page d'un patron)
+
+- `web/src/app/tailleur/patrons/nouveau/page.tsx`, ligne ~247 : supprimer la pastille `tPreviewBadge` « Aperçu — patron indicatif (col chemise et patte de boutonnage absents de GarmentCode) ». C'est le texte jaune de la capture.
+- `web/src/app/tailleur/patrons/[id]/page.tsx`, ligne ~147 : supprimer aussi la pastille jaune « Aperçu — patron indicatif ».
+- Ne remplace ces pastilles par aucun autre avertissement : avec le point 2.6, il n'y aura plus de patron « aperçu » pour la chemise.
+
+## 2.3 Photos sans défaut refusées : « Photo illisible. Essayez-en une autre. »
+
+**Où.** Le message est affiché par `pick()` dans `web/src/app/tailleur/patrons/nouveau/page.tsx` (ligne ~130), quand `compressForMeasurement` (`web/src/lib/imageCompress.ts`) lève une erreur. Cette fonction ne lève `UnreadablePhotoError` que si **la lecture des octets du fichier** échoue (`file.arrayBuffer()` rejeté, ou fichier de 0 octet), dans `inMemoryCopy`.
+
+**Cause probable.** Le fichier est lu **deux fois** :
+- une première fois par `createImageBitmap(file)` (décodage) ;
+- une seconde par `file.arrayBuffer()` (copie en mémoire). C'est le cas notamment des petits JPEG de moins de 900 Ko qui n'ont pas besoin d'être réduits, et de tout fichier dont le canvas échoue.
+
+Sous Chrome Android et dans la TWA, la seconde lecture échoue souvent (`NotReadableError`). C'est le cas :
+- des photos de la galerie synchronisées dans le nuage (Google Photos) ;
+- des images reçues par WhatsApp ;
+- des fichiers d'un fournisseur `content://` dont l'autorisation est temporaire.
+
+L'image est parfaite, mais elle n'est plus lisible au moment de la copie. Le commentaire en tête de `imageCompress.ts` décrit déjà ce phénomène (`ERR_UPLOAD_FILE_CHANGED`), mais la copie n'est faite qu'**après** le décodage.
+
+**À faire.**
+1. **Lire le fichier une seule fois, tout de suite** : `const bytes = await file.arrayBuffer()`, avec un repli sur `FileReader` si `arrayBuffer` échoue. Construire un `Blob` en mémoire, puis décoder et réduire **à partir de ce Blob**, jamais à partir du `File` d'origine. Toute la suite (`decode`, `inMemoryCopy`) travaille sur la copie.
+2. **Distinguer les cas** dans le message :
+   - fichier non lisible : « Cette photo n'est pas sur le téléphone (photo du nuage ?). Ouvrez-la d'abord dans la galerie, ou choisissez « Appareil photo ». » ;
+   - format non pris en charge (HEIC non décodable *et* refusé par le serveur) : le dire ;
+   - fichier vide.
+   Écris dans la console le nom de l'erreur (`e.name`) pour pouvoir diagnostiquer.
+3. **Vérifier le serveur.** Quels formats et quelle taille `POST /api/tailor/patterns` et `POST /api/tailor/patterns/analyse` acceptent-ils ? Voir `backend/app/api/v1/tailor_space.py` et `app/services/storage.py`. Un refus du serveur doit afficher son vrai message, pas « illisible ».
+4. **Même correction pour les mesures.** `compressForMeasurement` sert aussi aux photos de mesure (client et tailleur). Vérifie `CameraCapture.tsx`, `MeasureFlow.tsx` et `/tailleur/mesurer`.
+5. **Tests.** Test unitaire ou Playwright avec un `File` dont la seconde lecture échoue (simulation), un JPEG de moins de 900 Ko, un PNG, un WebP et une très grande image (6000 × 8000). Utilise uniquement des images de synthèse, **jamais de photo de personne**.
+
+## 2.4 Le zoom ne fonctionne pas : le retirer
+
+- `web/src/app/tailleur/patrons/[id]/page.tsx`, lignes ~54 et ~184-189 : supprimer l'état `zoom` et la rangée `tZoomRow` (boutons − / + et « 250 % »). Sur le téléphone, le bouton + ne faisait que tasser la mise en page.
+- Le dessin s'affiche à la largeur de l'écran. Le zoom natif du navigateur (pincer) suffit : vérifie qu'il n'est pas bloqué par le `viewport` ou par un `touch-action`.
+- Garde la phrase « Aperçu à l'écran : pour couper, utilisez le PDF », sous le dessin.
+- Supprime les styles `tZoomRow` devenus inutiles.
+
+## 2.5 À l'écran, le patron affiche une longue suite de cases vides
+
+**Constat** (chemise, captures 3 et 5). Sous les trois pièces, on voit « Découpe A4 (21 pages) » suivi de « Page 15/21 — — », « Page 16/21 — — »… : des cases presque toutes vides. L'utilisateur demande si c'est le bon patron.
+
+**Cause.**
+- Le moteur d'aperçu, `generate_preview_svg` dans `backend/app/services/pattern_engine.py`, met dans **le même SVG** le patron assemblé puis la découpe en tuiles A4 (`_tiles`, lignes ~154-227).
+- `_tiles` découpe le **rectangle englobant** toutes les pièces : la plupart des pages ne couvrent que du vide (« — »).
+- La page web affiche ce SVG tel quel.
+
+**À faire.**
+1. **À l'écran**, n'afficher que le patron assemblé, comme la page de `patron_plein.pdf` : les pièces côte à côte avec leurs cotes, le droit-fil, les crans et le carré test. Jamais les tuiles A4.
+2. **La découpe A4** n'existe que dans le PDF « patron 1:1 en pages A4 ». N'y garder que les pages qui contiennent au moins un morceau de pièce, et numéroter les pages restantes de suite.
+3. Même vérification pour les patrons GarmentCode : le SVG affiché à l'écran ne doit pas contenir de tuiles.
+
+## 2.6 La fiche imprimée ne contient que les mesures, pas le patron
+
+**Constat.**
+- Pour la chemise (moteur d'aperçu), « Imprimer la fiche (PDF) » donne une page « Mesures utilisées / Pièces à couper » (capture 4). C'est l'`<article className="fiche print-only">` de `patrons/[id]/page.tsx`.
+- L'utilisateur veut **le patron lui-même**, comme pour le pantalon : `patron_plein.pdf` (pièces à l'échelle 1:1 avec cotes, carré test) et `patron_tracage.pdf` (page 1 : pièces à couper, coutures A/B/C…, à savoir ; puis une page par pièce avec le dessin coté et les « points à reporter »).
+- Les deux PDF du pantalon sont la référence de ce qu'il faut obtenir. Ils viennent de `backend/app/services/patrons/export.py`.
+
+**À faire.**
+1. **Chemise.** La raison donnée dans `catalogue.py` (`A_VENIR["chemise"]`) n'est pas bloquante : le moteur maison (`patrons/moteur.py`, `geometrie.py`) trace déjà un haut à manches montées (`haut_ajuste`, `ample`).
+   - Ajoute une base `chemise_classique` (catégorie `chemise`, homme et femme). Corps devant et dos dérivés du tracé haut ou tunique, avec emmanchure et manche montée, longueur aux hanches.
+   - Ajoute en pièces simples cotées : la **patte de boutonnage** (rectangle ; positions des boutonnières en repères), le **col** et le **pied de col** (rectangles cotés depuis le tour de cou + croisure), les **poignets**.
+   - Mets la catégorie dans `BASE_PAR_DEFAUT` et retire `chemise` d'`A_VENIR`.
+   - Le patron sort alors les **trois PDF** comme les autres bases : traçage, 1:1 en pages A4, 1:1 pleine page.
+2. **Boubou et agbada**, encore en aperçu :
+   - **Boubou** : `A_VENIR` le décrit comme « grand rectangle plié aux épaules ». Fais-en une base simple (pièce pliée aux épaules, encolure, fentes de côté) qui sort les mêmes trois PDF.
+   - **Agbada** : s'il reste en aperçu, son PDF doit quand même montrer **les pièces dessinées et cotées**, pas seulement les mesures. Réutilise `export.py` en lui passant les pièces rectangulaires de `pattern_engine._pieces_for`.
+3. **Page d'un patron.** Supprime le bouton « Imprimer la fiche (PDF) » et l'`<article className="fiche print-only">` qui n'imprime que des mesures, ainsi que les aides devenues inutiles (`libelleMesure`, `cm`, styles `fiche*` propres à cette page). Chaque patron prêt affiche les trois boutons PDF. La liste « Pièces » à l'écran garde les dimensions.
+4. **Tests backend.** Dans `backend/tests/test_patrons.py` :
+   - génération d'une chemise : moteur `garmentcode-v1`, présence des pièces col, pied de col, patte et poignets, avec quantités et dimensions plausibles pour des mesures types ;
+   - les trois PDF de la chemise s'ouvrent ;
+   - le PDF A4 n'a aucune page vide ;
+   - le SVG affiché ne contient pas « Découpe A4 ».
+   Relance aussi `test_tailor_space` et `test_vision_patron`.
+5. **Test navigateur.** Pour une chemise et pour un pantalon : la page du patron montre le patron assemblé sans cases vides, sans zoom et sans pastille jaune, et les trois PDF se téléchargent. Pour le PDF de traçage, vérifie que sa première page n'est pas vide (problème déjà corrigé dans `6ced4b8`, à ne pas réintroduire).
+
+## 2.7 Ce que tu rends
+
+- Tous les tests backend à 0 échec ; `npm run build` du web sans erreur ; le scénario `relations_test.js` de la mission 1 passe toujours.
+- Un résumé pour l'utilisateur : ce qui est fait, ce qui ne l'est pas et pourquoi, et la commande VPS si le backend a changé (`mettre_a_jour.sh`).
+- Dans ce fichier, passe la mission 2 à « Réalisée (commit …) » dans le tableau du haut, une fois le commit fait avec l'accord de l'utilisateur.
+
+## Bilan de la mission 2 (2026-10-23)
+
+- **2.1 Changement de compte.**
+  - `web/src/lib/home.ts` : `pathAllowedFor` et `destinationFor`, utilisés par la connexion, l'inscription et le changement de mot de passe.
+  - `SignedInNotice` reçoit `switchTo`. `RequireRole` y passe la connexion avec `suite` : plus de boucle.
+- **2.2 Pastilles jaunes** retirées de la page « Nouveau patron », de la page d'un patron et de la liste des patrons.
+- **2.3 Photos.** `imageCompress.ts` lit le fichier une seule fois (`arrayBuffer`, avec `FileReader` en repli), puis tout part de la copie en mémoire. `photoErrorMessage` explique la cause (photo restée dans le nuage, fichier vide).
+- **2.4 Zoom** retiré.
+- **2.5 Affichage.** Le patron s'affiche assemblé, sans tuiles A4, pour tous les moteurs. L'aperçu passe par `pattern_engine.preview_files`, qui utilise le même export que le moteur.
+- **2.6 Patrons.** Toutes les catégories ont un vrai modèle de base :
+  - `chemise_classique` : encolure en deux passes, devants ouverts avec croisure, col, pied de col, patte, poignets ;
+  - `boubou_simple` ;
+  - `agbada_simple` : grands panneaux tracés sans GarmentCode, épaule jusqu'au poignet.
+
+  `A_VENIR` est vide. Chaque patron prêt, aperçu compris, a ses trois PDF. Les titres des pièces fines sont placés hors de la pièce. La fiche « mesures seulement » est supprimée.
+- **Tests.** Backend à 0 échec. Scénario navigateur `m2_test.js` : 33 vérifications OK.
+- **Limite.** Les patrons d'aperçu créés **avant** cette mission gardent leur ancien SVG et n'ont pas de PDF : il faut les régénérer (supprimer, puis recréer).
+
+---
+
+# Mission 1 — RÉALISÉE (commit 3245b24) : relier clients et tailleurs, localisation, finances
+
+Conservée comme référence sur le code. Ne pas refaire.
 
 ## 1. Ce qu'on veut, en une phrase par point
 

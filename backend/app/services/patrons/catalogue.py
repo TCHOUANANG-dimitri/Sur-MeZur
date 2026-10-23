@@ -164,6 +164,28 @@ BASES: list[ModeleBase] = [
         {"chest": 16},
     ),
     ModeleBase(
+        "chemise_classique", "chemise", "Chemise classique", "homme",
+        "Chemise droite à col et pied de col, patte de boutonnage ; poignets si manches longues.",
+        "chemise", "nuque",
+        {"longueur_cm": 75, "manches": "longues"},
+        {"chest": 14},
+    ),
+    ModeleBase(
+        "boubou_simple", "boubou", "Boubou simple", "homme",
+        "Grand vêtement ample tombant des épaules, encolure ronde, fentes de côté.",
+        "ample", "nuque",
+        {"longueur_cm": 140, "manches": "courtes", "encolure": "ronde", "ampleur": "forte"},
+        {"chest": 40},
+    ),
+    ModeleBase(
+        "agbada_simple", "agbada", "Agbada (grande robe)", "homme",
+        "Grande robe de dessus en deux grands panneaux qui couvrent les bras jusqu'aux poignets ; "
+        "côtés cousus seulement en bas.",
+        "agbada", "nuque",
+        {"longueur_cm": 130},
+        {},
+    ),
+    ModeleBase(
         "pantalon_droit", "pantalon", "Pantalon droit", "homme",
         "Pantalon à pinces dos, ceinture droite ; l'aisance de cuisse est déjà prévue par le tracé.",
         "pantalon", "taille",
@@ -175,11 +197,7 @@ BASES: list[ModeleBase] = [
 BASES_PAR_ID = {b.id: b for b in BASES}
 
 # Categories sans modele de base pour l'instant : le moteur d'apercu prend le relais.
-A_VENIR = {
-    "boubou": "grand rectangle plié aux épaules : tracé simple, à faire sans GarmentCode",
-    "agbada": "pièces drapées très larges : recette à recueillir auprès des tailleurs",
-    "chemise": "col chemise et patte de boutonnage absents de GarmentCode",
-}
+A_VENIR: dict[str, str] = {}
 
 # Type de vetement de l'API historique (POST /tailor/patterns) -> base par defaut.
 BASE_PAR_DEFAUT = {
@@ -189,6 +207,9 @@ BASE_PAR_DEFAUT = {
     "pantalon": "pantalon_droit",
     "haut": "haut_ajuste",
     "tunique": "tunique_droite",
+    "chemise": "chemise_classique",
+    "boubou": "boubou_simple",
+    "agbada": "agbada_simple",
 }
 
 

@@ -274,17 +274,27 @@ def dessiner_piece(t, piece: Piece, ox: float, oy: float, e: float = 1.0, police
     else:
         cx = cx + 0.18 * (mx[0] - mn[0])  # titre a cote du milieu de manche
 
-    # Titre de la piece.
-    (tx, ty), = X(np.array([cx, mn[1] + 0.55 * h]))
-    t.texte(tx + tc(4), ty + tc(6), piece.nom, tc(7), NOIR, gras=True, ancre="debut")
-    t.texte(tx + tc(4), ty - tc(1.5), piece.consigne, tc(4.5), NOIR, ancre="debut")
-    t.texte(tx + tc(4), ty - tc(7.5), f"fini : {fmt(mx[0] - mn[0])} × {fmt(mx[1] - mn[1])} cm", tc(3.6), GRIS, ancre="debut")
-
     # Lignes de cote : largeur sous la piece, hauteur a gauche.
     cmn = piece.coupe.min(axis=0)
     (x0, yb), (x1, _) = X(np.array([[mn[0], cmn[1]], [mx[0], cmn[1]]]))
     yb -= tc(8)
     _cote(t, (x0, yb), (x1, yb), f"largeur {fmt(mx[0] - mn[0])} cm", tc(3.6))
+
+    # Titre de la piece : dedans, ou sous la cote de largeur si la piece est
+    # trop fine pour l'y ecrire sans chevaucher les traits (col, patte...).
+    etroite, basse = (mx[0] - mn[0]) * k < tc(60), h * k < tc(26)
+    if basse:  # col, pied de col, poignet : sous la piece
+        tx, ty = x0, yb - tc(13)
+        dx = 0.0
+    elif etroite:  # patte : a droite, a mi-hauteur
+        (tx, ty), = X(np.array([piece.coupe.max(axis=0)[0], mn[1] + 0.55 * h]))
+        dx = tc(4)
+    else:
+        (tx, ty), = X(np.array([cx, mn[1] + 0.55 * h]))
+        dx = tc(4)
+    t.texte(tx + dx, ty + tc(6), piece.nom, tc(7), NOIR, gras=True, ancre="debut")
+    t.texte(tx + dx, ty - tc(1.5), piece.consigne, tc(4.5), NOIR, ancre="debut")
+    t.texte(tx + dx, ty - tc(7.5), f"fini : {fmt(mx[0] - mn[0])} × {fmt(mx[1] - mn[1])} cm", tc(3.6), GRIS, ancre="debut")
     (xg, y0c), (_, y1c) = X(np.array([[cmn[0], mn[1]], [cmn[0], mx[1]]]))
     xg -= tc(8)
     _cote(t, (xg, y0c), (xg, y1c), f"hauteur {fmt(mx[1] - mn[1])} cm", tc(3.6))

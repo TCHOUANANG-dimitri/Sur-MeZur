@@ -14,6 +14,7 @@ import { Suspense, useState } from "react";
 import { UsersApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/components/AuthProvider";
 import { safeNext } from "@/lib/guest";
+import { destinationFor } from "@/lib/home";
 import { PasswordInput } from "@/components/fields";
 import { Button, ErrorBanner, InfoBanner } from "@/components/ui";
 import { PASSWORD_HINT, passwordError } from "@/lib/password";
@@ -48,8 +49,7 @@ function ChangerMotDePasseInner() {
     return null;
   }
 
-  const backTo =
-    next ?? (user?.role === "tailor" ? "/tailleur" : user?.role === "admin" ? "/admin" : "/accueil");
+  const backTo = destinationFor(user?.role, next);
 
   return (
     <main className="authScreen">

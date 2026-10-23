@@ -48,7 +48,6 @@ export default function Patrons() {
         }
       />
       <ErrorBanner message={error} />
-      <p><span className="tPreviewBadge">Aperçu — la génération à partir de l&apos;image s&apos;améliore bientôt</span></p>
       {patterns === null ? (
         <Spinner label="Chargement…" />
       ) : patterns.length === 0 ? (

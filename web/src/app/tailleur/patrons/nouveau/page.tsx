@@ -24,7 +24,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TailorApi, GARMENT_TYPES } from "@/lib/api/tailor";
 import type { PatternCatalogue, StyleAnalysis } from "@/lib/api/tailor";
-import { compressForMeasurement } from "@/lib/imageCompress";
+import { compressForMeasurement, photoErrorMessage } from "@/lib/imageCompress";
 import { Button, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { ClientPicker, ManualMeasureForm } from "../../_components";
 
@@ -126,8 +126,8 @@ export default function NouveauPatron() {
       setAnalyseError("");
       setApplied(false);
       setDetails([]);
-    } catch {
-      setError("Photo illisible. Essayez-en une autre.");
+    } catch (err) {
+      setError(photoErrorMessage(err));
     }
   }
 
@@ -235,7 +235,6 @@ export default function NouveauPatron() {
     );
   }
 
-  const aVenir = catalogue?.mode === "on" ? catalogue.categories.find((c) => c.id === garment)?.a_venir : null;
   const prop = analyse?.proposition;
   const visionDispo = Boolean(catalogue?.vision);
 
@@ -243,9 +242,6 @@ export default function NouveauPatron() {
     <div className="tPage">
       <PageHeader title="Nouveau patron" back />
       <ErrorBanner message={error} />
-      {!vraiPatron && (
-        <p><span className="tPreviewBadge">Aperçu — patron indicatif{aVenir ? ` (${aVenir})` : ""}</span></p>
-      )}
 
       <div className="field">
         <span className="fieldLabel">

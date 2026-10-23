@@ -29,8 +29,46 @@ const MAX_DIM = 1600;
 const JPEG_QUALITY = 0.85;
 
 /** La photo choisie ne peut pas etre lue du tout : a signaler tout de suite,
- *  plutot que de laisser l'envoi echouer plus tard sans explication. */
-export class UnreadablePhotoError extends Error {}
+ *  plutot que de laisser l'envoi echouer plus tard sans explication.
+ *  `cause` : nom de l'erreur du navigateur (NotReadableError…), pour le
+ *  diagnostic. */
+export class UnreadablePhotoError extends Error {
+  constructor(message: string, readonly empty = false, readonly cause_name = "") {
+    super(message);
+  }
+}
+
+/** Message a afficher quand une photo choisie n'a pas pu etre preparee. */
+export function photoErrorMessage(e: unknown): string {
+  if (e instanceof UnreadablePhotoError) {
+    return e.empty
+      ? "Ce fichier est vide. Choisissez une autre photo."
+      : "Cette photo n'est pas lisible depuis le téléphone (photo restée dans le nuage ?). " +
+          "Ouvrez-la d'abord dans la galerie pour la télécharger, ou prenez-la avec l'appareil photo.";
+  }
+  return "Cette photo n'a pas pu être préparée. Essayez-en une autre.";
+}
+
+/** Lit TOUS les octets du fichier, une seule fois. `arrayBuffer` d'abord,
+ *  `FileReader` en repli (certains WebView Android ne gerent que lui). */
+async function readBytes(file: File): Promise<ArrayBuffer> {
+  try {
+    return await file.arrayBuffer();
+  } catch (first) {
+    try {
+      return await new Promise<ArrayBuffer>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as ArrayBuffer);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsArrayBuffer(file);
+      });
+    } catch {
+      const name = first instanceof Error ? first.name : "";
+      console.warn("Photo illisible :", name || first);
+      throw new UnreadablePhotoError("Photo illisible", false, name);
+    }
+  }
+}
 
 interface Decoded {
   source: CanvasImageSource;
@@ -66,31 +104,32 @@ async function decode(file: File): Promise<Decoded> {
   }
 }
 
-/** Copie integrale du fichier en memoire. Leve UnreadablePhotoError si le
- *  fichier ne peut pas etre lu — l'envoi aurait echoue de la meme facon. */
-async function inMemoryCopy(file: File): Promise<File> {
-  let buffer: ArrayBuffer;
-  try {
-    buffer = await file.arrayBuffer();
-  } catch {
-    throw new UnreadablePhotoError("Photo illisible");
-  }
-  if (buffer.byteLength === 0) throw new UnreadablePhotoError("Photo vide");
-  return new File([buffer], file.name || "photo.jpg", {
+/**
+ * Photo prete a l'envoi : reduite a 1600 px si besoin, en JPEG.
+ *
+ * Le fichier n'est lu QU'UNE FOIS, au tout debut : decodage et reduction
+ * partent de cette copie en memoire. Lire le `File` d'origine deux fois
+ * (decodage, puis copie) echouait souvent sous Android a la seconde lecture
+ * — photo de la galerie restee dans le nuage, image recue par WhatsApp,
+ * fichier d'un fournisseur `content://` — et une photo sans defaut etait
+ * declaree « illisible ».
+ */
+export async function compressForMeasurement(file: File): Promise<File> {
+  const bytes = await readBytes(file);
+  if (bytes.byteLength === 0) throw new UnreadablePhotoError("Photo vide", true);
+  const copy = new File([bytes], file.name || "photo.jpg", {
     type: file.type || "image/jpeg",
     lastModified: Date.now(),
   });
-}
 
-export async function compressForMeasurement(file: File): Promise<File> {
   let decoded: Decoded;
   try {
-    decoded = await decode(file);
+    decoded = await decode(copy);
   } catch {
     // Format que le navigateur ne sait pas decoder (HEIC sous Chrome, par
-    // exemple) : on l'envoie tel quel, le serveur tentera sa chance — mais
-    // depuis une copie en memoire, jamais depuis la reference d'origine.
-    return inMemoryCopy(file);
+    // exemple) : on envoie la copie telle quelle, le serveur dira si le
+    // format est accepte.
+    return copy;
   }
 
   const { source, width, height, release } = decoded;
@@ -98,9 +137,7 @@ export async function compressForMeasurement(file: File): Promise<File> {
     const ratio = Math.min(1, MAX_DIM / Math.max(width, height));
     // Deja a la bonne taille et deja legere : la reencoder ne ferait que
     // degrader l'image pour rien.
-    if (ratio === 1 && file.type === "image/jpeg" && file.size < 900_000) {
-      return await inMemoryCopy(file);
-    }
+    if (ratio === 1 && copy.type === "image/jpeg" && copy.size < 900_000) return copy;
 
     const targetWidth = Math.round(width * ratio);
     const targetHeight = Math.round(height * ratio);
@@ -123,9 +160,9 @@ export async function compressForMeasurement(file: File): Promise<File> {
 
     // Sans redimensionnement, on ne garde la version reencodee que si elle
     // est effectivement plus legere.
-    if (!blob || (ratio === 1 && blob.size >= file.size)) return await inMemoryCopy(file);
+    if (!blob || (ratio === 1 && blob.size >= copy.size)) return copy;
 
-    const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+    const name = copy.name.replace(/\.[^.]+$/, "") + ".jpg";
     return new File([blob], name, { type: "image/jpeg", lastModified: Date.now() });
   } finally {
     release();

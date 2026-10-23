@@ -47,6 +47,13 @@ export function RequireRole({
       <SignedInNotice
         title={`Cette page est réservée aux ${ROLE_AUDIENCE[role]}`}
         message="Allez à votre espace, ou changez de compte pour y accéder."
+        // Connexion, puis retour ici SEULEMENT si le nouveau compte y a droit
+        // (destinationFor) : plus de boucle sur cet ecran.
+        switchTo={
+          typeof window === "undefined"
+            ? "/connexion"
+            : `/connexion?suite=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`
+        }
       />
     );
   }

@@ -30,14 +30,10 @@ import { setTokens, startAuthTimer } from "@/lib/api/client";
 import { guestClaimToken, safeNext } from "@/lib/guest";
 import { useAuth } from "@/components/AuthProvider";
 import { SignedInNotice } from "@/components/SignedInNotice";
-import { homeFor } from "@/lib/home";
+import { destinationFor, pathAllowedFor } from "@/lib/home";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
-
-function destinationFor(role: string, next: string | null): string {
-  return next ?? homeFor(role);
-}
 
 function ConnexionInner() {
   const router = useRouter();
@@ -115,11 +111,12 @@ function ConnexionInner() {
   // ce navigateur) : on le dit et on laisse choisir, au lieu de renvoyer en
   // silence vers son espace.
   if (!loading && user && !user.is_guest && !handedOff) {
+    const suiteAutorisee = next && pathAllowedFor(user.role, next) ? next : null;
     return (
       <SignedInNotice
         message="Pour vous connecter avec un autre compte, choisissez « Changer de compte »."
-        continueTo={next ?? undefined}
-        continueLabel={next ? "Continuer" : undefined}
+        continueTo={suiteAutorisee ?? undefined}
+        continueLabel={suiteAutorisee ? "Continuer" : undefined}
       />
     );
   }

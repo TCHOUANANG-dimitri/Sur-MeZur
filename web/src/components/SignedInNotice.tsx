@@ -21,6 +21,7 @@ export function SignedInNotice({
   message,
   continueTo,
   continueLabel,
+  switchTo,
 }: {
   title?: string;
   /** Phrase sous le nom : ce que la personne voulait faire. */
@@ -28,6 +29,11 @@ export function SignedInNotice({
   /** Destination du bouton principal ; par defaut l'espace du compte. */
   continueTo?: string;
   continueLabel?: string;
+  /** Ou aller apres « Changer de compte ». Par defaut on reste sur place
+   *  (la page s'affiche telle qu'un visiteur la voit : formulaire, mesure
+   *  sans compte). Une page reservee a un autre role passe la connexion :
+   *  rester sur place y relancerait l'ecran en boucle. */
+  switchTo?: string;
 }) {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -48,7 +54,7 @@ export function SignedInNotice({
           </Button>
           {/* Deconnexion sur place : la page demandee s'affiche ensuite telle
               qu'un visiteur la voit (formulaire, mesure sans compte). */}
-          <Button variant="secondary" onClick={() => logout({ to: null })}>
+          <Button variant="secondary" onClick={() => logout({ to: switchTo ?? null })}>
             Changer de compte
           </Button>
         </div>

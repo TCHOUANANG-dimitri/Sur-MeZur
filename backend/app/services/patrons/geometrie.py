@@ -542,6 +542,47 @@ def redresser(piece: Piece) -> None:
     piece.appliquer(lambda pts: pts - mn)
 
 
+def rectangle(cle: str, nom: str, largeur_cm: float, hauteur_cm: float, quantite: int = 1,
+              consigne: str | None = None, valeur_couture_cm: float = 1.0, pli: bool = False) -> Piece:
+    """Piece rectangulaire cotee (col, poignet, patte, panneau d'apercu), prete
+    a dessiner : ligne de coupe calculee, coin bas-gauche en (0, 0). `pli` :
+    le bord gauche est une pliure (la piece est montree en moitie)."""
+    w, h = float(largeur_cm), float(hauteur_cm)
+    coins = [(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)]  # sens direct
+    aretes = [Arete(np.array([coins[i], coins[(i + 1) % 4]], dtype=float), False) for i in range(4)]
+    if pli:
+        aretes[3].role = "pli"  # (0, h) -> (0, 0)
+    piece = Piece(cle, nom, aretes, quantite, consigne or (f"Couper {quantite}" if not pli else "Couper 1 au pli"))
+    piece.coupe = ligne_de_coupe(piece, valeur_couture_cm)
+    redresser(piece)
+    return piece
+
+
+def ouvrir_pli(piece: Piece, croisure_cm: float, valeur_couture_cm: float = 1.0) -> np.ndarray | None:
+    """Transforme le bord « pli » d'une piece en bord de coupe deporte de
+    `croisure_cm` vers l'exterieur (devant de chemise : milieu devant +
+    croisure). Rend le segment de l'ancien pli (le milieu devant, a reporter),
+    ou None si la piece n'a pas de pli."""
+    i = next((k for k, a in enumerate(piece.aretes) if a.role == "pli"), None)
+    if i is None:
+        return None
+    pli = piece.aretes[i]
+    p, q = pli.pts[0].copy(), pli.pts[-1].copy()
+    d = (q - p) / np.linalg.norm(q - p)
+    dehors = np.array([d[1], -d[0]])  # a droite du bord = exterieur (contour direct)
+    p2, q2 = p + dehors * croisure_cm, q + dehors * croisure_cm
+    piece.aretes[i:i + 1] = [
+        Arete(np.array([p, p2]), False, pli.src),
+        Arete(np.array([p2, q2]), False, pli.src),
+        Arete(np.array([q2, q]), False, pli.src),
+    ]
+    piece.coupe = ligne_de_coupe(piece, valeur_couture_cm)
+    redresser(piece)
+    # L'ancien pli a bouge avec la piece (redresser) : il va du debut du
+    # premier raccord a la fin du second.
+    return np.array([piece.aretes[i].pts[0], piece.aretes[i + 2].pts[-1]])
+
+
 def preparer(spec: dict, valeur_couture_cm: float = 1.0) -> tuple[list[Piece], list[dict]]:
     coutures = _coutures(spec)
     pieces = pieces_depuis_spec(spec)

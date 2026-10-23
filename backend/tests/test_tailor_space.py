@@ -249,7 +249,10 @@ def main() -> None:
     check(p1["result"] and "Aperçu" in p1["result"]["note"], "mention apercu")
     check(p1["svg_url"] and p1["image_url"], "fichiers exposes")
     svg = ok(client.get(p1["svg_url"], headers=TH), "svg lisible").text
-    check("Aperçu" in svg and "Marge de couture" in svg, "svg annote")
+    # L'apercu est dessine comme les vrais patrons : assemble et cote, sans
+    # tuiles A4 vides, et il a ses trois PDF.
+    check("rectangles de base" in svg and "CARRÉ TEST" in svg and "Découpe A4" not in svg, "svg annote")
+    check(set(p1["pdf_urls"] or {}) == {"tracage", "a4", "plein"}, "apercu : trois PDF")
     ok(client.get(p1["image_url"], headers=TH), "image lisible")
     p2 = ok(client.post("/api/tailor/patterns", files={"image": ("r.png", io.BytesIO(PNG), "image/png")},
                         data={"garment_type": "pantalon",

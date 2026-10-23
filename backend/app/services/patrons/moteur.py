@@ -22,13 +22,23 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import catalogue as cat
-from .corps import LIBELLES, MesuresInvalides, avec_aisances, corps_garmentcode
+from .corps import LIBELLES, RAPPORT_COU, MesuresInvalides, avec_aisances, corps_garmentcode
 from .export import cotes_piece, horodatage, pdf_echelle, pdf_tracage, points_tracage, svg_patron
-from .geometrie import preparer
+from .geometrie import ouvrir_pli, preparer, rectangle
 
 MOTEUR = "garmentcode-v1"
 GC_DIR = Path(__file__).resolve().parents[3] / "third_party" / "garmentcode"
 VALEUR_COUTURE_CM = 1.0
+
+# Chemise (cm). Croisure : ce qui depasse du milieu devant pour boutonner.
+CROISURE_CM = 1.75
+PIED_DE_COL_H = 3.0
+COL_H = 4.5
+POIGNET_H = 6.0
+POIGNET_AISANCE = 5.0  # autour du poignet, plus la croisure
+ESPACE_BOUTONS = 9.0
+ENC_DEVANT_CM = 8.0  # profondeur d'encolure de chemise, sous le point de cou
+ENC_DOS_CM = 2.0
 
 _verrou = threading.Lock()
 _gc: dict = {}
@@ -179,11 +189,30 @@ def _design(base: cat.ModeleBase, style: dict, corps: dict, remarques: list) -> 
         _regler(d, "meta.upper", "FittedShirt")
         _manches(d, style)
         _encolure(d, style)
-    if prog in ("ample", "ample_etages"):
+    if prog in ("ample", "ample_etages", "chemise"):
         _regler(d, "meta.upper", "Shirt")
         _regler(d, "shirt.width", 1.0)  # l'aisance est deja dans le tour de poitrine
         _manches(d, style)
         _encolure(d, style)
+    if prog == "chemise":
+        # Encolure de chemise : au ras du cou (largeur = celle du cou), creusee
+        # devant, presque droite au dos. Le pied de col s'y monte.
+        _regler(d, "collar.f_collar", "CircleNeckHalf")
+        _regler(d, "collar.b_collar", "CircleNeckHalf")
+        # Largeur d'encolure de chemise ~ tour de cou / 3 + 2 cm (encolure ~ cou
+        # + 2 cm, pour boutonner sans serrer) ; GarmentCode
+        # l'exprime en fraction (negative) de sa largeur de cou.
+        tour_cou = corps["neck_w"] / RAPPORT_COU
+        cible = tour_cou / 3 + 2
+        d["collar"]["width"]["v"] = max(-0.5, min(0.0, cible / corps["neck_w"] - 1))
+        # Profondeurs : premiere passe a 0, corrigees ensuite (generer).
+        d["collar"]["fc_depth"]["v"] = 0.0
+        d["collar"]["bc_depth"]["v"] = 0.0
+        _regler(d, "shirt.length", L / corps["waist_line"])
+        _regler(d, "shirt.flare", 1.0)
+        if style.get("manches") == "longues":
+            # La manche s'arrete au poignet rapporte (un peu de blousant garde).
+            _regler(d, "sleeve.length", max(0.6, 1 - (POIGNET_H - 1) / corps["arm_length"]))
     if prog == "ample":
         _regler(d, "shirt.length", L / corps["waist_line"])
         _regler(d, "shirt.flare", {"peu": 1.0, "moyenne": 1.25, "forte": 1.5}.get(style.get("ampleur"), 1.0))
@@ -251,11 +280,29 @@ def generer(base_id: str, mesures: dict, style: dict | None = None, genre: str |
         style["longueur_cm"] = float(mesures["outseam"])
 
     remarques: list[str] = []
+    if base.programme == "agbada":
+        pieces, coutures = _pieces_agbada(corps_aise, style, remarques)
+        _reperes_et_notes(pieces, corps_aise, base, remarques)
+        controles = _controles(pieces, coutures, corps_aise, base)
+        mes = {k: round(float(v), 1) for k, v in mesures.items() if isinstance(v, (int, float)) or _num(v)}
+        return Patron(base, style, pieces, coutures, corps_aise, provenance, mes, ais, controles, remarques)
     gc = _charger()
     design = _design(base, style, corps_aise, remarques)
     body = gc["BodyParameters"](GC_DIR / "assets" / "bodies" / ("mean_male.yaml" if genre == "homme" else "mean_female.yaml"))
     body.load_from_dict(corps_aise)
-    vetement = gc["MetaGarment"](base.id, body, design)
+    # GarmentCode reecrit certaines valeurs du design en place : une copie par trace.
+    vetement = gc["MetaGarment"](base.id, body, copy.deepcopy(design))
+    if base.programme == "chemise":
+        # GarmentCode ajoute la pente d'epaule a la profondeur demandee : on
+        # mesure la premiere passe, puis on corrige pour obtenir les
+        # profondeurs d'une chemise (8 cm devant, 2 cm dos sous le point de cou).
+        essai, _ = preparer(vetement.assembly().pattern, VALEUR_COUTURE_CM)
+        pente = body["_bust_line"]
+        for nom, cle, voulu in (("Devant", "fc_depth", ENC_DEVANT_CM), ("Dos", "bc_depth", ENC_DOS_CM)):
+            piece = next((p for p in essai if p.nom == nom), None)
+            if piece is not None:
+                design["collar"][cle]["v"] += (voulu - _profondeur_encolure(piece)) / pente
+        vetement = gc["MetaGarment"](base.id, body, copy.deepcopy(design))
     controles = []
     try:
         vetement.assert_total_length()
@@ -269,11 +316,134 @@ def generer(base_id: str, mesures: dict, style: dict | None = None, genre: str |
     pieces, coutures = preparer(spec, VALEUR_COUTURE_CM)
     if base.programme == "ample_etages":
         _nommer_etages(pieces, coutures)
+    if base.programme == "chemise":
+        pieces += _pieces_chemise(pieces, corps_aise, style, remarques)
     _reperes_et_notes(pieces, corps_aise, base, remarques)
     controles += _controles(pieces, coutures, corps_aise, base)
 
     mes = {k: round(float(v), 1) for k, v in mesures.items() if isinstance(v, (int, float)) or _num(v)}
     return Patron(base, style, pieces, coutures, corps_aise, provenance, mes, ais, controles, remarques)
+
+
+def _profondeur_encolure(piece) -> float:
+    """Profondeur d'encolure d'une piece au pli : du point de cou (haut de
+    l'epaule) au haut de la pliure."""
+    pli = next(a for a in piece.aretes if a.role == "pli")
+    haut_pli = max(pli.pts[0][1], pli.pts[-1][1])
+    return float(piece.anneau()[:, 1].max() - haut_pli)
+
+
+def _bord_d_encolure(piece) -> float:
+    """Longueur du bord d'encolure d'une piece au pli : le bord qui part du
+    haut de la pliure (milieu devant ou dos)."""
+    import numpy as np
+
+    pli = next(a for a in piece.aretes if a.role == "pli")
+    haut = pli.pts[0] if pli.pts[0][1] > pli.pts[-1][1] else pli.pts[-1]
+    for a in piece.aretes:
+        if a is pli:
+            continue
+        if np.allclose(a.pts[0], haut, atol=0.05) or np.allclose(a.pts[-1], haut, atol=0.05):
+            return a.longueur
+    raise PatronImpossible("Encolure introuvable sur la pièce " + piece.nom)
+
+
+def _pieces_chemise(pieces, corps, style, remarques) -> list:
+    """Chemise : devants ouverts (milieu devant + croisure), puis les pieces
+    que GarmentCode ne trace pas — pied de col, col, patte de boutonnage,
+    poignets — en rectangles cotes, a partir de l'encolure reellement tracee."""
+    devant = next(p for p in pieces if p.nom == "Devant")
+    dos = next(p for p in pieces if p.nom == "Dos")
+    encolure = 2 * (_bord_d_encolure(devant) + _bord_d_encolure(dos))
+    hauteur_milieu = next(a for a in devant.aretes if a.role == "pli").longueur
+
+    milieu = ouvrir_pli(devant, CROISURE_CM, VALEUR_COUTURE_CM)
+    devant.quantite = 2
+    devant.consigne = "Couper 2 (en vis-à-vis)"
+    if milieu is not None:
+        devant.reperes.append((milieu, "milieu devant — boutons"))
+
+    ajout = [
+        rectangle("pied_de_col", "Pied de col", round(encolure + 2 * CROISURE_CM, 1), PIED_DE_COL_H, 2,
+                  "Couper 2 (+ 1 en entoilage)", VALEUR_COUTURE_CM),
+        rectangle("col", "Col", round(encolure + 2, 1), COL_H, 2,
+                  "Couper 2 (+ 1 en entoilage)", VALEUR_COUTURE_CM),
+        rectangle("patte", "Patte de boutonnage", 2 * CROISURE_CM, round(hauteur_milieu, 1), 2,
+                  "Couper 2 (+ 2 en entoilage)", VALEUR_COUTURE_CM),
+    ]
+    longues = style.get("manches") == "longues"
+    if longues:
+        poignet = round(float(corps.get("wrist") or 17) + POIGNET_AISANCE + 2 * CROISURE_CM, 1)
+        ajout.append(rectangle("poignet", "Poignet", poignet, POIGNET_H, 4,
+                               "Couper 4 (+ 2 en entoilage)", VALEUR_COUTURE_CM))
+
+    n_boutons = max(4, round(hauteur_milieu / ESPACE_BOUTONS))
+    remarques.append(
+        f"Encolure tracée : {_fmt(round(encolure, 1))} cm (tour complet). Le pied de col fait l'encolure "
+        f"+ {_fmt(2 * CROISURE_CM)} cm de croisure ; le col se monte sur le pied de col, "
+        "milieux dos l'un sur l'autre."
+    )
+    remarques.append(
+        f"Devant : le bord est à {_fmt(CROISURE_CM)} cm du milieu devant (croisure). La patte se coud "
+        "endroit contre endroit sur ce bord, puis se retourne vers l'intérieur. Boutons et boutonnières "
+        f"sur le milieu devant : {n_boutons} boutons, le premier sur le pied de col, puis tous les "
+        f"{_fmt(round(hauteur_milieu / n_boutons, 1))} cm environ (boutonnières à droite pour un homme, "
+        "à gauche pour une femme)."
+    )
+    if longues:
+        remarques.append(
+            f"Poignet : {_fmt(POIGNET_H)} cm de haut fini, 4 pièces (dessus et dessous de 2 poignets). Fente de manche de 10 cm au bas de la couture "
+            "arrière ; répartir l'excédent du bas de manche en 2 plis vers la fente."
+        )
+    return ajout
+
+
+def _pieces_agbada(corps, style, remarques):
+    """Agbada : deux grands panneaux au pli (devant, dos) qui vont de l'axe du
+    corps jusqu'au poignet, avec l'encolure. Coupe traditionnelle, tracee
+    sans GarmentCode (qui ne sait pas faire des « ailes » aussi larges)."""
+    import numpy as np
+
+    from .geometrie import Arete, Piece, ligne_de_coupe, redresser
+
+    sol = corps["height"] - corps["head_l"]
+    L = min(float(style.get("longueur_cm") or 130), sol - 6)
+    W = round(corps["shoulder_w"] / 2 + 0.95 * corps["arm_length"], 1)  # axe -> poignet
+    cou = corps["neck_w"] / RAPPORT_COU
+    demi_enc = cou / 6 + 1.5
+
+    def panneau(cle, nom, profondeur):
+        t = np.linspace(0, np.pi / 2, 24)
+        encolure = np.column_stack([demi_enc * np.sin(t), L - profondeur * np.cos(t)])  # pli -> epaule
+        aretes = [
+            Arete(np.array([[0.0, 0.0], [W, 0.0]]), False, (cle, 0)),          # bas
+            Arete(np.array([[W, 0.0], [W, L]]), False, (cle, 1)),              # cote (poignet -> bas)
+            Arete(np.array([[W, L], [demi_enc, L]]), False, (cle, 2)),         # epaule
+            Arete(encolure[::-1].copy(), True, (cle, 3)),                       # encolure
+            Arete(np.array([[0.0, L - profondeur], [0.0, 0.0]]), False, (cle, 4), role="pli"),
+        ]
+        piece = Piece(cle, nom, aretes, 1, "Couper 1 au pli")
+        piece.coupe = ligne_de_coupe(piece, VALEUR_COUTURE_CM)
+        redresser(piece)
+        return piece
+
+    devant, dos = panneau("agbada_f", "Devant", 12.0), panneau("agbada_b", "Dos", 2.0)
+    for p, lettre in ((devant, "A"), (dos, "A")):
+        p.aretes[2].lettre = lettre
+    for p in (devant, dos):
+        p.aretes[1].lettre = "B"
+    long_epaule = round(devant.aretes[2].longueur, 1)
+    coutures = [
+        {"lettre": "A", "piece_1": "Devant", "longueur_1": long_epaule, "piece_2": "Dos",
+         "longueur_2": round(dos.aretes[2].longueur, 1), "manche": False, "bords": 2},
+        {"lettre": "B", "piece_1": "Devant", "longueur_1": round(L, 1), "piece_2": "Dos",
+         "longueur_2": round(L, 1), "manche": False, "bords": 2},
+    ]
+    remarques.append(
+        f"Panneaux de {_fmt(round(2 * W))} cm de large (d'un poignet à l'autre) : coudre les épaules (A) "
+        "de l'encolure au poignet."
+    )
+    return [devant, dos], coutures
 
 
 def _nommer_etages(pieces, coutures) -> None:
@@ -316,6 +486,11 @@ def _reperes_et_notes(pieces, corps, base, remarques) -> None:
     if base.programme in ("robe_ajustee", "robe_cloche", "haut_ajuste", "jupe_ajustee"):
         remarques.append("Fermeture : les pièces sont tracées au pli. Pour une fermeture éclair au milieu dos, "
                          f"couper le dos en 2 et ajouter {_fmt(VALEUR_COUTURE_CM)} cm de couture au milieu.")
+    if base.id == "boubou_simple":
+        remarques.append("Côtés : laisser une fente de 25 à 30 cm au bas de chaque couture de côté.")
+    if base.id == "agbada_simple":
+        remarques.append("Côtés : coudre seulement les 40 cm du bas ; le haut reste ouvert pour passer les bras, "
+                         "les pans tombent sur les bras. Ourler les bords ouverts.")
     remarques.append(f"Ourlet : la valeur de couture du bas est de {_fmt(VALEUR_COUTURE_CM)} cm ; "
                      "ajouter la hauteur d'ourlet voulue sous la ligne du bas.")
 
