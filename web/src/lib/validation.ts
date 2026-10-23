@@ -42,15 +42,19 @@ export function nameError(value: string, label = "Le nom"): string | null {
   return null;
 }
 
-/** Plafond d'un montant en FCFA : au-dela, c'est une faute de frappe. */
-export const AMOUNT_MAX = 100_000_000;
+/** Plafond d'un montant en FCFA : au-dela, c'est une faute de frappe.
+ *  Dix millions de FCFA : au-dela, ce n'est plus un travail de couture. */
+export const AMOUNT_MAX = 10_000_000;
 
-/** Montant facultatif en FCFA : entier positif, plafonne. */
-export function amountError(value: string): string | null {
+/** Montant facultatif en FCFA : entier positif, plafonne. `min` fixe le
+ *  plancher (une recette doit valoir plus que zero). */
+export function amountError(value: string, { min = 0 } = {}): string | null {
   const v = value.trim();
   if (!v) return null;
   if (!/^\d+$/.test(v)) return "Montant en chiffres entiers, sans espace ni virgule.";
-  if (Number(v) > AMOUNT_MAX) return "Montant trop élevé.";
+  const n = Number(v);
+  if (n < min) return min > 0 ? "Montant supérieur à zéro." : null;
+  if (n > AMOUNT_MAX) return "Montant trop élevé.";
   return null;
 }
 

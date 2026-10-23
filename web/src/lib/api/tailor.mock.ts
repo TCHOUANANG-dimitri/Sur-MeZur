@@ -15,6 +15,7 @@
 
 import type {
   ClientMeasurement,
+  IncomeEntry,
   ShareLink,
   TailorClient,
   TailorDashboard,
@@ -33,6 +34,8 @@ interface Store {
   measurements: Record<string, ClientMeasurement[]>;
   jobs: TailorJob[];
   patterns: Array<TailorPattern & { svg?: string }>;
+  /** Carnet de recettes (finances de l'atelier). */
+  income: IncomeEntry[];
 }
 
 function seed(): Store {
@@ -81,6 +84,7 @@ function seed(): Store {
       },
     ],
     patterns: [],
+    income: [],
   };
 }
 
@@ -88,7 +92,13 @@ function load(): Store {
   if (typeof window === "undefined") return seed();
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return JSON.parse(raw) as Store;
+    if (raw) {
+      const v = JSON.parse(raw);
+      if (v && typeof v === "object") {
+        if (!Array.isArray(v.income)) v.income = [];
+        return v as Store;
+      }
+    }
   } catch {
     /* ignore */
   }
@@ -444,6 +454,88 @@ export const MockTailorApi = {
     await wait();
     throw new Error("Indisponible en simulation.");
   },
+  orderClient: async () => {
+    await wait();
+    throw new Error("Indisponible en simulation.");
+  },
+  addOrderToNotebook: async () => {
+    await wait();
+    throw new Error("Indisponible en simulation.");
+  },
+
+  // Finances : carnet de recettes simule, conserve dans le navigateur.
+  finances: async (params: { debut?: string; fin?: string } = {}) => {
+    await wait();
+    const store = load();
+    const entries = store.income ?? [];
+    const dansPeriode = entries.filter(
+      (e) =>
+        (!params.debut || (e.received_on ?? "") >= params.debut) &&
+        (!params.fin || (e.received_on ?? "") <= params.fin)
+    );
+    const parMois: Record<string, number> = {};
+    for (const e of dansPeriode) {
+      const mois = (e.received_on ?? "").slice(0, 7);
+      if (mois) parMois[mois] = (parMois[mois] ?? 0) + e.amount;
+    }
+    const reste = store.jobs.reduce(
+      (total, j) => total + Math.max(0, (j.price ?? 0) - (j.deposit ?? 0)),
+      0
+    );
+    const aujourdhui = new Date().toISOString().slice(0, 10);
+    const moisCourant = aujourdhui.slice(0, 7);
+    const moisPrecedent = new Date();
+    moisPrecedent.setMonth(moisPrecedent.getMonth() - 1);
+    const clePrecedent = moisPrecedent.toISOString().slice(0, 7);
+    return {
+      total_encaisse: dansPeriode.reduce((t, e) => t + e.amount, 0),
+      reste_a_encaisser: reste,
+      par_mois: Object.entries(parMois)
+        .map(([mois, total]) => ({ mois, total }))
+        .sort((a, b) => b.mois.localeCompare(a.mois)),
+      entrees: dansPeriode,
+      total_mois_courant: parMois[moisCourant] ?? 0,
+      total_mois_precedent: parMois[clePrecedent] ?? 0,
+    };
+  },
+  addIncome: async (body: {
+    job_id?: string | null;
+    amount: number;
+    received_on?: string | null;
+    label?: string | null;
+    method?: string;
+  }) => {
+    await wait();
+    const store = load();
+    const entry = {
+      id: `mock-income-${Date.now()}`,
+      job_id: body.job_id ?? null,
+      amount: body.amount,
+      received_on: body.received_on ?? new Date().toISOString().slice(0, 10),
+      label: body.label ?? "Recette",
+      method: body.method ?? "cash",
+      job_description: null,
+      created_at: new Date().toISOString(),
+    };
+    store.income = [entry, ...(store.income ?? [])];
+    if (body.job_id) {
+      const job = store.jobs.find((j) => j.id === body.job_id);
+      if (job) job.deposit = (job.deposit ?? 0) + body.amount;
+    }
+    save(store);
+    return entry;
+  },
+  deleteIncome: async (id: string) => {
+    await wait();
+    const store = load();
+    const entry = (store.income ?? []).find((e) => e.id === id);
+    store.income = (store.income ?? []).filter((e) => e.id !== id);
+    if (entry?.job_id) {
+      const job = store.jobs.find((j) => j.id === entry.job_id);
+      if (job) job.deposit = Math.max(0, (job.deposit ?? 0) - entry.amount);
+    }
+    save(store);
+  },
 
   patterns: async (): Promise<TailorPattern[]> => {
     await wait();
@@ -542,7 +634,16 @@ export const MockTailorApi = {
     }
     return null;
   },
-  updateProfile: async (body: { shop_name?: string; city?: string; quartier?: string; bio?: string }) => {
+  updateProfile: async (body: {
+    shop_name?: string;
+    city?: string;
+    quartier?: string;
+    bio?: string;
+    landmark?: string | null;
+    show_phone?: boolean;
+    lat?: number | null;
+    lng?: number | null;
+  }) => {
     await wait();
     const profile = {
       id: "mock-tailor-profile",

@@ -13,6 +13,7 @@
  * montants sont des entiers et l'avance ne depasse pas le prix.
  */
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { TailorApi } from "@/lib/api/tailor";
@@ -323,6 +324,11 @@ function TravauxInner() {
                     </Button>
                   ) : (
                     <span className="tRowSub">Travail terminé.</span>
+                  )}
+                  {(job.price == null || (job.deposit ?? 0) < job.price) && (
+                    <Link href={`/tailleur/finances?travail=${job.id}`} className="btn btnSecondary">
+                      Encaisser un paiement
+                    </Link>
                   )}
                   <Button variant="ghost" onClick={() => void remove(job)}>
                     Supprimer

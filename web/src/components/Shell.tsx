@@ -32,22 +32,23 @@ export interface NavItem {
   Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
 }
 
-// La version web se limite volontairement au parcours de prise de mesure :
-// catalogue, mesures, telechargement de la fiche. Pas de cote tailleur, pas
-// de commande ni de paiement — ceux-ci restent l'affaire de l'application
-// mobile.
+// Cote client : catalogue, mesures, et maintenant les tailleurs a qui les
+// envoyer. Cinq entrees au plus (barre du bas au telephone) : « Mes
+// commandes » est atteint depuis l'accueil et le profil.
 export const CLIENT_NAV: NavItem[] = [
   { href: "/accueil", label: "Accueil", Icon: IconHome },
   { href: "/modeles", label: "Modèles", Icon: IconModels },
+  { href: "/tailleurs", label: "Tailleurs", Icon: IconTailor },
   { href: "/mesures", label: "Mes mesures", Icon: IconMeasure },
   { href: "/profil", label: "Profil", Icon: IconProfile },
 ];
 
 /**
  * Navigation de l'espace tailleur (B3) : Accueil, Clients, Travaux, Patrons,
- * Profil. Les commandes recues via la plateforme sont accessibles depuis
- * l'accueil, avec un compteur — pas d'onglet dedie. Pas d'ecran Finances,
- * ni verification, ni pret-a-porter dans cette version.
+ * Profil. Les commandes recues via la plateforme et les recettes de
+ * l'atelier sont accessibles depuis l'accueil et le profil — pas d'onglet
+ * dedie (cinq entrees au plus dans la barre du bas). Ni verification, ni
+ * pret-a-porter dans cette version.
  */
 export const TAILOR_NAV: NavItem[] = [
   { href: "/tailleur", label: "Accueil", Icon: IconHome },

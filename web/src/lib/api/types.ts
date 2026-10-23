@@ -78,13 +78,28 @@ export interface TailorProfile {
   city: string | null;
   quartier: string | null;
   location_text?: string | null;
+  /** Repere pour trouver l'atelier (« face pharmacie X »). */
+  landmark?: string | null;
+  /** Le tailleur a-t-il choisi de montrer son numero aux clients ? */
+  show_phone?: boolean;
   verification_status: VerificationStatus;
+  /** Faux quand la verification est desactivee : pas de badge « vérifié ». */
+  verification_enabled?: boolean;
   rating_avg: number;
   completed_orders_count: number;
   avg_response_minutes: number;
   atelier_photo_url: string | null;
   photo_url?: string | null;
   distance_km?: number | null;
+}
+
+/** Reponse de `GET /tailors/{id}/contact` : le numero du tailleur, et lui
+ *  seul. Cette sortie n'est jamais confondue avec le profil public. */
+export interface TailorContact {
+  phone: string | null;
+  whatsapp: boolean;
+  /** Le tailleur prefere etre contacte par commande Sur-MeZur. */
+  hidden?: boolean;
 }
 
 export interface VerificationDocument {
@@ -196,12 +211,16 @@ export interface Order {
   fabric_id: string | null;
   measurement_id: string;
   accessories: { accessory_id: string; price: number }[];
+  client_notes: string | null;
   status: OrderStatus;
   priority: string;
   reception_mode: ReceptionMode;
   desired_date: string | null;
   agreed_price: number | null;
   delivery_fee: number | null;
+  /** Budget indicatif donne par le client a la commande. */
+  budget_amount: number | null;
+  decline_reason?: string | null;
   current_offer_round: number;
   dispute_status: string | null;
   dispute_note: string | null;

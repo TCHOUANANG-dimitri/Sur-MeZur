@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.order_helpers import offer_expiry, require_order_participant
 from app.core.deps import get_db, require_roles
+from app.models.catalog import GarmentModel
 from app.models.enums import OfferActor, OfferStatus, OrderStatus
+from app.models.measurements import Measurement
 from app.models.operations import DisputeMessage, FitFeedback
 from app.models.orders import Offer, Order
 from app.services.storage import save_upload
@@ -73,6 +75,19 @@ def create_order(
     tailor = db.get(TailorProfile, payload.tailor_id)
     if not tailor:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor not found")
+    # La commande ne peut porter QUE les mesures du client lui-meme : sans ce
+    # controle, un identifiant deviné (ou connu) permettrait d'expédier les
+    # mensurations d'une autre personne a un tailleur.
+    measurement = db.get(Measurement, payload.measurement_id)
+    if not measurement or measurement.client_id != client.id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Cette fiche de mesures ne vous appartient pas.",
+        )
+    # Un modele inexistant ferait echouer l'ecriture en base (cle etrangere) :
+    # on le verifie plutot que de renvoyer une erreur 500.
+    if payload.garment_model_id and not db.get(GarmentModel, payload.garment_model_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Modele introuvable")
 
     order = Order(
         client_id=client.id,

@@ -43,6 +43,10 @@ LIMITS = {
     "enquete_photo": (120, WINDOW_HOUR),
     # Acces direct sans lien personnel : creation d'une fiche tailleur.
     "enquete_new_ip": (10, WINDOW_HOUR),
+    # Numero d'un tailleur : rendu a chaque affichage de profil, mais la
+    # route donne un numero. Bornee par compte connecte (pas par IP : le
+    # numero suit la personne, pas sa connexion).
+    "tailor_contact": (60, WINDOW_MINUTE),
 }
 
 TOO_MANY_FR = "Trop de tentatives. Attendez quelques minutes avant de réessayer."

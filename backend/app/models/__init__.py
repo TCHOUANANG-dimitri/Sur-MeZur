@@ -49,6 +49,7 @@ from app.models.payments import CommissionTier, Payment, PaymentSplit
 from app.models.tailor_tools import (
     TailorClient,
     TailorClientMeasurement,
+    TailorIncomeEntry,
     TailorJob,
     TailorPatternRequest,
     TailorShareToken,
@@ -104,6 +105,7 @@ __all__ = [
     "SupportTicket",
     "TailorClient",
     "TailorClientMeasurement",
+    "TailorIncomeEntry",
     "TailorJob",
     "TailorPatternRequest",
     "TailorShareToken",

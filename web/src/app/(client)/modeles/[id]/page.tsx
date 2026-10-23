@@ -340,6 +340,9 @@ function ModeleDetail({ id, onNavigate }: { id: string; onNavigate: (id: string)
                 <Link href={`/mesures/nouvelle?modele=${model.id}`} style={{ display: "contents" }}>
                   <Button block>Prendre mes mesures</Button>
                 </Link>
+                <Link href={`/tailleurs?modele=${model.id}`} style={{ display: "contents" }}>
+                  <Button block variant="secondary">Faire coudre par un tailleur</Button>
+                </Link>
               </div>
             </div>
           </div>

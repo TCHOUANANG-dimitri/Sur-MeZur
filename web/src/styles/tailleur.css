@@ -229,3 +229,58 @@ a.tRow:hover, button.tRow:hover { border-color: var(--violet-vivid); }
   border-radius: var(--radius-button);
 }
 .tAnalyseDetails legend { padding: 0 4px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+
+/* --- Annuaire des tailleurs (cote client) --------------------------------- */
+.tFilterPair { margin: 0; }
+@media (min-width: 640px) {
+  .tFilterPair { grid-template-columns: 1fr 1fr; }
+}
+.tailorThumb {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--violet-tint);
+  color: var(--violet-primary);
+  font-weight: 700;
+  font-size: 20px;
+}
+.tailorThumb img { width: 100%; height: 100%; object-fit: cover; }
+.tailorHero { display: flex; align-items: center; gap: 14px; }
+.tailorHero .tailorThumb { width: 72px; height: 72px; font-size: 30px; border-radius: 18px; }
+.tailorHero h2 { margin: 0; font-size: 20px; }
+.tailorBlockTitle { font-size: 16px; margin: 0 0 8px; }
+.tailorAddress { margin: 0 0 10px; line-height: 1.5; }
+
+/* --- Choix d'une fiche ou d'un modele (commande) -------------------------- */
+.tPick { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.tPick legend { font-weight: 600; margin-bottom: 6px; padding: 0; }
+.tPickItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button);
+  background: var(--surface);
+  cursor: pointer;
+}
+.tPickItem:has(input:checked) { border-color: var(--violet-vivid); box-shadow: 0 0 0 3px var(--violet-tint); }
+.tPickItem input { accent-color: var(--violet-primary); width: 18px; height: 18px; flex: none; }
+.tPickThumb { flex: none; width: 44px; height: 54px; border-radius: 8px; object-fit: cover; background: var(--violet-tint); }
+
+/* --- Finances du tailleur -------------------------------------------------- */
+.tMoney { font-size: 20px; font-weight: 700; color: var(--indigo-text); }
+.tBars { display: flex; align-items: flex-end; gap: 6px; height: 120px; margin: 8px 0 0; padding: 0; list-style: none; }
+.tBars li { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; min-width: 0; }
+.tBar { width: 100%; max-width: 36px; border-radius: 6px 6px 0 0; background: var(--violet-primary); min-height: 2px; }
+.tBarLabel { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+.tMsgMine { justify-self: end; background: var(--violet-tint); }
+.tStatsMoney .tStatValue { font-size: 17px; line-height: 1.2; word-break: break-word; }
+.srOnly {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}

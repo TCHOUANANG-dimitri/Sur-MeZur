@@ -73,6 +73,55 @@ export interface TailorJob {
   created_at: string;
 }
 
+/** Une recette du carnet (finances de l'atelier). */
+export interface IncomeEntry {
+  id: string;
+  job_id: string | null;
+  amount: number;
+  received_on: string | null;
+  label: string;
+  method: string;
+  job_description?: string | null;
+  created_at?: string | null;
+}
+
+/** Carnet de recettes : ce qui est encaisse, et ce qui reste du. */
+export interface Finances {
+  total_encaisse: number;
+  reste_a_encaisser: number;
+  par_mois: { mois: string; total: number }[];
+  entrees: IncomeEntry[];
+  total_mois_courant: number;
+  total_mois_precedent: number;
+}
+
+/** Le client d'une commande, vu par le tailleur qui la recoit. */
+export interface OrderClient {
+  client_id: string | null;
+  name: string;
+  phone: string | null;
+  city: string | null;
+  measurement: {
+    id: string;
+    data: Record<string, number>;
+    height_cm: number | null;
+    weight_kg: number | null;
+    gender: string | null;
+    source: string | null;
+    created_at: string | null;
+  } | null;
+  model: { id: string; name: string; photo_url: string | null } | null;
+  order: {
+    id: string;
+    status: string;
+    client_notes: string | null;
+    desired_date: string | null;
+    budget_amount: number | null;
+    agreed_price: number | null;
+    reception_mode: string;
+  };
+}
+
 export interface TailorPattern {
   id: string;
   garment_type: string;
@@ -339,6 +388,8 @@ const RealTailorApi = {
     due_date?: string;
     price?: number;
     deposit?: number;
+    /** Modele du catalogue (travail cree depuis une commande Sur-MeZur). */
+    garment_model_id?: string | null;
   }) => {
     let clientId = body.tailor_client_id;
     if (!clientId && body.client_name.trim().length >= 2) {
@@ -349,7 +400,10 @@ const RealTailorApi = {
         })
       ).id as string;
     }
-    const created = await api.post<Raw>("/tailor/jobs", jobBody({ ...body, tailor_client_id: clientId }));
+    const created = await api.post<Raw>("/tailor/jobs", {
+      ...jobBody({ ...body, tailor_client_id: clientId }),
+      ...(body.garment_model_id ? { garment_model_id: body.garment_model_id } : {}),
+    });
     return toJob(created, clientId ? { [clientId]: body.client_name } : {});
   },
   patchJob: async (
@@ -364,13 +418,41 @@ const RealTailorApi = {
   /** Commandes recues via Sur-MeZur. Ni offre, ni devis, ni paiement. */
   orders: () => api.get<Order[]>("/orders"),
   order: (id: string) => api.get<Order>(`/orders/${id}`),
-  acceptOrder: (id: string) => api.post<Order>(`/orders/${id}/accept`),
+  /** Le prix convenu est fixe par le tailleur a l'acceptation. */
+  acceptOrder: (id: string, agreed_price?: number) =>
+    api.post<Order>(`/orders/${id}/accept`, agreed_price != null ? { agreed_price } : {}),
   declineOrder: (id: string, reason: string) => api.post<Order>(`/orders/${id}/decline`, { reason }),
   setOrderStatus: (id: string, status: string) => api.post<Order>(`/orders/${id}/status`, { status }),
   orderChat: (id: string) =>
     api.get<{ id: string; body: string | null; created_at: string; sender_id: string }[]>(`/orders/${id}/chat`),
   sendOrderChat: (id: string, body: string) =>
     api.post<{ id: string; body: string | null; created_at: string; sender_id: string }>(`/orders/${id}/chat`, { body }),
+
+  /** Nom, telephone et mesures du client d'une commande. Reserve au
+   *  tailleur de la commande. */
+  orderClient: (id: string) => api.get<OrderClient>(`/tailor/orders/${id}/client`),
+  /** Met le client de la commande dans le carnet (idempotent). */
+  addOrderToNotebook: (id: string) =>
+    api.post<{ client_id: string; created: boolean; measurement_copied: boolean; name: string }>(
+      `/tailor/orders/${id}/notebook`
+    ),
+
+  /** Carnet de recettes de l'atelier. */
+  finances: (params: { debut?: string; fin?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.debut) qs.set("debut", params.debut);
+    if (params.fin) qs.set("fin", params.fin);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return api.get<Finances>(`/tailor/finances${suffix}`);
+  },
+  addIncome: (body: {
+    job_id?: string | null;
+    amount: number;
+    received_on?: string | null;
+    label?: string | null;
+    method?: string;
+  }) => api.post<IncomeEntry>("/tailor/finances/entries", body),
+  deleteIncome: (id: string) => api.delete<void>(`/tailor/finances/entries/${id}`),
 
   patterns: async () => (await api.get<Raw[]>("/tailor/patterns")).map(toPattern),
   patternCatalogue: () => api.get<PatternCatalogue>("/tailor/patterns/catalogue"),
@@ -442,7 +524,16 @@ const RealTailorApi = {
   },
 
   profile: () => api.get<TailorProfile | null>("/tailors/me"),
-  updateProfile: (body: { shop_name?: string; city?: string; quartier?: string; bio?: string }) =>
+  updateProfile: (body: {
+    shop_name?: string;
+    city?: string;
+    quartier?: string;
+    bio?: string;
+    landmark?: string | null;
+    show_phone?: boolean;
+    lat?: number | null;
+    lng?: number | null;
+  }) =>
     api.patch<TailorProfile>("/tailors/me", body),
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */

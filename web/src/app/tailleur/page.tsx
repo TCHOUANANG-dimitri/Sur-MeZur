@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import { TailorApi } from "@/lib/api/tailor";
 import type { TailorDashboard } from "@/lib/api/tailor";
 import { PageHeader, Spinner } from "@/components/ui";
-import { IconCamera, IconOrders, IconPlus, IconTailor } from "@/components/icons";
+import { IconCamera, IconOrders, IconPlus, IconTailor, IconWallet } from "@/components/icons";
 import { BigAction, Stat } from "./_components";
 
 export default function TailleurAccueil() {
@@ -61,6 +61,24 @@ export default function TailleurAccueil() {
           secondary
         />
       </div>
+
+      <Link href="/tailleur/finances" className="tRow" aria-label="Voir les recettes de l'atelier">
+        <IconWallet size={20} aria-hidden />
+        <span className="tRowMain">
+          <span className="tRowTitle">Recettes de l&apos;atelier</span>
+          <br />
+          <span className="tRowSub">Noter un paiement, voir ce qui est encaissé et ce qui reste dû.</span>
+        </span>
+      </Link>
+
+      <Link href="/tailleur/commandes" className="tRow" aria-label="Voir les commandes Sur-MeZur">
+        <IconOrders size={20} aria-hidden />
+        <span className="tRowMain">
+          <span className="tRowTitle">Commandes Sur-MeZur</span>
+          <br />
+          <span className="tRowSub">Les clients de l&apos;application vous envoient leurs mesures et leur modèle.</span>
+        </span>
+      </Link>
 
       {(newOrders ?? dashboard.new_orders) > 0 && (
         <Link href="/tailleur/commandes" className="tRow" aria-label="Voir les commandes reçues">

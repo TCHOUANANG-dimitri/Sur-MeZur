@@ -62,6 +62,12 @@ class TailorProfileOut(ORMModel):
     lng: float | None
     city: str | None
     quartier: str | None
+    # Repere de l'atelier (« face pharmacie X »). Ni telephone ni e-mail ne
+    # doivent apparaitre ici : cette sortie est publique.
+    landmark: str | None = None
+    # Le tailleur a-t-il choisi de montrer son numero ? Le numero, lui, ne
+    # sort que par `GET /tailors/{id}/contact`, reserve aux comptes connectes.
+    show_phone: bool = True
     verification_status: VerificationStatus
     # A2.1 : la verification est desactivable. Le front cache alors les
     # badges « verifie » (le statut technique reste expose, mais n'est plus

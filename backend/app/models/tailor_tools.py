@@ -126,3 +126,26 @@ class TailorStyleAnalysis(Base, IDMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(String(16), default="processing")
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+
+class TailorIncomeEntry(Base, IDMixin, TimestampMixin):
+    """Entree d'argent encaisse par le tailleur.
+
+    C'est un CARNET DE RECETTES, rien de plus : aucun paiement ne transite
+    par la plateforme, le tailleur note ce qu'il a recu et quand. Une entree
+    peut etre rattachee a un travail (`job_id`) : dans ce cas, l'avance du
+    travail vaut la somme des entrees qui lui sont liees, et le serveur la
+    recalcule a chaque ajout ou suppression.
+    """
+
+    __tablename__ = "tailor_income_entries"
+
+    tailor_id: Mapped[str] = mapped_column(ForeignKey("tailor_profiles.id"), index=True)
+    job_id: Mapped[str | None] = mapped_column(
+        ForeignKey("tailor_jobs.id"), nullable=True, index=True
+    )
+    amount: Mapped[float] = mapped_column(Numeric(12, 2))
+    received_on: Mapped[date] = mapped_column(Date)
+    label: Mapped[str] = mapped_column(String(255))
+    # cash | mobile_money | virement | autre
+    method: Mapped[str] = mapped_column(String(16), default="cash")

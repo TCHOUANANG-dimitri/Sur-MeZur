@@ -93,5 +93,8 @@ export {
   GripVertical as IconGrip,
   Mail as IconMail,
   MapPin as IconLocation,
+  Navigation as IconRoute,
+  LocateFixed as IconLocate,
+  Wallet as IconWallet,
   Languages as IconLanguage,
 } from "lucide-react";

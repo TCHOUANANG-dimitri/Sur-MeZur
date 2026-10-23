@@ -41,6 +41,7 @@ from app.models.orders import Order
 from app.models.tailor_tools import (
     TailorClient,
     TailorClientMeasurement,
+    TailorIncomeEntry,
     TailorJob,
     TailorPatternRequest,
     TailorShareToken,
@@ -49,7 +50,7 @@ from app.models.tailor_tools import (
 from app.models.users import TailorProfile, User
 from app.services.patrons import vision
 from app.services.activity import platform_of, utcnow
-from app.services import patrons
+from app.services import patrons, tailor_finance
 from app.services.pattern_engine import GARMENT_TYPES, PREVIEW_NOTE, generate_preview_svg
 from app.services.phone import normalize_phone
 from app.services.platform_settings import get_setting as get_platform_setting
@@ -597,6 +598,20 @@ def create_job(
         advance_received=payload.advance_received,
     )
     db.add(j)
+    db.flush()
+    # L'avance d'un travail vaut la somme de ses recettes : l'avance saisie a
+    # la creation devient donc une entree du carnet, et non une valeur a part.
+    if payload.advance_received and float(payload.advance_received) > 0:
+        db.add(
+            TailorIncomeEntry(
+                tailor_id=tp.id,
+                job_id=j.id,
+                amount=float(payload.advance_received),
+                received_on=date.today(),
+                label="Avance",
+                method="cash",
+            )
+        )
     db.commit()
     db.refresh(j)
     return _job_out(j)
@@ -637,7 +652,31 @@ def update_job(
     if payload.agreed_price is not None:
         j.agreed_price = payload.agreed_price
     if payload.advance_received is not None:
-        j.advance_received = payload.advance_received
+        # L'avance est CALCULEE : elle vaut la somme des recettes du travail.
+        # Une avance modifiee en direct devient donc une entree de difference
+        # (« Ajustement de l'avance »), jamais une ecriture silencieuse qui
+        # desaccorderait le carnet et l'affichage.
+        tailor_finance.ensure_job_reprise(db, j)
+        current = tailor_finance.job_entries_total(db, j.id)
+        target = float(payload.advance_received)
+        if target > current + tailor_finance.EPSILON:
+            db.add(
+                TailorIncomeEntry(
+                    tailor_id=tp.id,
+                    job_id=j.id,
+                    amount=target - current,
+                    received_on=date.today(),
+                    label="Ajustement de l'avance",
+                    method="cash",
+                )
+            )
+            db.flush()
+        elif target < current - tailor_finance.EPSILON:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Pour reduire l'avance, supprimez une recette du carnet de recettes.",
+            )
+        tailor_finance.sync_job_advance(db, j)
     _check_job_amounts(j.agreed_price, j.advance_received)
     db.commit()
     db.refresh(j)
@@ -657,6 +696,10 @@ def delete_job(
             os.remove(_tailor_store("jobs", os.path.basename(j.reference_photo_url)))
         except OSError:
             pass
+    # Les recettes attachees a ce travail partent avec lui : une recette de
+    # travail supprime n'a plus de travail ou porter.
+    for entry in db.query(TailorIncomeEntry).filter(TailorIncomeEntry.job_id == j.id).all():
+        db.delete(entry)
     db.delete(j)
     db.commit()
 

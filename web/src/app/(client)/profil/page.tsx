@@ -21,8 +21,10 @@ import {
   IconLogout,
   IconMeasure,
   IconModels,
+  IconOrders,
   IconProfile,
   IconShield,
+  IconTailor,
 } from "@/components/icons";
 
 export default function Profil() {
@@ -170,6 +172,11 @@ export default function Profil() {
             label="Proposer un modèle"
             last
           />
+        </SettingsSection>
+
+        <SettingsSection title="Couture">
+          <SettingsRow href="/commandes" Icon={IconOrders} label="Mes commandes" />
+          <SettingsRow href="/tailleurs" Icon={IconTailor} label="Trouver un tailleur" last />
         </SettingsSection>
 
         <SettingsSection title="Confidentialité">

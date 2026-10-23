@@ -17,15 +17,19 @@ import { useAuth } from "@/components/AuthProvider";
 import { Button, ErrorBanner, Input, Spinner, Textarea } from "@/components/ui";
 import { ProfileStat, SettingsRow, SettingsSection } from "@/components/profile";
 import {
+  IconCall,
   IconEdit,
   IconKey,
   IconLanguage,
+  IconLocate,
   IconLocation,
   IconLogout,
   IconOrders,
   IconTailor,
   IconUsers,
+  IconWallet,
 } from "@/components/icons";
+import { currentPosition, hasPosition } from "@/lib/tailors";
 import { nameError } from "@/lib/validation";
 
 const BIO_MAX = 500;
@@ -41,6 +45,11 @@ export default function ProfilTailleur() {
   const [city, setCity] = useState("");
   const [quartier, setQuartier] = useState("");
   const [bio, setBio] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [showPhone, setShowPhone] = useState(true);
+  const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [positionNote, setPositionNote] = useState("");
   const [language, setLanguage] = useState("fr");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -71,16 +80,37 @@ export default function ProfilTailleur() {
     setCity(profile?.city ?? "");
     setQuartier(profile?.quartier ?? "");
     setBio(profile?.bio ?? "");
+    setLandmark(profile?.landmark ?? "");
+    setShowPhone(profile?.show_phone !== false);
+    setPosition(profile && hasPosition(profile) ? { lat: profile.lat as number, lng: profile.lng as number } : null);
+    setPositionNote("");
     setLanguage(user?.language ?? "fr");
     setNotice("");
     setEditing(true);
+  }
+
+  /** Position de l'atelier : a prendre SUR PLACE, le GPS du telephone donne
+   *  le point ou l'on se trouve. */
+  async function locate() {
+    setLocating(true);
+    setPositionNote("");
+    try {
+      const p = await currentPosition();
+      setPosition({ lat: p.lat, lng: p.lng });
+      setPositionNote(`Position relevée, précision d'environ ${Math.round(p.accuracy)} m. Enregistrez pour la garder.`);
+    } catch (e) {
+      setPositionNote(e instanceof Error ? e.message : "Position indisponible.");
+    } finally {
+      setLocating(false);
+    }
   }
 
   // Controles de saisie : nom d'atelier obligatoire, longueurs bornees.
   const shopErr = nameError(shopName, "Le nom de l'atelier");
   const cityErr = city.trim().length > 80 ? "80 caractères au plus." : null;
   const quartierErr = quartier.trim().length > 80 ? "80 caractères au plus." : null;
-  const canSave = !shopErr && !cityErr && !quartierErr && bio.length <= BIO_MAX && !busy;
+  const landmarkErr = landmark.trim().length > 255 ? "255 caractères au plus." : null;
+  const canSave = !shopErr && !cityErr && !quartierErr && !landmarkErr && bio.length <= BIO_MAX && !busy;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -94,6 +124,10 @@ export default function ProfilTailleur() {
           city: city.trim(),
           quartier: quartier.trim(),
           bio: bio.trim(),
+          landmark: landmark.trim(),
+          show_phone: showPhone,
+          lat: position?.lat ?? null,
+          lng: position?.lng ?? null,
         })
       );
       if (language !== user?.language) {
@@ -173,6 +207,51 @@ export default function ProfilTailleur() {
               </label>
             </div>
             <label className="field">
+              <span className="fieldLabel">Repère</span>
+              <Input
+                value={landmark}
+                onChange={(e) => setLandmark(e.target.value)}
+                placeholder="Ex. Face pharmacie du marché, 1er étage"
+                maxLength={255}
+                aria-invalid={landmarkErr ? true : undefined}
+              />
+              {landmarkErr && <span className="fieldError">{landmarkErr}</span>}
+            </label>
+            <div className="field">
+              <span className="fieldLabel">Position de l&apos;atelier (facultatif)</span>
+              <span className="fieldHint">À relever depuis l&apos;atelier : les clients auront l&apos;itinéraire.</span>
+              <div className="tActionRow" style={{ marginTop: 6 }}>
+                <Button variant="secondary" onClick={() => void locate()} disabled={locating}>
+                  <IconLocate size={18} aria-hidden /> {locating ? "Recherche…" : position ? "Relever à nouveau" : "Utiliser ma position"}
+                </Button>
+                {position && (
+                  <Button variant="ghost" onClick={() => { setPosition(null); setPositionNote("Position effacée. Enregistrez pour valider."); }}>
+                    Effacer la position
+                  </Button>
+                )}
+              </div>
+              {position && (
+                <a
+                  className="fieldHint"
+                  href={`https://www.google.com/maps/search/?api=1&query=${position.lat},${position.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Vérifier sur la carte ({position.lat.toFixed(5)}, {position.lng.toFixed(5)})
+                </a>
+              )}
+              {positionNote && <span className="fieldHint" role="status">{positionNote}</span>}
+            </div>
+            <label className="field" style={{ flexDirection: "row", alignItems: "center", gap: 10, display: "flex" }}>
+              <input
+                type="checkbox"
+                checked={showPhone}
+                onChange={(e) => setShowPhone(e.target.checked)}
+                style={{ width: 20, height: 20, accentColor: "var(--violet-primary)" }}
+              />
+              <span>Afficher mon numéro aux clients (appel, WhatsApp)</span>
+            </label>
+            <label className="field">
               <span className="fieldLabel">Présentation</span>
               <Textarea
                 rows={3}
@@ -216,7 +295,19 @@ export default function ProfilTailleur() {
             hint={profile?.bio?.trim() || "Aucune présentation : quelques mots rassurent vos clients."}
             onClick={startEdit}
           />
-          <SettingsRow Icon={IconLocation} label="Adresse" value={lieu || "À compléter"} onClick={startEdit} />
+          <SettingsRow
+            Icon={IconLocation}
+            label="Adresse"
+            value={lieu || "À compléter"}
+            hint={[profile?.landmark?.trim(), profile && hasPosition(profile) ? "Position GPS enregistrée" : null].filter(Boolean).join(" · ") || undefined}
+            onClick={startEdit}
+          />
+          <SettingsRow
+            Icon={IconCall}
+            label="Numéro visible des clients"
+            value={profile?.show_phone === false ? "Masqué" : "Oui"}
+            onClick={startEdit}
+          />
           <SettingsRow
             Icon={IconLanguage}
             label="Langue"
@@ -244,8 +335,9 @@ export default function ProfilTailleur() {
             Icon={IconTailor}
             label="Patrons"
             value={counts.patterns > 0 ? String(counts.patterns) : undefined}
-            last
           />
+          <SettingsRow href="/tailleur/commandes" Icon={IconOrders} label="Commandes reçues via Sur-MeZur" />
+          <SettingsRow href="/tailleur/finances" Icon={IconWallet} label="Recettes de l'atelier" last />
         </SettingsSection>
 
         <SettingsSection title="Compte">

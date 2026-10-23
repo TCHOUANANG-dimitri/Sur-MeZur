@@ -21,6 +21,7 @@ import type {
   ReadyToWear,
   Review,
   TailorProfile,
+  TailorContact,
   TokenResponse,
   TryonSession,
   User,
@@ -127,6 +128,9 @@ export const TailorsApi = {
     return api.get<TailorProfile[]>(`/tailors?${qs.toString()}`);
   },
   get: (id: string) => api.get<TailorProfile>(`/tailors/${id}`),
+  /** Numero du tailleur : reserve aux comptes connectes. Sans session, le
+   *  serveur refuse ; la page affiche alors l'invitation a se connecter. */
+  contact: (id: string) => api.get<TailorContact>(`/tailors/${id}/contact`),
   submitVerification: (form: FormData) => api.postForm<TailorProfile>("/tailors/verification", form),
 };
 
@@ -222,6 +226,8 @@ export const OrdersApi = {
     api.get<Order[]>(`/orders${status_filter ? `?status_filter=${status_filter}` : ""}`),
   get: (id: string) => api.get<Order>(`/orders/${id}`),
   setStatus: (id: string, status: string) => api.post<Order>(`/orders/${id}/status`, { status }),
+  /** Le client annule sa commande tant que le tailleur ne l'a pas acceptee. */
+  cancel: (id: string, reason: string) => api.post<Order>(`/orders/${id}/cancel`, { reason }),
   openDispute: (id: string, note: string) => api.post<Order>(`/orders/${id}/dispute`, { note }),
 
   offers: (orderId: string) => api.get<Offer[]>(`/orders/${orderId}/offers`),

@@ -1,19 +1,28 @@
 "use client";
 
 /**
- * Detail d'une commande recue (B3.6) : accepter / refuser avec motif, suivi
- * du statut, messagerie avec le client, modele demande et mesures quand
- * elles sont accessibles. Aucune offre, aucun devis, aucun paiement.
+ * Detail d'une commande recue (B3.6) : accepter (avec le prix convenu) ou
+ * refuser avec motif, suivi du statut, messagerie avec le client, modele
+ * demande et mesures envoyees. Aucune offre, aucun devis, aucun paiement.
+ *
+ * Le client se joint comme ceux du carnet : Appeler (numero copie),
+ * WhatsApp, Enregistrer dans les contacts. « Ajouter a mon carnet » le range
+ * avec ses mesures (sans doublon) ; une fois la commande acceptee, « Creer le
+ * travail » la reporte dans Travaux, d'ou elle alimente les recettes.
  */
 
-import { useParams } from "next/navigation";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { CatalogApi, MeasurementsApi, OrdersApi } from "@/lib/api/endpoints";
+import { OrdersApi } from "@/lib/api/endpoints";
 import { TailorApi } from "@/lib/api/tailor";
-import type { GarmentModel, Measurement } from "@/lib/api/types";
+import type { OrderClient } from "@/lib/api/tailor";
 import { formatCm, presentableGroups } from "@/lib/measurements";
 import { Button, Card, ErrorBanner, Input, PageHeader, Spinner, Textarea } from "@/components/ui";
-import { OrderBadge, formatDateFR } from "../../_components";
+import { IconCall, IconChat, IconContact, IconUsers } from "@/components/icons";
+import { copyText, openNewContact, whatsappHref } from "@/lib/contact";
+import { amountError } from "@/lib/validation";
+import { OrderBadge, formatDateFR, formatFcfa } from "../../_components";
 
 interface ChatMsg {
   id: string;
@@ -31,15 +40,18 @@ const TRACKER: { key: string; label: string }[] = [
 
 export default function CommandeDetail() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [order, setOrder] = useState<Awaited<ReturnType<typeof TailorApi.order>> | null>(null);
-  const [model, setModel] = useState<GarmentModel | null>(null);
-  const [measurement, setMeasurement] = useState<Measurement | null>(null);
+  const [info, setInfo] = useState<OrderClient | null>(null);
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [message, setMessage] = useState("");
   const [reason, setReason] = useState("");
   const [showRefuse, setShowRefuse] = useState(false);
+  const [price, setPrice] = useState("");
   const [dispute, setDispute] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [carnetId, setCarnetId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -47,12 +59,7 @@ export default function CommandeDetail() {
     try {
       const o = await TailorApi.order(id);
       setOrder(o);
-      if (o.garment_model_id) {
-        CatalogApi.model(o.garment_model_id).then(setModel).catch(() => setModel(null));
-      }
-      MeasurementsApi.list()
-        .then((list) => setMeasurement(list.find((m) => m.id === o.measurement_id) ?? null))
-        .catch(() => setMeasurement(null));
+      TailorApi.orderClient(id).then(setInfo).catch(() => setInfo(null));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Chargement impossible.");
     }
@@ -104,6 +111,55 @@ export default function CommandeDetail() {
     }
   }
 
+  /** Copie le numero : certains telephones ne remplissent pas le composeur. */
+  async function copyPhone(phone: string) {
+    const copied = await copyText(phone);
+    setNotice(copied ? `Numéro ${phone} copié : collez-le si le téléphone ne l'a pas déjà rempli.` : "");
+  }
+
+  async function saveContact(name: string, phone: string) {
+    await copyPhone(phone);
+    openNewContact(name, phone);
+  }
+
+  /** Range le client dans le carnet (idempotent) et renvoie sa fiche. */
+  async function toNotebook(): Promise<string | null> {
+    if (!id) return null;
+    const r = await TailorApi.addOrderToNotebook(id);
+    setCarnetId(r.client_id);
+    setNotice(
+      r.created
+        ? `${r.name} est dans votre carnet${r.measurement_copied ? ", avec ses mesures" : ""}.`
+        : r.measurement_copied
+          ? `Mesures de ${r.name} mises à jour dans votre carnet.`
+          : `${r.name} est déjà dans votre carnet.`
+    );
+    return r.client_id;
+  }
+
+  async function createJob() {
+    if (!order || !info) return;
+    setBusy(true);
+    setError("");
+    try {
+      const clientId = carnetId ?? (await toNotebook());
+      if (!clientId) return;
+      await TailorApi.createJob({
+        tailor_client_id: clientId,
+        client_name: info.name,
+        description: `${info.model?.name ?? "Vêtement sur mesure"} — commande Sur-MeZur n° ${order.id.slice(0, 6).toUpperCase()}`,
+        ...(order.desired_date ? { due_date: order.desired_date } : {}),
+        ...(order.agreed_price != null ? { price: Number(order.agreed_price) } : {}),
+        garment_model_id: order.garment_model_id,
+      });
+      router.push("/tailleur/travaux");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Création du travail impossible.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!order) {
     return (
       <>
@@ -115,10 +171,12 @@ export default function CommandeDetail() {
 
   const stepIndex = TRACKER.findIndex((t) => t.key === order.status);
   const activeStep = stepIndex === -1 ? TRACKER.length : stepIndex;
+  const priceErr = amountError(price);
+  const reference = order.id.slice(0, 6).toUpperCase();
 
   return (
     <div className="tPage">
-      <PageHeader title={`Commande n°${order.id.slice(0, 8)}`} back />
+      <PageHeader title={`Commande n° ${reference}`} back />
       <ErrorBanner message={error} />
       <div>
         <OrderBadge status={order.status} />
@@ -133,9 +191,50 @@ export default function CommandeDetail() {
         ))}
       </ol>
 
+      {info && (
+        <Card>
+          <p style={{ margin: 0 }}>
+            <strong>{info.name}</strong>
+            <br />
+            <span className="tRowSub">{[info.phone, info.city].filter(Boolean).join(" · ") || "Aucun numéro"}</span>
+          </p>
+          <div className="tActionRow" style={{ marginTop: 10 }}>
+            {info.phone && (
+              <>
+                <a
+                  className="btn btnSecondary"
+                  href={`tel:${info.phone.replace(/[^\d+]/g, "")}`}
+                  onClick={() => void copyPhone(info.phone as string)}
+                >
+                  <IconCall size={18} aria-hidden /> Appeler
+                </a>
+                <a
+                  className="btn btnWhatsapp"
+                  href={whatsappHref(info.phone, `Bonjour ${info.name}, j'ai bien reçu votre commande n° ${reference} sur Sur-MeZur.`)}
+                >
+                  <IconChat size={18} aria-hidden /> WhatsApp
+                </a>
+                <button type="button" className="btn btnSecondary" onClick={() => void saveContact(info.name, info.phone as string)}>
+                  <IconContact size={18} aria-hidden /> Enregistrer dans mes contacts
+                </button>
+              </>
+            )}
+            <Button variant="secondary" onClick={() => void act(toNotebook)} disabled={busy}>
+              <IconUsers size={18} aria-hidden /> Ajouter à mon carnet
+            </Button>
+          </div>
+          {carnetId && (
+            <p className="tRowSub" style={{ margin: "8px 0 0" }}>
+              <Link href={`/tailleur/clients/${carnetId}`}>Ouvrir sa fiche dans le carnet</Link>
+            </p>
+          )}
+        </Card>
+      )}
+      {notice && <p className="tNotice" role="status">{notice}</p>}
+
       <Card>
         <p style={{ margin: 0 }}>
-          <strong>Modèle :</strong> {model ? model.name : order.garment_model_id ? "…" : "Sur mesure libre"}
+          <strong>Modèle :</strong> {info?.model ? info.model.name : order.garment_model_id ? "…" : "Sur mesure libre"}
           <br />
           <span className="tRowSub">
             Passée le {formatDateFR(order.created_at)}
@@ -143,17 +242,33 @@ export default function CommandeDetail() {
             {order.reception_mode ? ` · ${order.reception_mode === "pickup" ? "Retrait" : "Livraison"}` : ""}
           </span>
         </p>
+        {info?.model?.photo_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={info.model.photo_url} alt={info.model.name} style={{ marginTop: 10, maxWidth: 160, borderRadius: 10 }} />
+        )}
+        {order.budget_amount != null && (
+          <p className="tRowSub" style={{ margin: "6px 0 0" }}>Budget indiqué par le client : {formatFcfa(order.budget_amount)}</p>
+        )}
+        {order.agreed_price != null && (
+          <p style={{ margin: "6px 0 0" }}>
+            Prix convenu : <strong>{formatFcfa(order.agreed_price)}</strong>
+          </p>
+        )}
+        {order.client_notes && (
+          <p className="tRowSub" style={{ margin: "6px 0 0", whiteSpace: "pre-line" }}>Message du client : {order.client_notes}</p>
+        )}
       </Card>
 
-      {measurement && (
+      {info?.measurement && (
         <Card>
           <strong>Mesures du client</strong>
-          {presentableGroups(measurement.data).map((group) => (
+          {info.measurement.height_cm != null && <span className="tRowSub"> · taille {info.measurement.height_cm} cm</span>}
+          {presentableGroups(info.measurement.data).map((group) => (
             <div key={group.id}>
               <p className="tRowSub" style={{ margin: "8px 0 4px" }}>{group.title}</p>
-              {group.items.map(({ key, info, value }) => (
+              {group.items.map(({ key, info: mesure, value }) => (
                 <p key={key} style={{ margin: "2px 0" }}>
-                  {info.label} : <strong>{formatCm(value)}</strong>
+                  {mesure.label} : <strong>{formatCm(value)}</strong>
                 </p>
               ))}
             </div>
@@ -163,8 +278,22 @@ export default function CommandeDetail() {
 
       {order.status === "new" && (
         <Card>
+          <label className="field">
+            <span className="fieldLabel">Prix convenu en FCFA (facultatif)</span>
+            <Input
+              inputMode="numeric"
+              value={price}
+              onChange={(e) => setPrice(e.target.value.replace(/[\s.]/g, ""))}
+              placeholder={order.budget_amount != null ? String(order.budget_amount) : "15000"}
+              aria-invalid={priceErr ? true : undefined}
+            />
+            {priceErr && <span className="fieldError">{priceErr}</span>}
+          </label>
           <div className="tActionRow">
-            <Button onClick={() => void act(() => TailorApi.acceptOrder(order.id))} disabled={busy}>
+            <Button
+              onClick={() => void act(() => TailorApi.acceptOrder(order.id, price ? Number(price) : undefined))}
+              disabled={busy || Boolean(priceErr)}
+            >
               Accepter
             </Button>
             <Button variant="secondary" onClick={() => setShowRefuse((s) => !s)}>
@@ -191,6 +320,11 @@ export default function CommandeDetail() {
         </Card>
       )}
 
+      {order.status === "in_progress" && info && (
+        <Button block variant="secondary" onClick={() => void createJob()} disabled={busy}>
+          Créer le travail correspondant
+        </Button>
+      )}
       {order.status === "in_progress" && (
         <Button block onClick={() => void act(() => TailorApi.setOrderStatus(order.id, "ready_for_pickup"))} disabled={busy}>
           Marquer comme prête
@@ -207,7 +341,7 @@ export default function CommandeDetail() {
         <div className="tChat">
           {chat.length === 0 && <p className="muted">Aucun message. Écrivez le premier.</p>}
           {chat.map((m) => (
-            <div key={m.id} className="tMsg">
+            <div key={m.id} className={`tMsg ${info?.client_id && m.sender_id !== info.client_id ? "tMsgMine" : ""}`}>
               {m.body}
               <div className="tMsgDate">{formatDateFR(m.created_at)}</div>
             </div>
@@ -219,6 +353,7 @@ export default function CommandeDetail() {
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Écrire au client…"
             aria-label="Message au client"
+            maxLength={2000}
             style={{ flex: 1 }}
           />
           <Button type="submit" disabled={!message.trim()}>Envoyer</Button>

@@ -83,6 +83,14 @@ class TailorProfile(Base, IDMixin, TimestampMixin):
     lng: Mapped[float | None] = mapped_column(Float, nullable=True)
     city: Mapped[str | None] = mapped_column(String(120), nullable=True)
     quartier: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # Repere pour trouver l'atelier (« face pharmacie X », « 2e etage »).
+    # Texte libre : la position GPS, elle, reste facultative.
+    landmark: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Le tailleur peut masquer son numero aux clients : il reste alors
+    # joignable par commande Sur-MeZur, uniquement.
+    # `server_default` est indispensable : sans lui, sync_sqlite_columns.py
+    # refuse d'ajouter une colonne NOT NULL a une table deja peuplee.
+    show_phone: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     verification_status: Mapped[VerificationStatus] = mapped_column(
         String(16), default=VerificationStatus.pending
     )

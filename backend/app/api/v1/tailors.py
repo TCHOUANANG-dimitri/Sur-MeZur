@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -8,6 +8,7 @@ from app.models.enums import TailorType, UserRole, VerificationStatus
 from app.models.operations import VerificationEvent
 from app.models.users import TailorProfile, User, VerificationDocument
 from app.schemas.users import TailorProfileOut, TailorProfilePublicOut, VerificationDocumentOut
+from app.services import rate_limit
 from app.services.geo import haversine_km
 from app.services.notify import notify
 from app.services.platform_settings import get_setting as get_platform_setting
@@ -96,7 +97,10 @@ def search_tailors(
     quartier: str | None = None,
     db: Session = Depends(get_db),
 ):
-    query = db.query(TailorProfile)
+    # Seuls les tailleurs dont le compte est actif figurent a l'annuaire :
+    # un compte desactive (suspension, fermeture) ne doit pas continuer de
+    # recevoir des commandes.
+    query = db.query(TailorProfile).filter(TailorProfile.user.has(User.is_active.is_(True)))
     if city:
         query = query.filter(TailorProfile.city.ilike(f"%{city}%"))
     if quartier:
@@ -149,6 +153,14 @@ class TailorProfilePatchIn(BaseModel):
     city: str | None = Field(None, max_length=120)
     quartier: str | None = Field(None, max_length=120)
     bio: str | None = Field(None, max_length=2000)
+    # Repere (« face pharmacie X »). Vide = efface.
+    landmark: str | None = Field(None, max_length=255)
+    # Afficher ou masquer son numero aux clients.
+    show_phone: bool | None = None
+    # Position GPS, facultative. Les deux ensemble, ou pas du tout :
+    # envoyer `null` pour les deux efface la position.
+    lat: float | None = Field(None, ge=-90, le=90)
+    lng: float | None = Field(None, ge=-180, le=180)
 
 
 @router.patch("/me", response_model=TailorProfileOut)
@@ -164,7 +176,15 @@ def update_my_tailor_profile(
     if not tp:
         tp = TailorProfile(user_id=user.id, tailor_type=TailorType.individual, shop_name=user.full_name)
         db.add(tp)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    # Position : les deux coordonnées ensemble, ou aucune. Une seule, ce
+    # serait un point incomplet — et Google Maps refuserait l'itineraire.
+    if ("lat" in data) != ("lng" in data):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Envoyez la latitude ET la longitude, ou effacez les deux.",
+        )
+    for field, value in data.items():
         if isinstance(value, str):
             value = value.strip() or None
         if field == "shop_name" and not value:
@@ -190,3 +210,43 @@ def get_tailor(tailor_id: str, db: Session = Depends(get_db)):
     out = TailorProfileOut.model_validate(tailor)
     out.verification_enabled = _verification_enabled()
     return out
+
+
+class TailorContactOut(BaseModel):
+    """Le numero du tailleur, et lui seul. Cette sortie n'est jamais
+    confondue avec le profil public, qui ne contient ni telephone ni
+    e-mail."""
+
+    phone: str | None = None
+    whatsapp: bool = False
+    # Le tailleur prefere etre contacte par commande Sur-MeZur : on ne peut
+    # pas joindre par telephone, mais ce n'est pas une erreur.
+    hidden: bool = False
+
+
+@router.get("/{tailor_id}/contact", response_model=TailorContactOut)
+def get_tailor_contact(
+    tailor_id: str,
+    request: Request,
+    user: User = Depends(require_roles("client", "tailor", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Numero du tailleur, reserve aux comptes connectes.
+
+    L'annuaire reste visible par tous (on ne peut pas aspirer les numeros
+    sans compte), mais le numero lui-même n'est rendu qu'ici, et seulement
+    si le tailleur a laisse `show_phone` actif.
+    """
+    # Limite de debit : la route est appelee a chaque affichage d'un profil,
+    # mais elle donne un numero. On borne les appels par compte connecte.
+    rate_limit.check("tailor_contact", user.id)
+    tailor = db.get(TailorProfile, tailor_id)
+    if not tailor:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tailor not found")
+    owner = db.get(User, tailor.user_id)
+    if not owner or not owner.is_active or not tailor.show_phone:
+        return TailorContactOut(phone=None, whatsapp=False, hidden=True)
+    phone = (owner.phone or "").strip()
+    if not phone or phone.startswith("guest-"):
+        return TailorContactOut(phone=None, whatsapp=False, hidden=True)
+    return TailorContactOut(phone=phone, whatsapp=True, hidden=False)

@@ -16,13 +16,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CatalogApi, MeasurementsApi } from "@/lib/api/endpoints";
+import { CatalogApi, MeasurementsApi, OrdersApi } from "@/lib/api/endpoints";
 import type { Category, GarmentModel, Measurement } from "@/lib/api/types";
 import { useAuth } from "@/components/AuthProvider";
 import { ModelCard } from "@/components/ModelCard";
 import { getSelection, onSelectionChange } from "@/lib/selection";
 import { Button, Spinner } from "@/components/ui";
-import { IconChevronRight, IconSearch } from "@/components/icons";
+import { IconChevronRight, IconOrders, IconSearch } from "@/components/icons";
 
 export default function Accueil() {
   const { user } = useAuth();
@@ -32,6 +32,8 @@ export default function Accueil() {
   const [byCategory, setByCategory] = useState<Record<string, GarmentModel[]>>({});
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [selection, setSelection] = useState<string[]>([]);
+  // Commandes chez un tailleur qui ne sont ni livrees ni annulees.
+  const [openOrders, setOpenOrders] = useState(0);
 
   useEffect(() => {
     CatalogApi.models({ sort: "popular", limit: 10 })
@@ -56,6 +58,10 @@ export default function Accueil() {
     MeasurementsApi.list()
       .then(setMeasurements)
       .catch(() => setMeasurements([]));
+
+    OrdersApi.list()
+      .then((list) => setOpenOrders(list.filter((o) => ["new", "in_progress", "ready_for_pickup"].includes(o.status)).length))
+      .catch(() => setOpenOrders(0));
   }, []);
 
   useEffect(() => {
@@ -96,6 +102,33 @@ export default function Accueil() {
           style={{ display: "contents" }}
         >
           <Button block>{latest ? "Voir mes mesures" : "Commencer"}</Button>
+        </Link>
+      </section>
+
+      {openOrders > 0 && (
+        <Link href="/commandes" className="tRow" aria-label="Voir mes commandes">
+          <IconOrders size={20} aria-hidden />
+          <span className="tRowMain">
+            <span className="tRowTitle">
+              Mes commandes ({openOrders} en cours)
+            </span>
+            <br />
+            <span className="tRowSub">Suivre la confection, écrire au tailleur.</span>
+          </span>
+          <IconChevronRight size={18} aria-hidden />
+        </Link>
+      )}
+
+      {/* Les mesures ont une suite : les envoyer a un tailleur. */}
+      <section className="homeContribute">
+        <div>
+          <h2>Faire coudre par un tailleur</h2>
+          <p className="muted">
+            Trouvez un atelier près de chez vous et envoyez-lui vos mesures, avec le modèle choisi.
+          </p>
+        </div>
+        <Link href="/tailleurs" style={{ display: "contents" }}>
+          <Button variant="secondary">Voir les tailleurs</Button>
         </Link>
       </section>
 

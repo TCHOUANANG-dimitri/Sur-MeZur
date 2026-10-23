@@ -12,7 +12,7 @@ from app.models.enums import (
     OrderType,
     ReceptionMode,
 )
-from app.schemas.common import ORMModel
+from app.schemas.common import AMOUNT_MAX, ORMModel
 
 
 class OrderCreateIn(BaseModel):
@@ -28,7 +28,7 @@ class OrderCreateIn(BaseModel):
     desired_date: date | None = None
     # A2.2 : budget indicatif (facultatif). Plus aucune offre ni acompte :
     # le prix convenu est fixe par le tailleur lors de l'acceptation.
-    budget_amount: float | None = None
+    budget_amount: float | None = Field(None, ge=0, le=AMOUNT_MAX)
     priority: OrderPriority = OrderPriority.normal
 
 
@@ -70,8 +70,8 @@ class OrderAcceptIn(BaseModel):
     """A2.2 — le tailleur accepte la commande et fixe le prix convenu (pur
     element d'information, aucun paiement n'est declenche)."""
 
-    agreed_price: float | None = None
-    delivery_fee: float | None = None
+    agreed_price: float | None = Field(None, ge=0, le=AMOUNT_MAX)
+    delivery_fee: float | None = Field(None, ge=0, le=AMOUNT_MAX)
 
 
 class OrderDeclineIn(BaseModel):
