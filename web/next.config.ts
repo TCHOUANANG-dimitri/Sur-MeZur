@@ -25,6 +25,22 @@ const nextConfig: NextConfig = {
   // a embarquer au deploiement.
   outputFileTracingRoot: path.join(__dirname),
 
+  // Hebergement mutualise (o2switch) : nombre de processus et memoire
+  // limites par compte. Par defaut Next lance un worker par coeur du serveur
+  // (des dizaines), que le systeme tue : la construction s'effondre
+  // (« kill EPERM »). `NEXT_BUILD_CPUS=1` (pose par le script de mise a jour
+  // o2switch) construit dans un seul processus ; sans la variable (poste de
+  // dev, Vercel), rien ne change.
+  ...(process.env.NEXT_BUILD_CPUS
+    ? {
+        experimental: {
+          cpus: Number(process.env.NEXT_BUILD_CPUS) || 1,
+          webpackBuildWorker: false,
+          workerThreads: false,
+        },
+      }
+    : {}),
+
   async rewrites() {
     return [
       { source: "/api/:path*", destination: `${API_ORIGIN}/api/:path*` },

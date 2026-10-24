@@ -8,3 +8,5 @@ npm_install.log
 build.log
 lucide.log
 start.log
+build.log
+tmp/

@@ -33,10 +33,15 @@ cd "$WEB"
 # l'environnement cPanel, que `npm ci` supprimerait. `--include=dev` :
 # l'environnement est en production, or TypeScript et les types servent au
 # build (sans eux, « Cannot find module 'typescript' »).
-npm install --include=dev --no-audit --no-fund
+NODE_ENV=development npm install --include=dev --no-audit --no-fund
 
-echo "== Construction"
-NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1536}" npm run build
+echo "== Construction (journal : $WEB/build.log)"
+# Un seul processus de construction (voir next.config.ts) : les limites du
+# compte mutualise tuent les workers en trop.
+export NEXT_BUILD_CPUS="${NEXT_BUILD_CPUS:-1}"
+export NEXT_TELEMETRY_DISABLED=1
+NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2048}" npm run build 2>&1 | tee "$WEB/build.log"
+test "${PIPESTATUS[0]}" -eq 0
 
 echo "== Redemarrage"
 mkdir -p "$WEB/tmp"
