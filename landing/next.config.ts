@@ -4,6 +4,19 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
 
+  // Hebergement mutualise (o2switch) : processus et memoire limites par
+  // compte. `NEXT_BUILD_CPUS=1` (pose par deploy/o2switch/mettre_a_jour.sh)
+  // construit dans un seul processus ; sans la variable, rien ne change.
+  ...(process.env.NEXT_BUILD_CPUS
+    ? {
+        experimental: {
+          cpus: Number(process.env.NEXT_BUILD_CPUS) || 1,
+          webpackBuildWorker: false,
+          workerThreads: false,
+        },
+      }
+    : {}),
+
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [360, 480, 640, 768, 1024, 1280, 1536, 1920],

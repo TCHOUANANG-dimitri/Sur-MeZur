@@ -28,3 +28,7 @@ yarn-error.log*
 next-env.d.ts
 # raw photo drops — processed into public/photos by scripts/optimize-photos.mjs
 photos-src/
+
+# o2switch
+build.log
+tmp/
