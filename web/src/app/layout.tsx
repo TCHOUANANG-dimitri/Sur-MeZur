@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { SITE_URL } from "@/lib/site";
 import "@/styles/globals.css";
 import "@/styles/shell.css";
 import "@/styles/ui.css";
@@ -21,7 +22,7 @@ import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { SwRegister } from "@/components/SwRegister";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://sur-me-zur.vercel.app"),
+  metadataBase: new URL(SITE_URL),
   manifest: "/manifest.webmanifest",
   title: "Sur-MeZur — Vos mesures, sans mètre ruban",
   description:

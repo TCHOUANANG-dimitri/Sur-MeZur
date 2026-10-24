@@ -7,10 +7,11 @@
  * cle d'API n'est necessaire.
  */
 
+import { SITE_URL } from "./site";
 import type { TailorProfile } from "./api/types";
 import { langue, tr } from "./i18n";
 
-export const APP_URL = "https://sur-me-zur.vercel.app";
+export const APP_URL = SITE_URL;
 
 /** Message pre-rempli quand un client ecrit a un tailleur sur WhatsApp : il
  *  dit d'ou vient le contact. Avec une commande, il en donne la reference. */

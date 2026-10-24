@@ -4,6 +4,7 @@
 // (une par une ou en lot), canaux, campagnes avec budget et cout
 // d'acquisition, objectifs, generateur de liens de campagne.
 
+import { SITE_URL } from "@/lib/site";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -403,7 +404,7 @@ function LinksTab() {
   const [campaign, setCampaign] = useState("");
   const [source, setSource] = useState("affiche");
   const [path, setPath] = useState("/");
-  const base = "https://sur-me-zur.vercel.app";
+  const base = SITE_URL;
   const code = (campaigns.data ?? []).find((c) => c.id === campaign)?.code ?? "";
   const url = `${base}${path.startsWith("/") ? path : `/${path}`}?utm_source=${encodeURIComponent(source)}${code ? `&utm_campaign=${encodeURIComponent(code)}` : ""}`;
   return (
