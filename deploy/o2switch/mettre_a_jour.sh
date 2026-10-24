@@ -30,8 +30,10 @@ git -C "$DEPOT" pull --ff-only
 echo "== Dependances"
 cd "$WEB"
 # `npm install` et non `npm ci` : node_modules est un lien vers
-# l'environnement cPanel, que `npm ci` supprimerait.
-npm install --no-audit --no-fund
+# l'environnement cPanel, que `npm ci` supprimerait. `--include=dev` :
+# l'environnement est en production, or TypeScript et les types servent au
+# build (sans eux, « Cannot find module 'typescript' »).
+npm install --include=dev --no-audit --no-fund
 
 echo "== Construction"
 NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1536}" npm run build
