@@ -38,8 +38,12 @@ construire() {
     return 1
   fi
   (
+    # Le script d'activation de cPanel lit des variables qui peuvent ne pas
+    # exister : on suspend `set -u` le temps de le charger.
+    set +u
     # shellcheck disable=SC1090
     source "$activate"
+    set -u
     cd "$dossier"
     echo "== Dependances"
     # `npm install` et non `npm ci` : node_modules est un lien vers
