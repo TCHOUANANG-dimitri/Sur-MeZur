@@ -72,15 +72,16 @@ function Silhouette({ className, guide }: { className: string; guide?: boolean }
   );
 }
 
-export function HeroDemo({ dict, className }: { dict: Dictionary; className?: string }) {
+export function HeroDemo({ dict, className, style }: { dict: Dictionary; className?: string; style?: CSSProperties }) {
   const d = dict.hero.demo;
 
   return (
     <div
       role="img"
       aria-label={d.alt}
+      style={style}
       className={cn(
-        "hero-demo aspect-[9/18.5] [container-type:inline-size] overflow-hidden rounded-[2rem] border-[7px] border-mist-50 bg-[#F6F2FC] shadow-[var(--shadow-lift)] ring-1 ring-violet-950/10",
+        "hero-in hero-demo aspect-[9/18.5] [container-type:inline-size] overflow-hidden rounded-[2rem] border-[7px] border-mist-50 bg-[#F6F2FC] shadow-[var(--shadow-lift)] ring-1 ring-violet-950/10",
         className,
       )}
     >

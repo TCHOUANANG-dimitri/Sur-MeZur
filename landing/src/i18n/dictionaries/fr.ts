@@ -86,6 +86,20 @@ const fr: Dictionary = {
     alt1: "Un client debout de face contre un mur clair, photographié en entier.",
     alt2: "Le même client, de profil, contre le même mur.",
     alt3: "À la table de coupe, le client tend son téléphone à la couturière.",
+    screen: {
+      infoTitle: "Vos infos",
+      height: "Taille",
+      weight: "Poids",
+      sex: "Sexe",
+      man: "Homme",
+      woman: "Femme",
+      next: "Continuer",
+      front: "De face",
+      profile: "De profil",
+      result: "Vos mesures",
+      send: "Envoyer à mon tailleur",
+      more: "+ 6 autres mesures",
+    },
   },
 
   audiences: {
@@ -118,6 +132,7 @@ const fr: Dictionary = {
     groupTop: "Buste et torse",
     groupArms: "Bras",
     groupLegs: "Hanches et jambes",
+    hint: "Touchez une mesure pour la voir sur le corps",
     chest: "Tour de poitrine",
     waist: "Tour de taille",
     hips: "Tour de hanches",

@@ -5,6 +5,8 @@ import stepProfile from "../../public/photos/step-profile.webp";
 import stepResult from "../../public/photos/step-result.webp";
 import forTailors from "../../public/photos/for-tailors.webp";
 import forClients from "../../public/photos/for-clients.webp";
+import patternCutting from "../../public/photos/pattern-cutting.webp";
+import finalCta from "../../public/photos/final-cta.webp";
 
 /**
  * Photographies importées statiquement : Next connaît leur taille (pas de
@@ -23,4 +25,6 @@ export const photos = {
   stepResult,
   forTailors,
   forClients,
+  patternCutting,
+  finalCta,
 } as const;

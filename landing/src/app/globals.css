@@ -675,3 +675,208 @@
     stroke-dashoffset: 0;
   }
 }
+
+/* ============================================================
+   STEP STORY  (sections/HowItWorks.tsx + ui/ActiveStep.tsx)
+   L'écran du téléphone suit l'étape au milieu de la page.
+   ============================================================ */
+
+.step-story .ss-screen {
+  opacity: 0;
+  transform: scale(1.03);
+  transition:
+    opacity 0.6s var(--ease-smz),
+    transform 0.6s var(--ease-smz);
+}
+.step-story[data-active="1"] .ss-screen[data-screen="1"],
+.step-story[data-active="2"] .ss-screen[data-screen="2"],
+.step-story[data-active="3"] .ss-screen[data-screen="3"] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (width >= 48rem) {
+  .step-story .ss-step {
+    opacity: 0.32;
+    transition: opacity 0.5s var(--ease-smz);
+  }
+  .step-story .ss-num {
+    color: var(--color-violet-200);
+    transition: color 0.5s var(--ease-smz);
+  }
+  .step-story[data-active="1"] .ss-step[data-step="1"],
+  .step-story[data-active="2"] .ss-step[data-step="2"],
+  .step-story[data-active="3"] .ss-step[data-step="3"] {
+    opacity: 1;
+  }
+  .step-story[data-active="1"] [data-step="1"] .ss-num,
+  .step-story[data-active="2"] [data-step="2"] .ss-num,
+  .step-story[data-active="3"] [data-step="3"] .ss-num {
+    color: var(--color-violet-600);
+  }
+}
+
+/* Étape 2 : la photo de face, puis celle de profil, en boucle. */
+.ss-shoot .ss-front,
+.ss-shoot .ss-label-front {
+  animation: ss-a 5s var(--ease-smz) infinite;
+}
+.ss-shoot .ss-profile,
+.ss-shoot .ss-label-profile {
+  animation: ss-b 5s var(--ease-smz) infinite;
+}
+@keyframes ss-a { 0%, 42% { opacity: 1; } 50%, 92% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes ss-b { 0%, 42% { opacity: 0; } 50%, 92% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ============================================================
+   BODY MODEL  (visuals/BodyModel.tsx + MeasureExplorer.tsx)
+   Les lignes se déroulent à l'apparition ; la mesure choisie s'allume.
+   ============================================================ */
+
+.body-model .bm-line {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    stroke-width 0.3s var(--ease-smz),
+    stroke 0.3s var(--ease-smz);
+}
+.body-model .bm-line.bm-v {
+  transform-origin: top;
+}
+[data-reveal] .body-model .bm-line {
+  transform: scaleX(0);
+}
+[data-reveal] .body-model .bm-line.bm-v {
+  transform: scaleY(0);
+}
+[data-shown="true"] .body-model .bm-line {
+  animation: bm-grow-x 0.9s var(--ease-smz) both;
+  animation-delay: calc(0.25s + var(--i) * 0.09s);
+}
+[data-shown="true"] .body-model .bm-line.bm-v {
+  animation-name: bm-grow-y;
+}
+@keyframes bm-grow-x { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes bm-grow-y { from { transform: scaleY(0); } to { transform: none; } }
+
+.body-model .bm-mesure,
+.body-model .bm-label {
+  transition: opacity 0.3s var(--ease-smz);
+}
+.body-model .is-dim {
+  opacity: 0.22;
+}
+.body-model .bm-mesure.is-active .bm-line {
+  stroke: #5d06cc;
+  stroke-width: 3.4;
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 4px rgba(140, 41, 251, 0.55));
+}
+.body-model .bm-label.is-active text {
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-shoot .ss-front,
+  .ss-shoot .ss-label-front,
+  .ss-shoot .ss-profile,
+  .ss-shoot .ss-label-profile {
+    animation: none !important;
+  }
+  .ss-shoot .ss-profile,
+  .ss-shoot .ss-label-profile {
+    opacity: 0;
+  }
+  [data-reveal] .body-model .bm-line,
+  [data-reveal] .body-model .bm-line.bm-v {
+    transform: none;
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   LOT 3 : patron, motif wax, mètre ruban, appel final
+   ============================================================ */
+
+/* Les pièces arrivent une à une, puis la coupe se trace (les règles
+   .pp-cut / .pp-seam plus haut, retardées ici). */
+.pattern-draw .pp-piece {
+  transform-box: fill-box;
+  transform-origin: left center;
+}
+[data-reveal] .pattern-draw .pp-piece {
+  opacity: 0;
+  transform: translateX(-36px) scale(0.86);
+}
+[data-shown="true"] .pattern-draw .pp-piece {
+  animation: pp-in 0.9s var(--ease-smz) both;
+  animation-delay: calc(0.55s + var(--i) * 0.16s);
+}
+[data-shown="true"] .pattern-draw .pp-cut {
+  animation-delay: 1.1s;
+}
+[data-shown="true"] .pattern-draw .pp-seam {
+  animation-delay: 1.7s;
+}
+@keyframes pp-in {
+  from { opacity: 0; transform: translateX(-36px) scale(0.86); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Balayage de la photo du modèle, avant que les pièces n'apparaissent. */
+.pt-scan {
+  opacity: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(165, 55, 252, 0.35) 80%, #c9a8ff 100%);
+}
+[data-shown="true"] .pt-scan {
+  animation: pt-scan 1.3s var(--ease-smz) 0.15s both;
+}
+@keyframes pt-scan {
+  0% { opacity: 1; transform: translateY(-100%); }
+  85% { opacity: 1; transform: translateY(300%); }
+  100% { opacity: 0; transform: translateY(300%); }
+}
+
+/* Motif wax : dérive lente. */
+.wax-drift {
+  animation: wax-drift 90s linear infinite;
+}
+@keyframes wax-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-120px, -120px, 0); }
+}
+
+/* Mètre ruban : défile d'une longueur entière, puis recommence. */
+.tape-run {
+  animation: tape-run 60s linear infinite;
+}
+@keyframes tape-run {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wax-drift,
+  .tape-run,
+  [data-shown="true"] .pattern-draw .pp-piece,
+  [data-shown="true"] .pt-scan {
+    animation: none !important;
+  }
+  [data-reveal] .pattern-draw .pp-piece {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Premier écran : apparition en CSS, lancée dès l'affichage (sans attendre
+   le script, contrairement aux [data-reveal] plus bas dans la page). */
+.hero-in {
+  animation: hero-in 0.8s var(--ease-smz) var(--d, 0ms) both;
+}
+@keyframes hero-in {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-in { animation: none !important; }
+}

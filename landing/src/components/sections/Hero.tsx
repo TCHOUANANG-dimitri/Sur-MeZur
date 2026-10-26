@@ -1,4 +1,5 @@
 import Image from "next/image";
+import type { CSSProperties } from "react";
 
 import { photos } from "@/data/photos";
 import { appPaths } from "@/data/site";
@@ -6,7 +7,6 @@ import type { Dictionary } from "@/i18n";
 import { localizePath, type Locale } from "@/i18n/config";
 import { AppLink } from "@/components/ui/AppLink";
 import { ArrowRight, Check } from "@/components/ui/Icons";
-import { Reveal } from "@/components/ui/Reveal";
 import { HeroDemo } from "@/components/visuals/HeroDemo";
 
 /**
@@ -28,11 +28,11 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
 
       <div className="container-smz relative grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14">
         <div className="max-w-[40rem]">
-          <Reveal as="p" className="eyebrow">
+          <p className="eyebrow hero-in">
             {dict.hero.eyebrow}
-          </Reveal>
+          </p>
 
-          <Reveal delay={80}>
+          <div className="hero-in" style={{ "--d": "80ms" } as CSSProperties}>
             <h1
               id="hero-title"
               className="mt-5 font-display text-[clamp(2.4rem,7.4vw,4.9rem)] font-semibold leading-[1.02] tracking-[-0.03em]"
@@ -40,15 +40,15 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
               <span className="block text-mist-50">{dict.hero.h1a}</span>
               <span className="block text-gradient">{dict.hero.h1b}</span>
             </h1>
-          </Reveal>
+          </div>
 
-          <Reveal delay={160}>
+          <div className="hero-in" style={{ "--d": "160ms" } as CSSProperties}>
             <p className="mt-6 max-w-xl text-[1.0625rem] leading-relaxed text-mist-300 sm:text-lg">
               {dict.hero.sub}
             </p>
-          </Reveal>
+          </div>
 
-          <Reveal delay={240}>
+          <div className="hero-in" style={{ "--d": "240ms" } as CSSProperties}>
             <div id="hero-cta" className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <AppLink path={appPaths.measure} cta="hero" className="btn btn-primary text-base">
                 {dict.hero.ctaPrimary}
@@ -58,9 +58,9 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
                 {dict.hero.ctaSecondary}
               </a>
             </div>
-          </Reveal>
+          </div>
 
-          <Reveal delay={320}>
+          <div className="hero-in" style={{ "--d": "320ms" } as CSSProperties}>
             <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-mist-400">
               {reassure.map((item) => (
                 <li key={item} className="flex items-center gap-2">
@@ -71,10 +71,12 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
                 </li>
               ))}
             </ul>
-          </Reveal>
+          </div>
         </div>
 
-        <Reveal from="scale" delay={160} className="relative">
+        {/* Photo affichée tout de suite (c'est l'élément le plus grand de
+            l'écran : la faire attendre retarde tout l'affichage). */}
+        <div className="relative">
           <div className="relative overflow-hidden rounded-[1.75rem] shadow-2xl shadow-violet-900/15 ring-1 ring-violet-200/60">
             <Image
               src={photos.heroAtelier}
@@ -87,9 +89,10 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           </div>
           <HeroDemo
             dict={dict}
+            style={{ "--d": "350ms" } as CSSProperties}
             className="absolute -bottom-12 right-2 w-[11.5rem] sm:-bottom-14 sm:right-[-1.25rem] sm:w-[13.5rem] lg:w-[14.5rem]"
           />
-        </Reveal>
+        </div>
       </div>
     </section>
   );

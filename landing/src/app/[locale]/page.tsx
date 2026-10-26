@@ -11,6 +11,7 @@ import { PatternTeaser } from "@/components/sections/PatternTeaser";
 import { ProofBar } from "@/components/sections/ProofBar";
 import { Testimonials } from "@/components/sections/Testimonials";
 import { StickyCta } from "@/components/layout/StickyCta";
+import { TapeMeasure } from "@/components/visuals/TapeMeasure";
 import { getDictionary } from "@/i18n";
 import { defaultLocale, isLocale, type Locale } from "@/i18n/config";
 import { faqJsonLd, jsonLdHtml, pageAlternates } from "@/lib/seo";
@@ -43,6 +44,7 @@ export default async function Home({ params }: Params) {
     <>
       <Hero locale={active} dict={dict} />
       <ProofBar dict={dict} />
+      <TapeMeasure />
       <HowItWorks dict={dict} />
       <Audiences dict={dict} />
       <Measures dict={dict} />
@@ -50,6 +52,7 @@ export default async function Home({ params }: Params) {
       <AppDownload locale={active} dict={dict} />
       <Testimonials locale={active} dict={dict} />
       <Faq dict={dict} />
+      <TapeMeasure tilt={0.7} />
       <FinalCta locale={active} dict={dict} />
       <StickyCta label={dict.sticky.cta} />
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdHtml(faqJsonLd(active, dict))} />

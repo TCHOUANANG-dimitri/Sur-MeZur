@@ -81,6 +81,20 @@ const en = {
     alt1: "A client standing face-on against a light wall, photographed full length.",
     alt2: "The same client, in profile, against the same wall.",
     alt3: "At the cutting table, the client hands his phone to the tailor.",
+    screen: {
+      infoTitle: "Your details",
+      height: "Height",
+      weight: "Weight",
+      sex: "Sex",
+      man: "Man",
+      woman: "Woman",
+      next: "Continue",
+      front: "Front",
+      profile: "Side",
+      result: "Your measurements",
+      send: "Send to my tailor",
+      more: "+ 6 more measurements",
+    },
   },
 
   audiences: {
@@ -113,6 +127,7 @@ const en = {
     groupTop: "Chest and torso",
     groupArms: "Arms",
     groupLegs: "Hips and legs",
+    hint: "Tap a measurement to see it on the body",
     chest: "Chest",
     waist: "Waist",
     hips: "Hips",

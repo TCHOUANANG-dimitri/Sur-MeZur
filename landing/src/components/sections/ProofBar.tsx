@@ -31,7 +31,7 @@ export function ProofBar({ dict }: { dict: Dictionary }) {
   ];
 
   return (
-    <section aria-label="Sur-MeZur" className="border-y border-violet-950/[0.08] bg-ink-900 pt-14 pb-8 sm:pt-16">
+    <section aria-label="Sur-MeZur" className="border-y border-violet-950/[0.08] bg-ink-900 pt-14 pb-12 sm:pt-16 sm:pb-14">
       <ul className="container-smz grid grid-cols-2 gap-x-6 gap-y-6 lg:grid-cols-4">
         {items.map((item, index) => (
           <Reveal as="li" key={item.t} delay={index * 70} className="flex flex-col gap-1">

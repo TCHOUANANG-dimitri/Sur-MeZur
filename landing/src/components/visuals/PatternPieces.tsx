@@ -1,7 +1,10 @@
+import type { CSSProperties } from "react";
+
 /**
  * Pièces de patron dessinées en SVG (devant, dos, manche) : marges de
  * couture en pointillé, droit-fil, crans. Le tracé se dessine à l'entrée de
- * la section (classe `.pattern-draw`, voir globals.css), sans bibliothèque.
+ * la section (classe `.pattern-draw`, voir globals.css), sans bibliothèque :
+ * les pièces arrivent une à une (`.pp-piece`), puis la coupe se trace.
  */
 export function PatternPieces({
   labels,
@@ -21,6 +24,7 @@ export function PatternPieces({
 
       {/* Devant */}
       <g transform="translate(22 26)">
+        <g className="pp-piece" style={{ "--i": 0 } as CSSProperties}>
         <path
           className="pp-cut"
           d="M30 0h62c4 14 14 22 30 22l20 6 10 54-14 6 6 70-8 112H18L8 158 14 88 0 82 10 28 30 22Z"
@@ -39,10 +43,12 @@ export function PatternPieces({
         <path d="M72 90v120" stroke="#fff" strokeOpacity=".6" strokeWidth="1.4" markerEnd="none" />
         <path d="M66 98l6-8 6 8M66 202l6 8 6-8" stroke="#fff" strokeOpacity=".6" fill="none" />
         <text x="44" y="150" fill="#fff" fontSize="13" fontWeight="600">{labels.front}</text>
+        </g>
       </g>
 
       {/* Dos */}
       <g transform="translate(176 26)">
+        <g className="pp-piece" style={{ "--i": 1 } as CSSProperties}>
         <path
           className="pp-cut"
           d="M24 0h70l10 16 22 10 10 56-14 6 6 70-8 112H18L8 158 14 88 0 82 10 26 24 16Z"
@@ -61,10 +67,12 @@ export function PatternPieces({
         <path d="M66 90v120" stroke="#fff" strokeOpacity=".6" strokeWidth="1.4" />
         <path d="M60 98l6-8 6 8M60 202l6 8 6-8" stroke="#fff" strokeOpacity=".6" fill="none" />
         <text x="50" y="150" fill="#fff" fontSize="13" fontWeight="600">{labels.back}</text>
+        </g>
       </g>
 
       {/* Manche */}
       <g transform="translate(320 46)">
+        <g className="pp-piece" style={{ "--i": 2 } as CSSProperties}>
         <path
           className="pp-cut"
           d="M40 0c22 0 38 20 46 44l-10 200H6L0 44C6 20 20 0 40 0Z"
@@ -75,6 +83,7 @@ export function PatternPieces({
         />
         <path d="M36 60v130" stroke="#fff" strokeOpacity=".6" strokeWidth="1.4" />
         <text x="12" y="128" fill="#fff" fontSize="12" fontWeight="600">{labels.sleeve}</text>
+        </g>
       </g>
     </svg>
   );

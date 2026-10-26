@@ -1,4 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
+
+import { photos } from "@/data/photos";
 
 import { appPaths } from "@/data/site";
 import type { Dictionary } from "@/i18n";
@@ -14,6 +17,10 @@ export function FinalCta({ locale, dict }: { locale: Locale; dict: Dictionary })
       id="final-cta"
       aria-labelledby="final-title"
     >
+      {/* L'atelier en panorama, centre dégagé, voilé pour que le texte reste lisible */}
+      <Image src={photos.finalCta} alt="" fill sizes="100vw" className="object-cover opacity-[0.5]" />
+      <div aria-hidden className="absolute inset-0 bg-[radial-gradient(60%_75%_at_50%_50%,rgba(255,255,255,0.93)_0%,rgba(255,255,255,0.72)_55%,rgba(251,249,255,0.3)_100%)]" />
+
       <div className="container-smz relative flex flex-col items-center text-center">
         <Reveal>
           <h2 id="final-title" className="text-gradient-mist max-w-3xl text-[clamp(2.1rem,5.2vw,3.9rem)] leading-[1.05]">
