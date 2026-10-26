@@ -49,9 +49,13 @@ export function Measures({ dict }: { dict: Dictionary }) {
             {groups.map((g, gi) => (
               <Reveal key={g.title} delay={gi * 90}>
                 <h3 className="font-sans text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">{g.title}</h3>
-                <ul className="mt-3 flex flex-col gap-2">
+                {/* Téléphone : pastilles côte à côte (la page reste courte) ; écran large : liste. */}
+                <ul className="mt-3 flex flex-wrap gap-2 sm:flex-col sm:flex-nowrap">
                   {g.keys.map((key) => (
-                    <li key={key} className="border-b border-violet-950/[0.08] pb-2 text-[0.9375rem] text-mist-200">
+                    <li
+                      key={key}
+                      className="rounded-full bg-violet-50 px-3 py-1.5 text-sm text-mist-200 ring-1 ring-violet-950/[0.06] sm:rounded-none sm:bg-transparent sm:px-0 sm:pb-2 sm:pt-0 sm:text-[0.9375rem] sm:ring-0 sm:[border-bottom:1px_solid_rgba(8,4,77,0.08)]"
+                    >
                       {m[key]}
                     </li>
                   ))}

@@ -8,7 +8,9 @@ type PhotoProps = {
   /** Describe what is happening, not what the file is. Empty only if decorative. */
   alt: string;
   /** Locks the frame so nothing shifts while the image loads. */
-  ratio?: "3/2" | "4/5" | "21/9" | "1/1";
+  ratio?: "3/2" | "3/4" | "4/5" | "21/9" | "1/1";
+  /** Point de l'image gardé au recadrage (CSS object-position), ex. "50% 36%". */
+  focus?: string;
   sizes: string;
   priority?: boolean;
   /** Blur-up is worth it on the large ones, wasted bytes on the small ones. */
@@ -21,6 +23,7 @@ type PhotoProps = {
 
 const ratioClass = {
   "3/2": "aspect-[3/2]",
+  "3/4": "aspect-[3/4]",
   "4/5": "aspect-[4/5]",
   "21/9": "aspect-[21/9]",
   "1/1": "aspect-square",
@@ -41,6 +44,7 @@ export function Photo({
   className,
   overlay,
   rounded = true,
+  focus,
 }: PhotoProps) {
   return (
     <div
@@ -58,6 +62,7 @@ export function Photo({
         sizes={sizes}
         priority={priority}
         placeholder={blur ? "blur" : undefined}
+        style={focus ? { objectPosition: focus } : undefined}
         className="object-cover transition-transform duration-[900ms] ease-[var(--ease-smz)] group-hover:scale-[1.03]"
       />
       {/* Keeps the white page and the photograph from meeting on a hard edge. */}

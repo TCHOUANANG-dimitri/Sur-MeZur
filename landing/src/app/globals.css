@@ -515,3 +515,163 @@
     stroke-dashoffset: 0;
   }
 }
+
+/* ============================================================
+   HERO DEMO  (components/visuals/HeroDemo.tsx)
+   Une boucle de 10 s, découpée en pourcentages :
+     0-21 % photo de face · 22-44 % profil · 45-62 % calcul
+     60-70 % mesures tracées · 70-94 % fiche, chiffres qui défilent
+   Uniquement opacité, déplacements et tracés : rien ne décale la page.
+   ============================================================ */
+
+@property --hd-n {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --cu-n {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+.hero-demo {
+  --hd-cycle: 10s;
+}
+.hero-demo .hd-face-guide,
+.hero-demo .hd-profile-guide {
+  fill: none;
+  stroke: #5d06cc;
+  stroke-width: 4;
+  stroke-dasharray: 6 9;
+  stroke-linecap: round;
+}
+.hero-demo .hd-face,
+.hero-demo .hd-profile {
+  fill: #dccbfa;
+  stroke: #5d06cc;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.hero-demo .hd-lines path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.hero-demo .hd-shutter {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.hero-demo .hd-face-guide { animation: hd-face-guide var(--hd-cycle) linear infinite; }
+.hero-demo .hd-face { animation: hd-face var(--hd-cycle) linear infinite; }
+.hero-demo .hd-profile-guide { animation: hd-profile-guide var(--hd-cycle) linear infinite; }
+.hero-demo .hd-profile { animation: hd-profile var(--hd-cycle) linear infinite; }
+.hero-demo .hd-flash-1 { animation: hd-flash-1 var(--hd-cycle) linear infinite; }
+.hero-demo .hd-flash-2 { animation: hd-flash-2 var(--hd-cycle) linear infinite; }
+.hero-demo .hd-shutter { animation: hd-shutter var(--hd-cycle) var(--ease-smz) infinite; }
+.hero-demo .hd-step-1 { animation: hd-step-1 var(--hd-cycle) linear infinite; }
+.hero-demo .hd-step-2 { animation: hd-step-2 var(--hd-cycle) linear infinite; }
+.hero-demo .hd-step-3 { animation: hd-step-3 var(--hd-cycle) linear infinite; }
+.hero-demo .hd-scan { animation: hd-scan var(--hd-cycle) linear infinite; }
+.hero-demo .hd-lines path {
+  animation: hd-line var(--hd-cycle) var(--ease-smz) infinite;
+  animation-delay: calc(var(--i) * 0.18s);
+}
+.hero-demo .hd-dots circle {
+  animation: hd-dot var(--hd-cycle) linear infinite;
+  animation-delay: calc(var(--i) * 0.18s);
+}
+.hero-demo .hd-sheet { animation: hd-sheet var(--hd-cycle) var(--ease-smz) infinite; }
+.hero-demo .hd-count {
+  --hd-n: var(--to);
+  counter-reset: hd var(--hd-n);
+  animation: hd-count var(--hd-cycle) var(--ease-smz) infinite;
+}
+.hero-demo .hd-count::after {
+  content: counter(hd);
+}
+
+@keyframes hd-face-guide { 0%, 8% { opacity: 1; } 9%, 100% { opacity: 0; } }
+@keyframes hd-face {
+  0%, 8.9% { opacity: 0; }
+  9%, 21% { opacity: 1; }
+  24%, 44% { opacity: 0; }
+  47%, 94% { opacity: 1; }
+  97%, 100% { opacity: 0; }
+}
+@keyframes hd-profile-guide { 0%, 22% { opacity: 0; } 25%, 33% { opacity: 1; } 34%, 100% { opacity: 0; } }
+@keyframes hd-profile { 0%, 33.9% { opacity: 0; } 34%, 43% { opacity: 1; } 46%, 100% { opacity: 0; } }
+@keyframes hd-flash-1 { 0%, 8% { opacity: 0; } 9% { opacity: 0.95; } 13%, 100% { opacity: 0; } }
+@keyframes hd-flash-2 { 0%, 33% { opacity: 0; } 34% { opacity: 0.95; } 38%, 100% { opacity: 0; } }
+@keyframes hd-shutter {
+  0%, 6%, 11%, 31%, 36%, 100% { transform: scale(1); }
+  8.5%, 33.5% { transform: scale(0.82); }
+}
+@keyframes hd-step-1 { 0%, 21% { opacity: 1; transform: none; } 23%, 100% { opacity: 0; transform: translateY(-4px); } }
+@keyframes hd-step-2 {
+  0%, 22% { opacity: 0; transform: translateY(4px); }
+  25%, 43% { opacity: 1; transform: none; }
+  45%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes hd-step-3 {
+  0%, 44% { opacity: 0; transform: translateY(4px); }
+  46%, 62% { opacity: 1; transform: none; }
+  64%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes hd-scan {
+  0%, 46% { opacity: 0; transform: translateY(20px); }
+  47% { opacity: 1; transform: translateY(20px); }
+  61% { opacity: 1; transform: translateY(300px); }
+  62%, 100% { opacity: 0; transform: translateY(300px); }
+}
+@keyframes hd-line {
+  0%, 60% { stroke-dashoffset: 1; opacity: 1; }
+  66%, 94% { stroke-dashoffset: 0; opacity: 1; }
+  97%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes hd-dot { 0%, 61% { opacity: 0; } 63%, 94% { opacity: 1; } 97%, 100% { opacity: 0; } }
+@keyframes hd-sheet {
+  0%, 68% { transform: translateY(115%); }
+  73%, 93% { transform: none; }
+  98%, 100% { transform: translateY(115%); }
+}
+@keyframes hd-count {
+  0%, 72% { --hd-n: 0; }
+  83%, 100% { --hd-n: var(--to); }
+}
+
+/* Compteurs des chiffres clés (ProofBar) : défilent quand le bloc apparaît. */
+.countup {
+  --cu-n: var(--to);
+  counter-reset: cu var(--cu-n);
+}
+.countup::after {
+  content: counter(cu);
+}
+[data-shown="true"] .countup {
+  animation: cu-count 1.4s var(--ease-smz) both;
+}
+@keyframes cu-count {
+  from { --cu-n: 0; }
+  to { --cu-n: var(--to); }
+}
+
+/* Sans animation : la scène finale, fixe (face, mesures, fiche). */
+@media (prefers-reduced-motion: reduce) {
+  .hero-demo *,
+  .hero-demo *::after,
+  .countup {
+    animation: none !important;
+  }
+  .hero-demo .hd-face-guide,
+  .hero-demo .hd-profile-guide,
+  .hero-demo .hd-profile,
+  .hero-demo .hd-flash,
+  .hero-demo .hd-scan,
+  .hero-demo .hd-step {
+    opacity: 0;
+  }
+  .hero-demo .hd-lines path {
+    stroke-dashoffset: 0;
+  }
+}

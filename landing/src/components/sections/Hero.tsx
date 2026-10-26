@@ -7,7 +7,7 @@ import { localizePath, type Locale } from "@/i18n/config";
 import { AppLink } from "@/components/ui/AppLink";
 import { ArrowRight, Check } from "@/components/ui/Icons";
 import { Reveal } from "@/components/ui/Reveal";
-import { MeasureCard } from "@/components/visuals/MeasureCard";
+import { HeroDemo } from "@/components/visuals/HeroDemo";
 
 /**
  * Premier écran : la promesse en une phrase, l'action principale, trois
@@ -19,7 +19,7 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
 
   return (
     <section
-      className="relative overflow-hidden pb-16 pt-[calc(var(--nav-h)+2rem)] sm:pb-24 lg:pt-[calc(var(--nav-h)+4rem)]"
+      className="relative overflow-hidden pb-20 pt-[calc(var(--nav-h)+2rem)] sm:pb-28 lg:pt-[calc(var(--nav-h)+4rem)]"
       aria-labelledby="hero-title"
     >
       <div aria-hidden className="pointer-events-none absolute inset-0">
@@ -77,7 +77,7 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
         <Reveal from="scale" delay={160} className="relative">
           <div className="relative overflow-hidden rounded-[1.75rem] shadow-2xl shadow-violet-900/15 ring-1 ring-violet-200/60">
             <Image
-              src={photos.heroPattern}
+              src={photos.heroAtelier}
               alt={dict.hero.photoAlt}
               priority
               placeholder="blur"
@@ -85,10 +85,9 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
               className="aspect-[4/5] h-auto w-full object-cover sm:aspect-[3/2]"
             />
           </div>
-          <MeasureCard
+          <HeroDemo
             dict={dict}
-            keys={["chest", "waist", "hips", "shoulder"]}
-            className="absolute -bottom-8 right-3 w-[13.5rem] sm:-bottom-10 sm:right-[-1.5rem] sm:w-[17rem]"
+            className="absolute -bottom-12 right-2 w-[11.5rem] sm:-bottom-14 sm:right-[-1.25rem] sm:w-[13.5rem] lg:w-[14.5rem]"
           />
         </Reveal>
       </div>

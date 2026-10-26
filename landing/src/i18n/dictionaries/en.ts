@@ -40,7 +40,15 @@ const en = {
     cardTitle: "Measurement sheet",
     cardExample: "Example",
     cardFooter: "12 measurements · ready to print or share",
-    photoAlt: "In her workshop, a tailor photographs a client standing against the wall with her phone, framed on a body outline.",
+    photoAlt: "In her workshop, a tailor photographs a client standing against the wall with her phone.",
+    demo: {
+      alt: "Animation: the phone takes a front photo, then a side photo, calculates, and shows the measurement sheet (example values).",
+      front: "Front",
+      profile: "Side",
+      analysing: "Calculating…",
+      result: "Your measurements",
+      more: "+ 8 more measurements · sheet ready to share",
+    },
   },
 
   proof: {
@@ -70,9 +78,9 @@ const en = {
     s3b: "Your 12 measurements arrive in seconds. Print the sheet or send it to your tailor.",
     cta: "Try it now",
     ctaNote: "Free · no sign-up to try",
-    alt1: "A tailor photographs a client standing straight against a white wall.",
-    alt2: "The same client in profile against the same wall.",
-    alt3: "A hand holds a phone showing the list of measurements.",
+    alt1: "A client standing face-on against a light wall, photographed full length.",
+    alt2: "The same client, in profile, against the same wall.",
+    alt3: "At the cutting table, the client hands his phone to the tailor.",
   },
 
   audiences: {
@@ -85,7 +93,7 @@ const en = {
     c3: "Pick a style and send your order to a tailor",
     c4: "Your measurements stay in your account, ready to reuse",
     clientsCta: "Take my measurements",
-    clientsAlt: "A young woman props her phone on a stack of books to photograph herself against a wall.",
+    clientsAlt: "At home, a young woman props her phone on a shelf to photograph herself.",
     tailorsLabel: "Tailors",
     tailorsTitle: "Your client book, finally on your phone.",
     t1: "Measure clients by photo or with a tape",
@@ -94,7 +102,7 @@ const en = {
     t4: "Your jobs and delivery dates, nothing forgotten",
     t5: "Client orders land straight with you",
     tailorsCta: "Create my tailor account",
-    tailorsAlt: "A tailor in Douala checks measurements on his phone at his workbench.",
+    tailorsAlt: "A tailor in Douala checks his phone at his cutting table.",
     free: "Free",
   },
 
@@ -140,7 +148,7 @@ const en = {
     front: "Front",
     back: "Back",
     sleeve: "Sleeve",
-    garmentAlt: "Photo of a wax print dress used as the reference for the pattern.",
+    garmentAlt: "A violet wax print dress on a dress form, photographed face-on: the reference for the pattern.",
   },
 
   privacy: {

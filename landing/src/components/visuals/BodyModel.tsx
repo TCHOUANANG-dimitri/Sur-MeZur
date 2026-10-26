@@ -11,11 +11,11 @@ import { EXAMPLE_VALUES } from "./MeasureCard";
  * texte : rien ne se chevauche, même avec les libellés anglais.
  */
 
-const AXE = 220;
+export const AXE = 220;
 
 /** Moitié gauche du contour (de la base du cou à l'entrejambe). La moitié
  *  droite est la même, en miroir autour de l'axe. */
-const DEMI_CORPS = [
+export const DEMI_CORPS = [
   "M210 88", "L210 100",
   "C200 106 178 108 166 112", // épaule
   "C154 116 150 128 149 142",
@@ -30,7 +30,7 @@ const DEMI_CORPS = [
   "C204 470 210 400 214 360", "L220 342", // intérieur de la jambe -> entrejambe
 ].join(" ");
 
-function miroir(d: string): string {
+export function miroir(d: string): string {
   return d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${2 * AXE - Number(x)} ${y}`);
 }
 

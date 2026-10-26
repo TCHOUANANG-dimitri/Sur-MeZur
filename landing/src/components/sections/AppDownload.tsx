@@ -89,7 +89,7 @@ export function AppDownload({ locale, dict }: { locale: Locale; dict: Dictionary
               <div className="aspect-[9/19.5] w-full">
                 <div className="relative h-[58%] w-full p-3 pt-10">
                   <div className="relative h-full w-full overflow-hidden rounded-[1.4rem]">
-                    <Image src={photos.heroPattern} alt="" fill sizes="18rem" className="object-cover object-[42%_50%]" />
+                    <Image src={photos.heroAtelier} alt="" fill sizes="18rem" className="object-cover object-[42%_50%]" />
                   </div>
                 </div>
                 <div className="px-5 pt-2">

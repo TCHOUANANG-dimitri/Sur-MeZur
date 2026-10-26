@@ -45,7 +45,15 @@ const fr: Dictionary = {
     cardTitle: "Fiche de mesures",
     cardExample: "Exemple",
     cardFooter: "12 mesures · prête à imprimer ou partager",
-    photoAlt: "Dans son atelier, une couturière photographie avec son téléphone un client debout contre le mur, cadré sur une silhouette.",
+    photoAlt: "Dans son atelier, une couturière photographie avec son téléphone un client debout contre le mur.",
+    demo: {
+      alt: "Animation : le téléphone prend une photo de face, puis de profil, calcule, et affiche la fiche de mesures (valeurs d'exemple).",
+      front: "De face",
+      profile: "De profil",
+      analysing: "Calcul des mesures…",
+      result: "Vos mesures",
+      more: "+ 8 autres mesures · fiche prête à partager",
+    },
   },
 
   proof: {
@@ -75,9 +83,9 @@ const fr: Dictionary = {
     s3b: "Vos 12 mesures arrivent en quelques secondes. Imprimez la fiche ou envoyez-la à votre tailleur.",
     cta: "Essayer maintenant",
     ctaNote: "Gratuit · sans inscription pour essayer",
-    alt1: "Un tailleur photographie un client debout, de face, contre un mur blanc.",
+    alt1: "Un client debout de face contre un mur clair, photographié en entier.",
     alt2: "Le même client, de profil, contre le même mur.",
-    alt3: "Une main tient un téléphone qui affiche la liste des mesures obtenues.",
+    alt3: "À la table de coupe, le client tend son téléphone à la couturière.",
   },
 
   audiences: {
@@ -90,7 +98,7 @@ const fr: Dictionary = {
     c3: "Choisissez un modèle et envoyez votre commande à un tailleur",
     c4: "Vos mesures restent dans votre compte, réutilisables",
     clientsCta: "Prendre mes mesures",
-    clientsAlt: "Une jeune femme pose son téléphone sur une pile de livres pour se photographier contre un mur.",
+    clientsAlt: "Chez elle, une jeune femme pose son téléphone sur une étagère pour se photographier.",
     tailorsLabel: "Tailleurs",
     tailorsTitle: "Votre carnet de clients, enfin dans votre téléphone.",
     t1: "Mesurez vos clients par photo ou au mètre ruban",
@@ -99,7 +107,7 @@ const fr: Dictionary = {
     t4: "Vos travaux et dates de livraison, sans rien oublier",
     t5: "Les commandes de vos clients arrivent directement chez vous",
     tailorsCta: "Créer mon compte tailleur",
-    tailorsAlt: "Un tailleur de Douala consulte des mesures sur son téléphone, à son établi.",
+    tailorsAlt: "Un tailleur de Douala consulte son téléphone à sa table de coupe.",
     free: "Gratuit",
   },
 
@@ -146,7 +154,7 @@ const fr: Dictionary = {
     front: "Devant",
     back: "Dos",
     sleeve: "Manche",
-    garmentAlt: "Photo d'un modèle de robe en wax, utilisée comme référence pour le patron.",
+    garmentAlt: "Une robe en wax violet sur un mannequin de couture, photographiée de face : le modèle de référence du patron.",
   },
 
   privacy: {

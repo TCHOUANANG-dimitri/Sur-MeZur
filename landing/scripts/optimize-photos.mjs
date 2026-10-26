@@ -22,9 +22,9 @@ const OUT = path.join(ROOT, "public/photos");
 
 const JOBS = [
   { src: "01_hero.png", out: "hero-atelier", width: 2000 },
-  // Image du haut de page : les mains posent un patron sur la table de coupe.
+  // Ancienne image du haut de page (la couturière photographie le client).
   { src: "01_hero_v2.png", out: "hero-pattern", width: 2000 },
-  // Image à fournir (docs/IMAGES-A-FOURNIR.md) : ignorée tant qu'absente.
+  // Brief de génération de toutes ces images : docs/IMAGES-A-FOURNIR.md.
   { src: "10_pattern_garment.png", out: "pattern-garment", width: 1200 },
   { src: "02_problem.png", out: "problem-tape", width: 1200 },
   { src: "03_how_it_works_face.png", out: "step-front", width: 1200 },
@@ -33,6 +33,8 @@ const JOBS = [
   { src: "06_for_tailors.png", out: "for-tailors", width: 1800 },
   { src: "07_for_clients.png", out: "for-clients", width: 1200 },
   { src: "08_fabric_strip.png", out: "fabric-strip", width: 2400 },
+  { src: "11_pattern_cutting.png", out: "pattern-cutting", width: 1800 },
+  { src: "12_final_cta.png", out: "final-cta", width: 2400 },
   // The only one that keeps its alpha — it is cut out, not a photograph.
   { src: "09_avatar_3d.png", out: "avatar-3d", width: 1100, alpha: true },
 ];

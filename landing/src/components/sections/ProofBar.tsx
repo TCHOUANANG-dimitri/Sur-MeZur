@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import type { Dictionary } from "@/i18n";
 import { Reveal } from "@/components/ui/Reveal";
 
@@ -6,6 +8,20 @@ import { Reveal } from "@/components/ui/Reveal";
  * d'utilisateurs ni témoignage tant qu'ils ne sont pas réels : la preuve
  * sociale viendra de `Testimonials` quand des avis authentiques existeront.
  */
+/** « 12 mesures » : le nombre défile de 0 à 12 à l'apparition (CSS, globals.css). */
+function CountUp({ text }: { text: string }) {
+  const match = /^(\d+)(\s.*)$/.exec(text);
+  if (!match) return <>{text}</>;
+  const [, n, rest] = match;
+  return (
+    <>
+      <span className="sr-only">{n}</span>
+      <span aria-hidden className="countup tabular-nums" style={{ "--to": Number(n) } as CSSProperties} />
+      {rest}
+    </>
+  );
+}
+
 export function ProofBar({ dict }: { dict: Dictionary }) {
   const items = [
     { t: dict.proof.p1t, b: dict.proof.p1b },
@@ -19,7 +35,9 @@ export function ProofBar({ dict }: { dict: Dictionary }) {
       <ul className="container-smz grid grid-cols-2 gap-x-6 gap-y-6 lg:grid-cols-4">
         {items.map((item, index) => (
           <Reveal as="li" key={item.t} delay={index * 70} className="flex flex-col gap-1">
-            <span className="font-display text-2xl text-mist-50 sm:text-3xl">{item.t}</span>
+            <span className="font-display text-2xl text-mist-50 sm:text-3xl">
+              <CountUp text={item.t} />
+            </span>
             <span className="text-sm leading-snug text-mist-400">{item.b}</span>
           </Reveal>
         ))}

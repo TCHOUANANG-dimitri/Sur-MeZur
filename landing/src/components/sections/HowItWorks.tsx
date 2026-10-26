@@ -9,9 +9,11 @@ import { Reveal } from "@/components/ui/Reveal";
 
 export function HowItWorks({ dict }: { dict: Dictionary }) {
   const steps = [
-    { index: "1", title: dict.how.s1t, body: dict.how.s1b, photo: photos.stepFront, alt: dict.how.alt1 },
-    { index: "2", title: dict.how.s2t, body: dict.how.s2b, photo: photos.stepProfile, alt: dict.how.alt2 },
-    { index: "3", title: dict.how.s3t, body: dict.how.s3b, photo: photos.stepResult, alt: dict.how.alt3 },
+    // Les photos de face et de profil sont en 9:16 : recadrées en gardant la
+    // tête et le haut du corps.
+    { index: "1", title: dict.how.s1t, body: dict.how.s1b, photo: photos.stepFront, alt: dict.how.alt1, focus: "50% 36%" },
+    { index: "2", title: dict.how.s2t, body: dict.how.s2b, photo: photos.stepProfile, alt: dict.how.alt2, focus: "50% 36%" },
+    { index: "3", title: dict.how.s3t, body: dict.how.s3b, photo: photos.stepResult, alt: dict.how.alt3, focus: "50% 40%" },
   ];
 
   return (
@@ -32,7 +34,8 @@ export function HowItWorks({ dict }: { dict: Dictionary }) {
                 <Photo
                   src={step.photo}
                   alt={step.alt}
-                  ratio="4/5"
+                  ratio="3/4"
+                  focus={step.focus}
                   rounded={false}
                   sizes="(min-width: 768px) 30vw, 78vw"
                   overlay={
