@@ -59,6 +59,10 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
+          // L'application n'a rien à faire dans les résultats de recherche :
+          // c'est la landing (sur-mezur.com) qui est référencée. Évite aussi
+          // qu'une fiche partagée (mesures d'une personne) soit indexée.
+          { key: "X-Robots-Tag", value: "noindex" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

@@ -9,6 +9,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { siteConfig } from "@/data/site";
 import { getDictionary } from "@/i18n";
 import { defaultLocale, htmlLang, isLocale, locales, type Locale } from "@/i18n/config";
+import { jsonLdHtml, pageAlternates, siteJsonLd } from "@/lib/seo";
 
 import "../globals.css";
 
@@ -40,15 +41,6 @@ export const viewport: Viewport = {
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
-}
-
-function alternateLanguages(path = "") {
-  const languages: Record<string, string> = {};
-  for (const locale of locales) {
-    languages[htmlLang[locale]] = `${siteConfig.url}/${locale}${path}`;
-  }
-  languages["x-default"] = `${siteConfig.url}/${defaultLocale}${path}`;
-  return languages;
 }
 
 export async function generateMetadata({
@@ -88,10 +80,8 @@ export async function generateMetadata({
           ],
     authors: [{ name: siteConfig.name }],
     creator: siteConfig.name,
-    alternates: {
-      canonical: `${siteConfig.url}/${active}`,
-      languages: alternateLanguages(),
-    },
+    // Chaque page redonne les siennes (lib/seo.ts) : celles-ci valent pour l'accueil.
+    alternates: pageAlternates(active),
     openGraph: {
       type: "website",
       siteName: siteConfig.name,
@@ -144,6 +134,7 @@ export default async function LocaleLayout({
         <main id="main">{children}</main>
         <Footer locale={active} dict={dict} />
         <Attribution />
+        <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdHtml(siteJsonLd(active, dict))} />
       </body>
     </html>
   );

@@ -1,0 +1,18 @@
+# Sur-MeZur
+
+> Sur-MeZur donne vos 12 mesures de couture à partir de 2 photos prises avec un téléphone, sans mètre ruban, gratuitement. Pour les clients et leurs tailleurs, au Cameroun (Douala) et ailleurs. En français et en anglais.
+
+Les clients choisissent un modèle, prennent une photo de face et une de profil, et obtiennent une fiche de mesures prête pour leur tailleur. Les tailleurs y gèrent leurs clients, leurs travaux et leurs patrons.
+
+## Pages
+
+- [Présentation (français)](https://sur-mezur.com/fr): le service, les 12 mesures, questions fréquentes
+- [Overview (English)](https://sur-mezur.com/en): the service, the 12 measurements, FAQ
+- [Application Android](https://sur-mezur.com/fr/telecharger): téléchargement de l'application
+- [Application web](https://app.sur-mezur.com/mesurer): prendre ses mesures dans le navigateur
+
+## Informations
+
+- [Confidentialité](https://app.sur-mezur.com/infos/confidentialite)
+- [Conditions d'utilisation](https://app.sur-mezur.com/infos/conditions)
+- [Contact](https://app.sur-mezur.com/contact)

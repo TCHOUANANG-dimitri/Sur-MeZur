@@ -9,9 +9,9 @@ import type { Dictionary } from "../types";
  */
 const fr: Dictionary = {
   meta: {
-    title: "Sur-MeZur — Vos mesures de couture en 2 photos, gratuitement",
+    title: "Mesures de couture en 2 photos, gratuitement | Sur-MeZur",
     description:
-      "Prenez deux photos avec votre téléphone et obtenez vos 12 mesures de couture, prêtes pour votre tailleur. Gratuit, sans mètre ruban. Tailleurs : mesurez et gérez vos clients au même endroit.",
+      "Vos 12 mesures de couture en 2 photos, prêtes pour votre tailleur. Gratuit, sans mètre ruban. Tailleurs du Cameroun : mesurez et gérez vos clients.",
     ogTitle: "Vos mesures de couture en 2 photos",
     ogSub: "Gratuit · Sans mètre ruban · Pensé pour le Cameroun",
   },

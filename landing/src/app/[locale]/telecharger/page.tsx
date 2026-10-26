@@ -6,6 +6,7 @@ import { photos } from "@/data/photos";
 import { appPaths, siteConfig } from "@/data/site";
 import { getDictionary } from "@/i18n";
 import { defaultLocale, isLocale, localizedPath, type Locale } from "@/i18n/config";
+import { pageAlternates } from "@/lib/seo";
 import { AppLink } from "@/components/ui/AppLink";
 import { ArrowRight } from "@/components/ui/Icons";
 import { Reveal } from "@/components/ui/Reveal";
@@ -15,7 +16,13 @@ type Params = { params: Promise<{ locale: string }> };
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { locale } = await params;
   const dict = getDictionary(locale);
-  return { title: dict.download.metaTitle, description: dict.download.metaDescription };
+  const active: Locale = isLocale(locale) ? locale : defaultLocale;
+  return {
+    title: dict.download.metaTitle,
+    description: dict.download.metaDescription,
+    alternates: pageAlternates(active, "/telecharger"),
+    openGraph: { url: `${siteConfig.url}/${active}/telecharger`, title: dict.download.metaTitle, description: dict.download.metaDescription },
+  };
 }
 
 /**

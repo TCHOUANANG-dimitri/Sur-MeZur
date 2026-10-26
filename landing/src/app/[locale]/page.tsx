@@ -13,6 +13,7 @@ import { Testimonials } from "@/components/sections/Testimonials";
 import { StickyCta } from "@/components/layout/StickyCta";
 import { getDictionary } from "@/i18n";
 import { defaultLocale, isLocale, type Locale } from "@/i18n/config";
+import { faqJsonLd, jsonLdHtml, pageAlternates } from "@/lib/seo";
 
 type Params = { params: Promise<{ locale: string }> };
 
@@ -22,6 +23,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return {
     title: { absolute: dict.meta.title },
     description: dict.meta.description,
+    alternates: pageAlternates(isLocale(locale) ? locale : defaultLocale),
   };
 }
 
@@ -50,6 +52,7 @@ export default async function Home({ params }: Params) {
       <Faq dict={dict} />
       <FinalCta locale={active} dict={dict} />
       <StickyCta label={dict.sticky.cta} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdHtml(faqJsonLd(active, dict))} />
     </>
   );
 }

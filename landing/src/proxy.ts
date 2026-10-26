@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { siteConfig } from "@/data/site";
 import { defaultLocale, isLocale, locales } from "@/i18n/config";
 
 const LOCALE_COOKIE = "smz_locale";
@@ -26,6 +27,13 @@ function negotiate(header: string | null): string {
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  // Une seule adresse pour le site : www.sur-mezur.com renvoie définitivement
+  // vers sur-mezur.com (sinon Google voit deux sites en double).
+  const host = (request.headers.get("x-forwarded-host") || request.headers.get("host") || "").toLowerCase();
+  if (host.startsWith("www.")) {
+    return NextResponse.redirect(`${siteConfig.url}${pathname}${search}`, 308);
+  }
 
   const first = pathname.split("/")[1];
   if (isLocale(first)) {

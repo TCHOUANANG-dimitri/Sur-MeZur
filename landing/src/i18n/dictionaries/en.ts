@@ -4,9 +4,9 @@
  */
 const en = {
   meta: {
-    title: "Sur-MeZur — Your tailoring measurements from 2 photos, free",
+    title: "Tailoring measurements from 2 photos, free | Sur-MeZur",
     description:
-      "Take two photos with your phone and get your 12 tailoring measurements, ready for your tailor. Free, no tape measure. Tailors: measure and manage your clients in one place.",
+      "Your 12 tailoring measurements from 2 photos, ready for your tailor. Free, no tape measure. Tailors in Cameroon: measure and manage your clients.",
     ogTitle: "Your tailoring measurements from 2 photos",
     ogSub: "Free · No tape measure · Built for Cameroon",
   },

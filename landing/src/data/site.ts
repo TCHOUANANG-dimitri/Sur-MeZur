@@ -18,13 +18,13 @@ function apkSize(locale: "fr" | "en"): string {
 export const siteConfig = {
   name: "Sur-MeZur",
   tagline: "Mesurez plus juste. Cousez mieux.",
-  url: process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://sur-mezur.korah.tech",
+  url: process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://sur-mezur.com",
   /**
    * L'application web elle-même : chaque appel à l'action y mène. Les liens
    * passent par `appHref`, qui y ajoute la page d'arrivée ; le composant
    * `Attribution` y ajoute ensuite l'origine de la visite (utm_*, code).
    */
-  appUrl: process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://sur-me-zur.vercel.app",
+  appUrl: process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://app.sur-mezur.com",
   /** APK Android (page /telecharger, section « Application »). Vide tant qu'aucune version n'est publiée. */
   apk: {
     url: process.env.NEXT_PUBLIC_APK_URL || apkBuild.file || "",
