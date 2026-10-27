@@ -15,6 +15,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import React from "react";
 import { useT } from "@/lib/i18n";
+import { LangSwitch } from "@/components/LangSwitch";
 import {
   IconHome,
   IconModels,
@@ -96,6 +97,7 @@ export function Shell({ nav, children }: { nav: NavItem[]; children: React.React
           Sur-MeZur
         </div>
         <NavList items={nav} />
+        <LangSwitch compact />
       </aside>
 
       <main className="shellMain">{children}</main>

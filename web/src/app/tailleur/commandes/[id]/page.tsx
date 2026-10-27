@@ -25,6 +25,7 @@ import { IconCall, IconChat, IconContact, IconUsers } from "@/components/icons";
 import { copyText, openNewContact, whatsappHref } from "@/lib/contact";
 import { amountError } from "@/lib/validation";
 import { OrderBadge, formatDateFR, formatFcfa } from "../../_components";
+import { nomModele } from "@/lib/modelText";
 
 const TRACKER: { key: string; fr: string; en: string }[] = [
   { key: "new", fr: "Reçue", en: "Received" },
@@ -111,7 +112,7 @@ export default function CommandeDetail() {
       await TailorApi.createJob({
         tailor_client_id: clientId,
         client_name: info.name,
-        description: `${info.model?.name ?? tr("Vêtement sur mesure", "Made-to-measure garment")} — ${tr("commande Sur-MeZur n°", "Sur-MeZur order no.")} ${order.id.slice(0, 6).toUpperCase()}`,
+        description: `${info.model ? nomModele(info.model) : tr("Vêtement sur mesure", "Made-to-measure garment")} — ${tr("commande Sur-MeZur n°", "Sur-MeZur order no.")} ${order.id.slice(0, 6).toUpperCase()}`,
         ...(order.desired_date ? { due_date: order.desired_date } : {}),
         ...(order.agreed_price != null ? { price: Number(order.agreed_price) } : {}),
         garment_model_id: order.garment_model_id,
@@ -198,7 +199,7 @@ export default function CommandeDetail() {
 
       <Card>
         <p style={{ margin: 0 }}>
-          <strong>{tr("Modèle", "Style")} :</strong> {info?.model ? info.model.name : order.garment_model_id ? "…" : tr("Libre", "Free choice")}
+          <strong>{tr("Modèle", "Style")} :</strong> {info?.model ? nomModele(info.model) : order.garment_model_id ? "…" : tr("Libre", "Free choice")}
           <br />
           <span className="tRowSub">
             {formatDateFR(order.created_at)}
@@ -208,7 +209,7 @@ export default function CommandeDetail() {
         </p>
         {info?.model?.photo_url && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={info.model.photo_url} alt={info.model.name} style={{ marginTop: 10, maxWidth: 160, borderRadius: 10 }} />
+          <img src={info.model.photo_url} alt={nomModele(info.model)} style={{ marginTop: 10, maxWidth: 160, borderRadius: 10 }} />
         )}
         {order.budget_amount != null && (
           <p className="tRowSub" style={{ margin: "6px 0 0" }}>{tr("Budget du client", "Client's budget")} : {formatFcfa(order.budget_amount)}</p>

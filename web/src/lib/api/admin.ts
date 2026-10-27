@@ -377,7 +377,42 @@ export interface ModelStats {
   orders: number;
 }
 
+/** Proposition de nom et de description (Qwen3-VL), à relire dans l'admin. */
+export interface AiNameItem {
+  id: string;
+  name: string;
+  description: string | null;
+  name_en: string | null;
+  description_en: string | null;
+  category: string | null;
+  gender: string | null;
+  status: string;
+  photo_url: string | null;
+  ai_status: "proposed" | "applied" | "rejected" | "failed" | null;
+  suggestion: {
+    name?: string;
+    description?: string;
+    name_en?: string;
+    description_en?: string;
+    fiche?: Record<string, unknown>;
+    date?: string;
+    erreur?: string;
+  };
+}
+
+export interface AiNamesPage {
+  counts: { total: number; not_analysed: number; proposed: number; applied: number; rejected: number; failed: number };
+  total: number;
+  items: AiNameItem[];
+}
+
 export const Catalog = {
+  aiNames: (status: string, offset = 0, limit = 24) =>
+    api.get<AiNamesPage>(`/admin/models/ai-names?status=${status}&offset=${offset}&limit=${limit}`),
+  applyAiName: (id: string, body: { name?: string; description?: string; name_en?: string; description_en?: string }) =>
+    api.post<AiNameItem>(`/admin/models/${id}/ai-name/apply`, body),
+  rejectAiName: (id: string) => api.post<AiNameItem>(`/admin/models/${id}/ai-name/reject`, {}),
+  applyAllAiNames: () => api.post<{ applied: number }>("/admin/models/ai-names/apply-all", {}),
   models: (p: Params) => table<ModelRow>("/admin/tables/models", p),
   moderate: (id: string, status: string, reason?: string) =>
     api.post<unknown>(`/admin/models/${id}/moderate`, { status, reason }),

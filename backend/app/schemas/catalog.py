@@ -31,6 +31,10 @@ class GarmentModelOut(ORMModel):
     category: CategoryOut
     name: str
     description: str | None
+    # Anglais (nul tant qu'aucune traduction) : l'interface retombe sur le
+    # français.
+    name_en: str | None = None
+    description_en: str | None = None
     base_price: float | None
     style_tags: list
     thumbnail_color: str
@@ -52,6 +56,8 @@ class GarmentModelOut(ORMModel):
 class GarmentModelCreateIn(BaseModel):
     name: str
     description: str | None = None
+    name_en: str | None = None
+    description_en: str | None = None
     category_id: str
     base_price: float | None = None
     style_tags: list[str] = []
@@ -80,6 +86,8 @@ class CommunityModelIn(BaseModel):
 class GarmentModelUpdateIn(BaseModel):
     name: str | None = None
     description: str | None = None
+    name_en: str | None = None
+    description_en: str | None = None
     category_id: str | None = None
     base_price: float | None = None
     style_tags: list[str] | None = None

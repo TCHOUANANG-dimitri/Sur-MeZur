@@ -24,6 +24,7 @@ import { cacheModels, rememberSuite } from "@/lib/modelSuite";
 import type { GarmentModel } from "@/lib/api/types";
 import { IconCheck, IconHeart } from "./icons";
 import { tr } from "@/lib/i18n";
+import { nomModele } from "@/lib/modelText";
 
 export function ModelCard({
   model,
@@ -86,7 +87,7 @@ export function ModelCard({
               }
         }
         role="img"
-        aria-label={model.name}
+        aria-label={nomModele(model)}
       >
         {selected && (
           <span className="modelCardBadge" aria-label={tr("Dans votre sélection", "In your selection")}>
@@ -99,13 +100,13 @@ export function ModelCard({
             className={`modelCardSave ${saved ? "modelCardSaveOn" : ""}`}
             onClick={toggle}
             aria-pressed={saved}
-            aria-label={saved ? tr(`Retirer ${model.name} des enregistrés`, `Remove ${model.name} from saved`) : tr(`Enregistrer ${model.name}`, `Save ${model.name}`)}
+            aria-label={saved ? tr(`Retirer ${nomModele(model)} des enregistrés`, `Remove ${nomModele(model)} from saved`) : tr(`Enregistrer ${nomModele(model)}`, `Save ${nomModele(model)}`)}
           >
             <IconHeart size={18} strokeWidth={2.2} aria-hidden />
           </button>
         )}
       </div>
-      <span className="modelCardName">{model.name}</span>
+      <span className="modelCardName">{nomModele(model)}</span>
       {model.category?.name && <span className="modelCardCategory">{model.category.name}</span>}
     </Link>
   );

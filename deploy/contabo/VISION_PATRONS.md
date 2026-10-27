@@ -110,3 +110,37 @@ figés sur la version testée. Toute modification se teste d'abord sur le lot de
 photos des essais (`~/modeles/tester_lot.sh`), puis se reporte dans le code ;
 le test `backend/tests/test_vision_patron.py` vérifie que les catégories du
 schéma restent celles du catalogue.
+
+## Noms du catalogue (nom et description FR / EN par modèle)
+
+Le même serveur de vision propose, d'après la photo de couverture, un nom et
+une description en français et en anglais pour chaque modèle du catalogue
+(`backend/app/services/catalogue_nommage.py`). Le modèle remplit une fiche
+fermée (la fiche de style ci-dessus + couleurs + tissu) ; les phrases sont
+composées par le code, avec les accords. Rien n'est appliqué d'office : tout
+se relit dans **Admin › Catalogue › Noms IA**.
+
+Comptez 1 à 3 minutes par photo : environ une nuit pour 300 modèles. Pendant
+le lot, l'analyse « Nouveau patron » des tailleurs attend son tour.
+
+1. Mettre à jour le VPS (`mettre_a_jour.sh` : ajoute les colonnes `name_en`,
+   `description_en`, `ai_suggestion`, `ai_status`).
+2. Essai sur 5 modèles, sans rien enregistrer :
+
+   ```bash
+   sudo -u surmezur -H bash -c 'set -a; . /etc/surmezur/api.env; set +a; cd /srv/surmezur/app/backend; /srv/surmezur/venv/bin/python scripts/nommer_catalogue.py --essai --limite 5'
+   ```
+
+3. Si les propositions sont bonnes, le lot complet, en tâche de fond (il
+   continue si la session SSH se ferme) :
+
+   ```bash
+   sudo -u surmezur -H bash -c 'set -a; . /etc/surmezur/api.env; set +a; cd /srv/surmezur/app/backend; nohup /srv/surmezur/venv/bin/python scripts/nommer_catalogue.py > /tmp/nommage.log 2>&1 &'
+   tail -f /tmp/nommage.log      # suivre (Ctrl+C n'arrête que l'affichage)
+   ```
+
+   Interrompu, il reprend là où il s'était arrêté si on le relance. Options :
+   `--categorie Kaba`, `--limite 20`, `--refaire` (réanalyse aussi les
+   modèles déjà faits, échecs compris).
+4. Relire dans l'admin : corriger si besoin, « Appliquer », « Ignorer », ou
+   « Tout appliquer ».

@@ -23,6 +23,7 @@ import { Button, ErrorBanner, InfoBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
 import { passwordError, passwordHint } from "@/lib/password";
 import { phoneError } from "@/lib/validation";
+import { LangSwitch } from "@/components/LangSwitch";
 
 export default function MotDePasseOublie() {
   const router = useRouter();
@@ -83,6 +84,7 @@ export default function MotDePasseOublie() {
 
   return (
     <main className="authScreen">
+      <LangSwitch compact className="langSwitchFloat" />
       <form className="authForm" onSubmit={step === "phone" ? requestCode : confirm} noValidate>
         <div className="authLogo">
           <Image

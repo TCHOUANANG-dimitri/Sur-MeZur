@@ -22,6 +22,7 @@ import { Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/componen
 import { IconMeasure, IconModels, IconPrint } from "@/components/icons";
 import { getSelection, onSelectionChange } from "@/lib/selection";
 import { tr } from "@/lib/i18n";
+import { nomModele } from "@/lib/modelText";
 
 function DetailMesureInner() {
   const { id } = useParams<{ id: string }>();
@@ -90,11 +91,11 @@ function DetailMesureInner() {
                   : { background: model.thumbnail_color }
               }
               role="img"
-              aria-label={model.name}
+              aria-label={nomModele(model)}
             />
             <div>
               <span className="fieldHint">{tr("Modèle retenu", "Chosen style")}</span>
-              <strong style={{ display: "block" }}>{model.name}</strong>
+              <strong style={{ display: "block" }}>{nomModele(model)}</strong>
             </div>
           </div>
         )}

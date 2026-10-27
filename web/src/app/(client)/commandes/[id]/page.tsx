@@ -19,6 +19,7 @@ import { formatCm, presentableGroups } from "@/lib/measurements";
 import { copyText, whatsappHref } from "@/lib/contact";
 import { tailorWhatsappMessage } from "@/lib/tailors";
 import { OrderBadge, formatDateFR, formatFcfa } from "@/app/tailleur/_components";
+import { nomModele } from "@/lib/modelText";
 
 const TRACKER: { key: string; fr: string; en: string }[] = [
   { key: "new", fr: "Envoyée", en: "Sent" },
@@ -112,7 +113,7 @@ export default function CommandeClient() {
           <strong>{tr("Tailleur", "Tailor")} :</strong>{" "}
           {tailor ? <Link href={`/tailleurs/${tailor.id}`}>{tailor.shop_name}</Link> : "…"}
           <br />
-          <strong>{tr("Modèle", "Style")} :</strong> {model ? <Link href={`/modeles/${model.id}`}>{model.name}</Link> : order.garment_model_id ? "…" : tr("Aucun", "None")}
+          <strong>{tr("Modèle", "Style")} :</strong> {model ? <Link href={`/modeles/${model.id}`}>{nomModele(model)}</Link> : order.garment_model_id ? "…" : tr("Aucun", "None")}
           <br />
           <span className="tRowSub">
             {formatDateFR(order.created_at)}

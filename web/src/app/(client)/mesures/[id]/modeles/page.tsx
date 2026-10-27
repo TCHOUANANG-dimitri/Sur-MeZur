@@ -25,6 +25,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { Button, EmptyState, ErrorBanner, PageHeader, Spinner, Textarea } from "@/components/ui";
 import { IconDownload, IconEdit, IconModels, IconPrint } from "@/components/icons";
 import { locale, tr } from "@/lib/i18n";
+import { nomModele, descriptionModele } from "@/lib/modelText";
 
 /*
  * Ajustements POUR CHAQUE MODELE (preferences, tissu, finitions). Ils vivent
@@ -133,7 +134,7 @@ export default function FicheModeles() {
       const url = URL.createObjectURL(await watermarkedPhoto(src));
       const a = document.createElement("a");
       a.href = url;
-      a.download = photoFileName(m.name);
+      a.download = photoFileName(nomModele(m));
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -225,10 +226,10 @@ export default function FicheModeles() {
                   className="modelSheetPhoto"
                   style={photo ? { backgroundImage: `url(${photo})` } : { background: m.thumbnail_color }}
                   role="img"
-                  aria-label={m.name}
+                  aria-label={nomModele(m)}
                 />
                 <div className="modelSheetBody">
-                  <h2 className="ficheModelName">{m.name}</h2>
+                  <h2 className="ficheModelName">{nomModele(m)}</h2>
                   {m.category?.name && <p className="ficheModelCat">{m.category.name}</p>}
 
                   <div className="modelSheetActions">
@@ -287,7 +288,7 @@ export default function FicheModeles() {
               {meta}
             </header>
             <div className="ficheModeleTitre">
-              <h2 className="ficheModelName">{print.model.name}</h2>
+              <h2 className="ficheModelName">{nomModele(print.model)}</h2>
               {print.model.category?.name && <p className="ficheModelCat">{print.model.category.name}</p>}
             </div>
             {print.src ? (
@@ -316,14 +317,14 @@ export default function FicheModeles() {
               {meta}
             </header>
             <div className="ficheModeleTitre">
-              <h2 className="ficheModelName">{print.model.name}</h2>
+              <h2 className="ficheModelName">{nomModele(print.model)}</h2>
               {print.model.category?.name && <p className="ficheModelCat">{print.model.category.name}</p>}
             </div>
             <p className="ficheModeleNotes">{notes[print.model.id]}</p>
-            {print.model.description && (
+            {descriptionModele(print.model) && (
               <p className="ficheModelDesc">
                 <strong>{tr("Description : ", "Description: ")}</strong>
-                {print.model.description}
+                {descriptionModele(print.model)}
               </p>
             )}
             <footer className="ficheFooter">

@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Spinner } from "@/components/ui";
 import { homeFor } from "@/lib/home";
+import { LangSwitch } from "@/components/LangSwitch";
 
 const VU = "smz_onboarding_vu";
 
@@ -104,6 +105,7 @@ export default function Bienvenue() {
     >
       <div className="obTop">
         <Image src="/logo-mark.png" alt="Sur-MeZur" width={38} height={40} priority />
+        <LangSwitch compact />
         {!dernier && (
           <button type="button" className="obSkip" onClick={() => aller(ECRANS.length - 1)}>
             {tr("Passer", "Skip")}

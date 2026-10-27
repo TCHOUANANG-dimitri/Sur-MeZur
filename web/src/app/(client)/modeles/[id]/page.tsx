@@ -29,6 +29,7 @@ import { cacheModels, modelCache, readSuite, rememberSuite, setDirection, takeDi
 import { Badge, Button, EmptyState, ErrorBanner, PageHeader, Spinner } from "@/components/ui";
 import { IconBack, IconCheck, IconChevronRight, IconHeart, IconModels, IconSearch } from "@/components/icons";
 import { tr } from "@/lib/i18n";
+import { nomModele, descriptionModele } from "@/lib/modelText";
 
 /** Distance (px) au-dela de laquelle un balayage change de modele... */
 const SEUIL = 70;
@@ -245,7 +246,7 @@ function ModeleDetail({ id, onNavigate }: { id: string; onNavigate: (id: string)
 
   return (
     <>
-      <PageHeader title={model.name} back />
+      <PageHeader title={nomModele(model)} back />
       <div className="modelSwipeViewport">
         <div
           ref={swipeRef}
@@ -261,7 +262,7 @@ function ModeleDetail({ id, onNavigate }: { id: string; onNavigate: (id: string)
                 className="modelHero"
                 style={cover ? { backgroundImage: `url(${cover})` } : { background: model.thumbnail_color }}
                 role="img"
-                aria-label={model.name}
+                aria-label={nomModele(model)}
               />
               {gallery.length > 1 && (
                 <div className="modelThumbs">
@@ -294,7 +295,7 @@ function ModeleDetail({ id, onNavigate }: { id: string; onNavigate: (id: string)
 
             <div>
               <div className="modelTitleRow">
-                <h2>{model.name}</h2>
+                <h2>{nomModele(model)}</h2>
                 <button
                   className={`likeBtn ${model.liked_by_me ? "likeBtnActive" : ""}`}
                   onClick={toggleLike}
@@ -316,7 +317,7 @@ function ModeleDetail({ id, onNavigate }: { id: string; onNavigate: (id: string)
                 ))}
               </div>
 
-              {model.description && <p className="muted modelDescription">{model.description}</p>}
+              {descriptionModele(model) && <p className="muted modelDescription">{descriptionModele(model)}</p>}
 
               <div className="actionBar">
                 <Button variant={selected ? "secondary" : "ghost"} onClick={toggleSelection}>

@@ -92,6 +92,7 @@ def models_table(
     def serialize(m: GarmentModel) -> dict:
         return {
             "id": m.id, "name": m.name, "description": m.description,
+            "name_en": m.name_en, "description_en": m.description_en, "ai_status": m.ai_status,
             "category_id": m.category_id, "category": m.category.name if m.category else None,
             "gender": m.category.gender if m.category else None,
             "status": m.status, "rejection_reason": m.rejection_reason,
@@ -216,6 +217,106 @@ def set_spotlight(model_id: str, payload: SpotlightIn, request: Request, db: Ses
 
 
 # --- 4.11 Import en masse ----------------------------------------------------------------
+
+
+# --- Noms et descriptions proposés par Qwen3-VL (services/catalogue_nommage.py) --
+# Les propositions sont produites par lot sur le VPS (scripts/nommer_catalogue.py) ;
+# ici, l'administrateur les relit, les corrige, les applique ou les ignore.
+
+AI_STATUSES = ("proposed", "applied", "rejected", "failed")
+
+
+def _ai_out(m: GarmentModel) -> dict:
+    s = m.ai_suggestion or {}
+    return {
+        "id": m.id, "name": m.name, "description": m.description,
+        "name_en": m.name_en, "description_en": m.description_en,
+        "category": m.category.name if m.category else None,
+        "gender": m.category.gender if m.category else None,
+        "status": m.status, "photo_url": m.photo_url, "ai_status": m.ai_status,
+        "suggestion": {k: s.get(k) for k in ("name", "description", "name_en", "description_en", "fiche", "date", "erreur")},
+    }
+
+
+@router.get("/models/ai-names")
+def ai_names(
+    ai_status: str = Query("proposed", alias="status", pattern="^(proposed|applied|rejected|failed)$"),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(24, ge=1, le=100),
+    db: Session = Depends(get_db),
+    _=Depends(require_perm("catalog")),
+):
+    """Propositions à relire, et où en est le lot (combien d'analysés)."""
+    counts = dict(db.query(GarmentModel.ai_status, func.count(GarmentModel.id)).group_by(GarmentModel.ai_status).all())
+    total = sum(counts.values())
+    query = (
+        db.query(GarmentModel).options(joinedload(GarmentModel.category))
+        .filter(GarmentModel.ai_status == ai_status).order_by(GarmentModel.name)
+    )
+    items = query.offset(offset).limit(limit).all()
+    return {
+        "counts": {
+            "total": total, "not_analysed": counts.get(None, 0),
+            **{k: counts.get(k, 0) for k in AI_STATUSES},
+        },
+        "total": query.count(),
+        "items": [_ai_out(m) for m in items],
+    }
+
+
+class AiNameApplyIn(BaseModel):
+    """Valeurs relues par l'administrateur ; absentes = celles proposées."""
+    name: str | None = Field(None, min_length=2, max_length=255)
+    description: str | None = Field(None, max_length=2000)
+    name_en: str | None = Field(None, max_length=255)
+    description_en: str | None = Field(None, max_length=2000)
+
+
+def _apply_ai(m: GarmentModel, payload: AiNameApplyIn | None = None) -> None:
+    s = m.ai_suggestion or {}
+    if not s.get("name"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Aucune proposition pour ce modèle")
+    p = payload or AiNameApplyIn()
+    m.name = (p.name or s["name"]).strip()
+    m.description = (p.description if p.description is not None else s.get("description")) or None
+    m.name_en = (p.name_en if p.name_en is not None else s.get("name_en")) or None
+    m.description_en = (p.description_en if p.description_en is not None else s.get("description_en")) or None
+    m.ai_status = "applied"
+
+
+@router.post("/models/ai-names/apply-all")
+def ai_names_apply_all(request: Request, db: Session = Depends(get_db), admin: User = Depends(require_perm("catalog"))):
+    """Applique telles quelles toutes les propositions en attente."""
+    rows = db.query(GarmentModel).filter(GarmentModel.ai_status == "proposed").all()
+    for m in rows:
+        _apply_ai(m)
+    audit.record(db, admin, "model.ai_names_apply_all", "model", None, summary=f"{len(rows)} modèles", request=request)
+    db.commit()
+    return {"applied": len(rows)}
+
+
+@router.post("/models/{model_id}/ai-name/apply")
+def ai_name_apply(model_id: str, request: Request, payload: AiNameApplyIn | None = None,
+                  db: Session = Depends(get_db), admin: User = Depends(require_perm("catalog"))):
+    m = get_or_404(db, GarmentModel, model_id, "Modèle")
+    previous = m.name
+    _apply_ai(m, payload)
+    audit.record(db, admin, "model.ai_name_apply", "model", m.id, summary=f"{previous} → {m.name}", request=request)
+    db.commit()
+    return _ai_out(m)
+
+
+@router.post("/models/{model_id}/ai-name/reject")
+def ai_name_reject(model_id: str, request: Request, db: Session = Depends(get_db),
+                   admin: User = Depends(require_perm("catalog"))):
+    """Garde le nom actuel ; le lot ne repropose pas ce modèle (sauf --refaire)."""
+    m = get_or_404(db, GarmentModel, model_id, "Modèle")
+    if m.ai_status != "proposed":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Aucune proposition en attente pour ce modèle")
+    m.ai_status = "rejected"
+    audit.record(db, admin, "model.ai_name_reject", "model", m.id, summary=m.name, request=request)
+    db.commit()
+    return _ai_out(m)
 
 
 def _title_from_filename(name: str) -> str:

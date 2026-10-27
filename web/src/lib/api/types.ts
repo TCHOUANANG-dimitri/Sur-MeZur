@@ -160,6 +160,9 @@ export interface GarmentModel {
   category: { id: string; name: string; gender: string };
   name: string;
   description: string | null;
+  /** Anglais : nul tant que la traduction n'est pas faite (voir lib/modelText). */
+  name_en?: string | null;
+  description_en?: string | null;
   base_price: number | null;
   style_tags: string[];
   thumbnail_color: string;

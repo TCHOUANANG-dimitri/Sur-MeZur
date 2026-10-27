@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import {
   Catalog,
   type AccessoryItem,
+  type AiNameItem,
   type CategoryItem,
   type FabricItem,
   type ModelRow,
@@ -30,10 +31,11 @@ import {
 import { AuthImage, ErrorState, Loading, PageHead, Panel, StatusBadge, useLoad } from "@/components/admin/kit";
 import { MODEL_STATUS, formatDate, formatFcfa, formatNumber } from "@/components/admin/format";
 
-const TABS = ["modeles", "moderation", "categories", "tissus", "accessoires", "pretaporter", "import"] as const;
+const TABS = ["modeles", "moderation", "nommage", "categories", "tissus", "accessoires", "pretaporter", "import"] as const;
 const TAB_LABEL: Record<string, string> = {
   modeles: "Modèles",
   moderation: "Modération",
+  nommage: "Noms IA",
   categories: "Catégories",
   tissus: "Tissus",
   accessoires: "Accessoires",
@@ -56,6 +58,7 @@ export default function CatalogPage() {
       </div>
       {tab === "modeles" && <ModelsTab s={s} set={set} pendingOnly={false} />}
       {tab === "moderation" && <ModelsTab s={s} set={set} pendingOnly />}
+      {tab === "nommage" && <AiNamesTab />}
       {tab === "categories" && <CategoriesTab />}
       {tab === "tissus" && <FabricsTab />}
       {tab === "accessoires" && <AccessoriesTab />}
@@ -587,5 +590,149 @@ function ImportTab() {
         </div>
       )}
     </Panel>
+  );
+}
+
+// --- Noms IA : propositions de Qwen3-VL (backend/scripts/nommer_catalogue.py) ---
+
+const AI_FILTERS = [
+  { value: "proposed", label: "À relire" },
+  { value: "applied", label: "Appliqués" },
+  { value: "rejected", label: "Ignorés" },
+  { value: "failed", label: "Échecs" },
+] as const;
+
+function AiNamesTab() {
+  const { confirm, toast } = useFeedback();
+  const [filter, setFilter] = useState<string>("proposed");
+  const [offset, setOffset] = useState(0);
+  const page = useLoad(() => Catalog.aiNames(filter, offset, 24), [filter, offset]);
+  const c = page.data?.counts;
+  const analysed = c ? c.total - c.not_analysed : 0;
+
+  const applyAll = async () => {
+    if (!c?.proposed) return;
+    const ok = await confirm({
+      title: `Appliquer les ${c.proposed} propositions en attente ?`,
+      body: "Les noms et descriptions proposés remplacent les actuels, sans relecture une par une.",
+      confirmLabel: "Tout appliquer",
+    });
+    if (ok === null) return;
+    try {
+      const r = await Catalog.applyAllAiNames();
+      toast(`${r.applied} modèle(s) renommé(s).`);
+      page.reload();
+    } catch (e) {
+      toast((e as Error).message, { error: true });
+    }
+  };
+
+  return (
+    <Panel
+      title="Noms et descriptions proposés par l'IA"
+      actions={filter === "proposed" && c?.proposed ? <Button onClick={applyAll}>Tout appliquer ({c.proposed})</Button> : null}
+    >
+      <p className="adHint">
+        Qwen3-VL regarde la photo de couverture et remplit une fiche (type, coupe, longueur, couleurs, tissu) ; le nom
+        et la description, en français et en anglais, en sont tirés. Rien n&apos;est appliqué sans vous. Les détails
+        de construction sont les moins sûrs : relisez-les. Le lot se lance sur le serveur (voir VISION_PATRONS.md).
+      </p>
+      {c && (
+        <p className="adAiProgress">
+          <strong>{analysed}</strong> / {c.total} analysés · {c.proposed} à relire · {c.applied} appliqués · {c.rejected} ignorés
+          {c.failed ? ` · ${c.failed} échecs` : ""}
+        </p>
+      )}
+      <div className="adTabs adAiFilters" role="tablist">
+        {AI_FILTERS.map((f) => (
+          <button
+            key={f.value}
+            role="tab"
+            aria-selected={filter === f.value}
+            className={`adTab ${filter === f.value ? "adTabActive" : ""}`}
+            onClick={() => { setFilter(f.value); setOffset(0); }}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+      {page.error ? <ErrorState error={page.error} /> : page.loading && !page.data ? <Loading /> : page.data && page.data.items.length === 0 ? (
+        <p className="adHint">Rien ici pour le moment.</p>
+      ) : (
+        <>
+          <div className="adAiGrid">
+            {page.data?.items.map((m) => <AiNameCard key={m.id} item={m} onDone={page.reload} />)}
+          </div>
+          {page.data && page.data.total > 24 && (
+            <div className="adAiPager">
+              <Button variant="secondary" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 24))}>Précédents</Button>
+              <span className="adHint">{offset + 1}–{Math.min(offset + 24, page.data.total)} sur {page.data.total}</span>
+              <Button variant="secondary" disabled={offset + 24 >= page.data.total} onClick={() => setOffset(offset + 24)}>Suivants</Button>
+            </div>
+          )}
+        </>
+      )}
+    </Panel>
+  );
+}
+
+function AiNameCard({ item, onDone }: { item: AiNameItem; onDone: () => void }) {
+  const { toast } = useFeedback();
+  const s = item.suggestion;
+  const [name, setName] = useState(s.name ?? "");
+  const [desc, setDesc] = useState(s.description ?? "");
+  const [nameEn, setNameEn] = useState(s.name_en ?? "");
+  const [descEn, setDescEn] = useState(s.description_en ?? "");
+  const [busy, setBusy] = useState(false);
+  const proposed = item.ai_status === "proposed";
+
+  const act = async (fn: () => Promise<unknown>, done: string) => {
+    setBusy(true);
+    try {
+      await fn();
+      toast(done);
+      onDone();
+    } catch (e) {
+      toast((e as Error).message, { error: true });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <article className="adAiCard">
+      <div className="adAiPhoto">{item.photo_url ? <AuthImage src={item.photo_url} alt={item.name} /> : null}</div>
+      <div className="adAiBody">
+        <p className="adHint">
+          {item.category ?? "—"} · actuel : <strong>{item.name}</strong>
+        </p>
+        {item.ai_status === "failed" ? (
+          <p className="adAiError">Analyse impossible : {s.erreur ?? "erreur inconnue"}. Relancer avec --refaire.</p>
+        ) : proposed ? (
+          <>
+            <label className="adAiField"><span>Nom</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={255} /></label>
+            <label className="adAiField"><span>Description</span><textarea className="input" rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={2000} /></label>
+            <label className="adAiField"><span>Name (English)</span><input className="input" value={nameEn} onChange={(e) => setNameEn(e.target.value)} maxLength={255} /></label>
+            <label className="adAiField"><span>Description (English)</span><textarea className="input" rows={3} value={descEn} onChange={(e) => setDescEn(e.target.value)} maxLength={2000} /></label>
+            <div className="adAiActions">
+              <Button
+                disabled={busy || name.trim().length < 2}
+                onClick={() => act(() => Catalog.applyAiName(item.id, { name, description: desc, name_en: nameEn, description_en: descEn }), `« ${name} » appliqué.`)}
+              >
+                Appliquer
+              </Button>
+              <Button variant="secondary" disabled={busy} onClick={() => act(() => Catalog.rejectAiName(item.id), "Proposition ignorée.")}>
+                Ignorer
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p><strong>{s.name}</strong> · <em>{s.name_en}</em></p>
+            <p className="adHint">{s.description}</p>
+          </>
+        )}
+      </div>
+    </article>
   );
 }

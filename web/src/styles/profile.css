@@ -217,3 +217,59 @@
     border-radius: 0 0 var(--radius-card) var(--radius-card);
   }
 }
+
+/* --- Choix de la langue (components/LangSwitch) ----------------------- */
+.langSwitch {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-chip);
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+}
+.langOption {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.langOptionActive {
+  background: var(--surface);
+  color: var(--violet-text);
+  box-shadow: var(--shadow-sm);
+}
+.langOption:focus-visible {
+  outline: 2px solid var(--violet-vivid);
+  outline-offset: 2px;
+}
+.langSwitchCompact {
+  display: inline-grid;
+  padding: 3px;
+}
+.langSwitchCompact .langOption {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.langSettings {
+  padding: 12px 14px;
+}
+/* Écrans de connexion : en haut à droite, au-dessus du formulaire. */
+.langSwitchFloat {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 12px;
+  z-index: 5;
+}
+.sidenav .langSwitch {
+  margin: auto 12px 16px;
+}

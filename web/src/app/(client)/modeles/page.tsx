@@ -87,7 +87,8 @@ function GalerieInner() {
     if (!models) return null;
     const q = query.trim().toLowerCase();
     if (!q) return models;
-    return models.filter((m) => m.name.toLowerCase().includes(q));
+    // Les deux langues : on retrouve un modèle par son nom français ou anglais.
+    return models.filter((m) => `${m.name} ${m.name_en ?? ""}`.toLowerCase().includes(q));
   }, [models, query]);
 
   return (

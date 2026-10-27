@@ -30,6 +30,7 @@ import {
 } from "@/components/icons";
 import { currentPosition, hasPosition } from "@/lib/tailors";
 import { nameError } from "@/lib/validation";
+import { LangSwitch } from "@/components/LangSwitch";
 
 const BIO_MAX = 500;
 
@@ -317,6 +318,12 @@ export default function ProfilTailleur() {
           />
           <SettingsRow href="/tailleur/commandes" Icon={IconOrders} label={tr("Commandes Sur-MeZur", "Sur-MeZur orders")} />
           <SettingsRow href="/tailleur/finances" Icon={IconWallet} label={tr("Recettes", "Income")} last />
+        </SettingsSection>
+
+        <SettingsSection title={tr("Langue", "Language")}>
+          <div className="langSettings">
+            <LangSwitch />
+          </div>
         </SettingsSection>
 
         <SettingsSection title={tr("Compte", "Account")}>

@@ -28,6 +28,9 @@ class GarmentModel(Base, IDMixin, TimestampMixin):
     category_id: Mapped[str] = mapped_column(ForeignKey("categories.id"))
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    # Versions anglaises (téléphone en anglais) ; vides : le français s'affiche.
+    name_en: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    description_en: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     base_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     style_tags: Mapped[list] = mapped_column(JSON, default=list)
     # Vignette de repli tant qu'aucune photo n'est encore associée — voir
@@ -51,6 +54,12 @@ class GarmentModel(Base, IDMixin, TimestampMixin):
     # 4.8 : statistiques d'usage.
     view_count: Mapped[int] = mapped_column(Integer, default=0)
     select_count: Mapped[int] = mapped_column(Integer, default=0)
+    # Nom et description proposés par Qwen3-VL d'après la photo
+    # (services/catalogue_nommage.py) : {name, description, name_en,
+    # description_en, fiche, modele, version, date} ou {erreur}. Statut :
+    # proposed | applied | rejected | failed ; vide = pas encore analysé.
+    ai_suggestion: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    ai_status: Mapped[str | None] = mapped_column(String(12), nullable=True)
 
     category: Mapped["Category"] = relationship("Category")
 

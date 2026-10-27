@@ -26,6 +26,7 @@ import { getSelection } from "@/lib/selection";
 import { whatsappHref } from "@/lib/contact";
 import { tailorWhatsappMessage } from "@/lib/tailors";
 import { amountError, todayISO } from "@/lib/validation";
+import { nomModele } from "@/lib/modelText";
 
 const NOTE_MAX = 2000;
 
@@ -128,8 +129,8 @@ function CommanderInner() {
             icon={<IconCheck size={30} strokeWidth={1.8} />}
             title={tr(`Envoyée à ${tailor.shop_name}`, `Sent to ${tailor.shop_name}`)}
             body={tr(
-              `N° ${sent.id.slice(0, 6).toUpperCase()}${model ? ` · ${model.name}` : ""}. Le tailleur fixera le prix avec vous.`,
-              `No. ${sent.id.slice(0, 6).toUpperCase()}${model ? ` · ${model.name}` : ""}. The tailor will agree the price with you.`
+              `N° ${sent.id.slice(0, 6).toUpperCase()}${model ? ` · ${nomModele(model)}` : ""}. Le tailleur fixera le prix avec vous.`,
+              `No. ${sent.id.slice(0, 6).toUpperCase()}${model ? ` · ${nomModele(model)}` : ""}. The tailor will agree the price with you.`
             )}
           />
           {contact?.phone && (
@@ -202,7 +203,7 @@ function CommanderInner() {
                     <span className="tPickThumb" style={{ background: m.thumbnail_color }} aria-hidden />
                   )}
                   <span>
-                    <strong>{m.name}</strong>
+                    <strong>{nomModele(m)}</strong>
                     <br />
                     <span className="tRowSub">{m.category?.name}</span>
                   </span>

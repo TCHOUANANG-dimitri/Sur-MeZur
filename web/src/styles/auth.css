@@ -352,3 +352,8 @@
 @media (prefers-reduced-motion: reduce) {
   .obTrack { transition: none; }
 }
+
+/* Le choix de langue se place en haut à droite (profile.css, .langSwitchFloat). */
+.authScreen {
+  position: relative;
+}

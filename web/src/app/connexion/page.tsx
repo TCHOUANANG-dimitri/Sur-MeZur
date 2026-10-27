@@ -35,6 +35,7 @@ import { destinationFor, pathAllowedFor } from "@/lib/home";
 import { PasswordInput, PhoneField } from "@/components/fields";
 import { Button, ErrorBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
+import { LangSwitch } from "@/components/LangSwitch";
 
 function ConnexionInner() {
   const router = useRouter();
@@ -123,6 +124,7 @@ function ConnexionInner() {
 
   return (
     <main className="authScreen">
+      <LangSwitch compact className="langSwitchFloat" />
       {mfaToken ? (
         <form className="authForm" onSubmit={submitMfa} noValidate>
           <h1 className="authTitle">{tr("Code de vérification", "Verification code")}</h1>

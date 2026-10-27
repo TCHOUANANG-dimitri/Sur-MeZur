@@ -27,6 +27,7 @@ import {
   IconTailor,
 } from "@/components/icons";
 import { tr } from "@/lib/i18n";
+import { LangSwitch } from "@/components/LangSwitch";
 
 export default function Profil() {
   const { user, loading, refresh, logout } = useAuth();
@@ -178,6 +179,12 @@ export default function Profil() {
         <SettingsSection title={tr("Couture", "Tailoring")}>
           <SettingsRow href="/commandes" Icon={IconOrders} label={tr("Mes commandes", "My orders")} />
           <SettingsRow href="/tailleurs" Icon={IconTailor} label={tr("Trouver un tailleur", "Find a tailor")} last />
+        </SettingsSection>
+
+        <SettingsSection title={tr("Langue", "Language")}>
+          <div className="langSettings">
+            <LangSwitch />
+          </div>
         </SettingsSection>
 
         <SettingsSection title={tr("Confidentialité", "Privacy")}>

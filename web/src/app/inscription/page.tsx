@@ -36,6 +36,7 @@ import { Button, ErrorBanner } from "@/components/ui";
 import { COUNTRIES, splitPhone } from "@/lib/countries";
 import { passwordError, passwordHint } from "@/lib/password";
 import { nameError, phoneError } from "@/lib/validation";
+import { LangSwitch } from "@/components/LangSwitch";
 
 type Role = "client" | "tailor";
 
@@ -165,6 +166,7 @@ function InscriptionInner() {
 
   return (
     <main className="authScreen">
+      <LangSwitch compact className="langSwitchFloat" />
       <form className="authForm" onSubmit={submit} noValidate>
         <div className="authLogo">
           <Image
