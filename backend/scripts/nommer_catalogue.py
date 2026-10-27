@@ -51,7 +51,10 @@ def main() -> int:
     ap.add_argument("--limite", type=int, default=0, help="nombre maximal de modèles à analyser")
     ap.add_argument("--categorie", help="seulement cette catégorie (nom, ex. Kaba)")
     ap.add_argument("--refaire", action="store_true", help="réanalyse aussi les modèles déjà analysés")
+    ap.add_argument("--site", default="https://app.sur-mezur.com",
+                    help="adresse publique de l'application, pour afficher le lien de chaque photo")
     args = ap.parse_args()
+    site = args.site.rstrip("/")
 
     if not settings.vl_url:
         print("VL_URL n'est pas réglé : le service de vision est introuvable.", file=sys.stderr)
@@ -98,6 +101,10 @@ def main() -> int:
             reste = ecoule / i * (len(modeles) - i)
             print(f"[{i}/{len(modeles)}] {m.name} → {prop['name']} / {prop['name_en']}"
                   f"  ({time.monotonic() - t0:.0f} s, reste ~{_duree(reste)})")
+            # Lien de la photo : en essai rien n'est enregistré, l'admin ne
+            # peut donc pas la montrer ; on l'ouvre dans le navigateur.
+            lien = m.photo_url if m.photo_url.startswith("http") else f"{site}{m.photo_url}"
+            print(f"    Photo : {lien}")
             if args.essai:
                 print(f"    FR : {prop['description']}\n    EN : {prop['description_en']}")
                 continue

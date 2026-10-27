@@ -13,6 +13,7 @@ Usage (depuis backend/) :
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import threading
@@ -136,8 +137,9 @@ def main() -> None:
     evt = p["name"].split(" ", 1)[1]
     check(p["occasion"] == "fete" and evt in fetes, f"kaba à étages = fête -> événement de fête : {p['name']}")
     check(p["name_en"] == f"{fetes[evt]} kaba", f"nom EN : {p['name_en']}")
-    check("le culte, une dot ou les fêtes de famille" in p["description"], f"occasion dans la description : {p['description']}")
-    check("church, a traditional wedding or family celebrations" in p["description_en"], "occasion en anglais")
+    textes = nommage.OCCASIONS_TEXTES["fete"]
+    check(any(fr in p["description"] for fr, _ in textes), f"occasion de fête dans la description : {p['description']}")
+    check(any(en in p["description_en"] for _, en in textes), f"occasion en anglais : {p['description_en']}")
     check("wax" not in (p["name"] + p["description"] + p["name_en"] + p["description_en"]).lower(), "le wax n'est jamais nommé")
     check("empiècement" not in p["description"] and "yoke" not in p["description_en"], "pas de jargon de couture")
     check("À porter avec son foulard de tête assorti." in p["description"], "pièce assortie")
@@ -149,7 +151,8 @@ def main() -> None:
     q = nommage.proposition("Kaba", "female", nommage.nettoyer(simple), graine="m2")
     check(q["occasion"] == "quotidien_f" and q["name"].split(" ", 1)[1] in quotidien,
           f"kaba simple = quotidien -> événement du quotidien : {q['name']} / {q['name_en']}")
-    check("sorties entre amies" in q["description"], "quotidien au féminin")
+    check(any(fr in q["description"] for fr, _ in nommage.OCCASIONS_TEXTES["quotidien_f"]), f"occasion du quotidien : {q['description']}")
+    check("entre amis" not in q["description"], "quotidien au féminin (pas « entre amis »)")
     pris = {nommage.cle_nom(q["name"])}
     q2, _ = nommage.nommer("Kaba", "female", nommage.nettoyer(simple), pris, "m2")
     check(q2 != q["name"] and q2.split(" ", 1)[1] in quotidien, f"doublon : événement suivant ({q2})")
@@ -162,7 +165,10 @@ def main() -> None:
     r = nommage.proposition("Robe De Soiree", "female", nommage.nettoyer(robe), graine="m5")
     check(r["occasion"] == "soiree" and r["name"].startswith("Robe de soirée "), f"robe de soirée : {r['name']}")
     check("En satin noir, sans manches, à la cheville :" in r["description"], f"concret : {r['description']}")
-    check(("-la " in r["description"]) or ("par votre tailleur" in r["description"]), "accord au féminin (faites-la / choisissez-la)")
+    check(not re.search(r"-le\b|\bOn le\b|\bil vous\b|\bcousu\b", r["description"]), f"accords au féminin (la, elle, cousue) : {r['description']}")
+    # Variété : sur 30 modèles semblables, beaucoup de descriptions différentes.
+    variantes = {nommage.decrire("Kaba", "female", fiche, "fr", f"v{k}") for k in range(30)}
+    check(len(variantes) >= 20, f"tournures variées ({len(variantes)} descriptions différentes sur 30)")
 
     tunique = {**KABA, "category": "kaftan_tunic", "silhouette": "straight", "length": "knee",
                "neckline": "mandarin_collar", "sleeves": "long", "sleeve_style": "plain",

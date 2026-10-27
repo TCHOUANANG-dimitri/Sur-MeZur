@@ -221,14 +221,14 @@ EVENEMENTS: dict[str, list[tuple[str, str]]] = {
         ("Soirée dansante", "Dance Night"), ("Vernissage", "Private View"),
     ],
     "ceremonie": [
-        ("Grand Mariage", "Grand Wedding"), ("Mariage", "Wedding"), ("Dot", "Bride Price"), ("Tabaski", "Tabaski"),
+        ("Grand Mariage", "Grand Wedding"), ("Mariage", "Wedding"), ("Dot", "Traditional Wedding"), ("Tabaski", "Tabaski"),
         ("Aïd", "Eid"), ("Fiançailles", "Engagement"), ("Intronisation", "Enthronement"), ("Ngondo", "Ngondo"),
         ("Nguon", "Nguon"), ("Medumba", "Medumba"), ("Fête nationale", "National Day"), ("Noël", "Christmas"),
         ("Nouvel An", "New Year"), ("Grande Cérémonie", "Grand Ceremony"), ("Jour J", "Big Day"),
         ("Mariage coutumier", "Customary Wedding"), ("Couronnement", "Coronation"),
     ],
     "fete": [
-        ("Baptême", "Christening"), ("Dot", "Bride Price"), ("Pâques", "Easter"), ("Noël", "Christmas"),
+        ("Baptême", "Christening"), ("Dot", "Traditional Wedding"), ("Pâques", "Easter"), ("Noël", "Christmas"),
         ("Fête des mères", "Mother's Day"), ("Retrouvailles", "Reunion"), ("Dimanche", "Sunday"),
         ("Communion", "Communion"), ("Mariage civil", "Civil Wedding"), ("Anniversaire", "Birthday"),
         ("Fête de famille", "Family Party"), ("Culte", "Service"), ("Réception", "Reception"),
@@ -290,34 +290,156 @@ def nommer(categorie: str, genre: str, fiche: dict, deja_pris: set[str] | frozen
 
 # --- Descriptions : donner envie, dire quand le porter -----------------------------
 
-# Trait -> tournures d'accroche (français, anglais).
+# Trait -> tournures d'accroche (français, anglais). Toutes invariables en
+# genre : elles parlent de la coupe ou du détail, pas du vêtement.
 ACCROCHES: dict[str, list[tuple[str, str]]] = {
-    "tiers": [("Des étages qui dansent à chaque pas.", "Tiers that sway with every step."),
-              ("Ses étages lui donnent du mouvement et du volume.", "Its tiers bring movement and volume.")],
-    "ruffles": [("Des volants pleins de légèreté.", "Light, playful ruffles."),
-                ("Ses volants apportent une touche joyeuse.", "Its ruffles add a joyful touch.")],
-    "embroidery": [("Des broderies qui font tout son chic.", "Embroidery that makes all the difference."),
-                   ("Ses broderies lui donnent une allure de fête.", "Its embroidery gives it a festive air.")],
-    "side_slit": [("Une fente qui révèle juste ce qu'il faut.", "A slit that reveals just enough.")],
-    "puffed": [("Des manches bouffantes qui ont du caractère.", "Puffed sleeves with plenty of character.")],
-    "fitted": [("Une coupe près du corps qui met la silhouette en valeur.", "A close-fitting cut that flatters the figure.")],
-    "flared": [("Une coupe évasée qui bouge avec vous.", "A flared cut that moves with you.")],
-    "a_line": [("Une coupe trapèze qui flatte toutes les silhouettes.", "An A-line cut that flatters every figure.")],
-    "loose": [("Une coupe ample dans laquelle on se sent libre toute la journée.", "A loose cut you feel free in all day."),
-              ("Tout en ampleur et en confort.", "All about volume and comfort.")],
-    "straight": [("Une coupe droite, simple et élégante.", "A straight cut, simple and elegant.")],
-    "long": [("Une longueur qui donne de l'allure.", "A length that adds grace.")],
+    "tiers": [
+        ("Des étages qui dansent à chaque pas.", "Tiers that sway with every step."),
+        ("Ses étages lui donnent du mouvement et du volume.", "Its tiers bring movement and volume."),
+        ("Chaque pas fait vivre ses étages.", "Every step brings its tiers to life."),
+        ("Des étages superposés pour une allure aérienne.", "Layered tiers for an airy look."),
+        ("Le volume des étages, avec toute la légèreté du tissu.", "The volume of tiers, with all the lightness of the fabric."),
+    ],
+    "ruffles": [
+        ("Des volants pleins de légèreté.", "Light, playful ruffles."),
+        ("Ses volants apportent une touche joyeuse.", "Its ruffles add a joyful touch."),
+        ("Des volants qui virevoltent au moindre mouvement.", "Ruffles that twirl with every move."),
+        ("Un jeu de volants, tout en fraîcheur.", "A play of ruffles, fresh and lively."),
+    ],
+    "embroidery": [
+        ("Des broderies qui font tout son chic.", "Embroidery that makes all the difference."),
+        ("Ses broderies lui donnent une allure de fête.", "Its embroidery gives it a festive air."),
+        ("Des broderies travaillées qui attirent tous les regards.", "Fine embroidery that draws every eye."),
+        ("Le détail qui change tout : ses broderies.", "The detail that changes everything: its embroidery."),
+    ],
+    "side_slit": [
+        ("Une fente qui révèle juste ce qu'il faut.", "A slit that reveals just enough."),
+        ("Une fente discrète pour une démarche pleine d'assurance.", "A subtle slit for a confident stride."),
+        ("L'élégance, avec une pointe d'audace grâce à sa fente.", "Elegance with a bold touch, thanks to its slit."),
+    ],
+    "puffed": [
+        ("Des manches bouffantes qui ont du caractère.", "Puffed sleeves with plenty of character."),
+        ("Des manches bouffantes, pour une touche romantique.", "Puffed sleeves for a romantic touch."),
+        ("Tout se joue dans ses manches bouffantes.", "It's all in the puffed sleeves."),
+    ],
+    "fitted": [
+        ("Une coupe près du corps qui met la silhouette en valeur.", "A close-fitting cut that flatters the figure."),
+        ("Ajustement parfait, allure assurée.", "A perfect fit, guaranteed style."),
+        ("Une coupe qui épouse la silhouette avec élégance.", "A cut that follows the figure with elegance."),
+    ],
+    "flared": [
+        ("Une coupe évasée qui bouge avec vous.", "A flared cut that moves with you."),
+        ("Un tombé évasé, plein de fluidité.", "A flared drape, full of flow."),
+        ("La coupe évasée qui fait tourner les têtes.", "The flared cut that turns heads."),
+    ],
+    "a_line": [
+        ("Une coupe trapèze qui flatte toutes les silhouettes.", "An A-line cut that flatters every figure."),
+        ("La coupe trapèze, simple et toujours juste.", "The A-line cut: simple and always right."),
+        ("Une ligne trapèze qui allonge la silhouette.", "An A-line shape that lengthens the silhouette."),
+    ],
+    "loose": [
+        ("Une coupe ample dans laquelle on se sent libre toute la journée.", "A loose cut you feel free in all day."),
+        ("Tout en ampleur et en confort.", "All about volume and comfort."),
+        ("Ample et fluide, pour se sentir bien du matin au soir.", "Loose and flowing, to feel good from morning to night."),
+        ("Le confort d'une coupe ample, l'élégance en plus.", "The comfort of a loose cut, with added elegance."),
+    ],
+    "straight": [
+        ("Une coupe droite, simple et élégante.", "A straight cut, simple and elegant."),
+        ("Des lignes droites et nettes, pour une allure soignée.", "Clean straight lines for a polished look."),
+        ("La sobriété d'une coupe droite, qui va à tout le monde.", "The simplicity of a straight cut that suits everyone."),
+    ],
+    "long": [
+        ("Une longueur qui donne de l'allure.", "A length that adds grace."),
+        ("Tout en longueur, pour une silhouette élancée.", "Long and graceful, for a slender silhouette."),
+    ],
 }
-ACCROCHE_DEFAUT = [("Un modèle facile à porter, qui va avec tout.", "An easy-to-wear style that goes with everything.")]
+ACCROCHE_DEFAUT = [
+    ("Un modèle facile à porter, qui va avec tout.", "An easy-to-wear style that goes with everything."),
+    ("Un classique revisité, simple et sûr.", "A revisited classic, simple and reliable."),
+    ("Le genre de modèle qu'on ne se lasse pas de porter.", "The kind of style you never tire of wearing."),
+]
 
-# Tournures invariables (« idéal » ne s'accorderait pas avec « robe »).
-INTRO_OCCASION = [("Le choix idéal pour {o}.", "Ideal for {o}."), ("Un modèle parfait pour {o}.", "Perfect for {o}."),
-                  ("À porter pour {o}.", "Made for {o}.")]
+# Occasion -> façons de la dire (français, anglais), après « pour ».
+OCCASIONS_TEXTES: dict[str, list[tuple[str, str]]] = {
+    "soiree": [
+        ("les soirées, les mariages et les galas", "evening events, weddings and galas"),
+        ("un dîner chic, un gala ou une grande soirée", "a smart dinner, a gala or a big night out"),
+        ("vos plus belles soirées", "your most beautiful evenings"),
+        ("les cocktails et les nuits de fête", "cocktail parties and festive nights"),
+    ],
+    "ceremonie": [
+        ("les mariages, les dots et les grandes cérémonies", "weddings, traditional ceremonies and big celebrations"),
+        ("les grands jours : mariage, dot ou intronisation", "the big days: weddings, bride price ceremonies or enthronements"),
+        ("les cérémonies où l'on veut être remarqué", "ceremonies where you want to stand out"),
+        ("la Tabaski, Noël et les grandes fêtes", "Tabaski, Christmas and the big celebrations"),
+    ],
+    "fete": [
+        ("le culte, une dot ou les fêtes de famille", "church, a traditional wedding or family celebrations"),
+        ("un baptême, un anniversaire ou un repas de fête", "a christening, a birthday or a festive meal"),
+        ("les dimanches en famille et les jours de fête", "family Sundays and festive days"),
+        ("les retrouvailles et les fêtes de quartier", "reunions and neighbourhood parties"),
+    ],
+    "vendredi": [
+        ("le vendredi, le culte ou les réunions de famille", "Fridays, church or family gatherings"),
+        ("une visite, une prière ou un repas de famille", "a visit, prayers or a family meal"),
+        ("les rendez-vous où l'on veut être élégant sans en faire trop", "occasions where you want to look smart without overdoing it"),
+    ],
+    "quotidien": [
+        ("le quotidien, le marché ou les sorties entre amis", "everyday wear, the market or outings with friends"),
+        ("les journées en ville comme les week-ends tranquilles", "busy days in town and quiet weekends alike"),
+        ("les sorties de tous les jours", "everyday outings"),
+        ("le marché, les courses ou une balade", "the market, errands or a stroll"),
+    ],
+    "quotidien_f": [
+        ("le quotidien, le marché ou les sorties entre amies", "everyday wear, the market or outings with friends"),
+        ("les journées en ville comme les week-ends tranquilles", "busy days in town and quiet weekends alike"),
+        ("les sorties de tous les jours", "everyday outings"),
+        ("le marché, les courses ou une balade entre copines", "the market, errands or a stroll with friends"),
+    ],
+    "bureau": [
+        ("le bureau, les sorties et le week-end", "the office, outings and weekends"),
+        ("une journée de travail puis un afterwork", "a day at work followed by afterwork drinks"),
+        ("les réunions, les déjeuners et les sorties", "meetings, lunches and outings"),
+        ("le bureau comme le week-end", "the office and the weekend alike"),
+    ],
+}
+
+# Façons d'annoncer l'occasion. {le} : le / la selon le vêtement.
+INTRO_OCCASION = [
+    ("Le choix idéal pour {o}.", "Ideal for {o}."),
+    ("Un modèle parfait pour {o}.", "Perfect for {o}."),
+    ("À porter pour {o}.", "Made for {o}."),
+    ("On {le} voit déjà pour {o}.", "Picture it for {o}."),
+    ("Sortez-{le} pour {o}.", "Bring it out for {o}."),
+    ("De quoi briller pour {o}.", "Ready to shine for {o}."),
+    ("Votre allié pour {o}.", "Your go-to for {o}."),
+]
+# Fin de la phrase concrète. {le} : le / la ; {il} : il / elle.
 INVITATIONS = [
     ("faites-{le} coudre à vos mesures", "have it sewn to your measurements"),
     ("à faire coudre à vos mesures par votre tailleur", "for your tailor to sew to your measurements"),
     ("choisissez-{le} et envoyez vos mesures à votre tailleur", "choose it and send your measurements to your tailor"),
+    ("cousu{e} à vos mesures, {il} vous ira comme un gant", "sewn to your measurements, it will fit like a glove"),
+    ("il ne reste plus qu'à {le} faire coudre à votre taille", "all that's left is to have it sewn to your size"),
+    ("votre tailleur s'occupe du reste, à vos mesures", "your tailor takes care of the rest, to your measurements"),
 ]
+
+# Nuances de couleur, quand une seule couleur domine et qu'aucun tissu n'est
+# nommé (« en violet profond » / « in deep purple ») ; sinon la couleur simple.
+NUANCES: dict[str, list[tuple[str, str]]] = {
+    "purple": [("violet profond", "deep purple"), ("violet intense", "rich purple")],
+    "blue": [("bleu lumineux", "bright blue"), ("bleu éclatant", "vivid blue")],
+    "navy": [("bleu nuit", "midnight blue")],
+    "green": [("vert éclatant", "vibrant green"), ("vert profond", "deep green")],
+    "yellow": [("jaune soleil", "sunny yellow"), ("jaune lumineux", "bright yellow")],
+    "orange": [("orange vif", "bright orange"), ("orange solaire", "sunset orange")],
+    "red": [("rouge vif", "vivid red"), ("rouge éclatant", "bold red")],
+    "black": [("noir intense", "deep black"), ("noir profond", "jet black")],
+    "white": [("blanc éclatant", "brilliant white"), ("blanc pur", "pure white")],
+    "gold": [("doré lumineux", "shimmering gold")],
+    "pink": [("rose tendre", "soft pink"), ("rose vif", "bright pink")],
+    "burgundy": [("bordeaux profond", "deep burgundy")],
+}
 
 _LONGUEUR = {"hip": ("aux hanches", "hip length"), "thigh": ("mi-cuisse", "mid-thigh"), "knee": ("au genou", "knee length"),
              "midi": ("mi-mollet", "midi length"), "ankle": ("à la cheville", "ankle length"),
@@ -331,7 +453,7 @@ _ASSORTI = {"trousers": ("son pantalon", "trousers"), "head_wrap": ("son foulard
             "cap": ("son bonnet", "cap"), "inner_tunic": ("sa tunique de dessous", "inner tunic")}
 
 
-def _en_couleurs(fiche: dict) -> tuple[str, str]:
+def _en_couleurs(fiche: dict, graine: int = 0) -> tuple[str, str]:
     """« En bazin blanc » / « In white bazin », « En violet et jaune » / « In purple and yellow »."""
     tissu = _TISSU.get(fiche.get("fabric", "unknown"))
     cs = _couleurs(fiche)
@@ -343,7 +465,16 @@ def _en_couleurs(fiche: dict) -> tuple[str, str]:
         return "", ""
     if cs == ["multicolor"]:
         return "tout en couleurs", "full of colour"
+    # Une couleur seule : une fois sur deux, une nuance (« violet profond »).
+    if len(cs) == 1 and cs[0] in NUANCES and graine % 2:
+        fr, en = _choisir(NUANCES[cs[0]], graine, 3)
+        return f"en {fr}", f"in {en}"
     return "en " + " et ".join(_COULEUR[c][0] for c in cs), "in " + " and ".join(_COULEUR[c][2] for c in cs)
+
+
+def _accorder(texte: str, fem: bool) -> str:
+    """{le} -> le / la, {il} -> il / elle, {e} -> « » / « e »."""
+    return texte.replace("{le}", "la" if fem else "le").replace("{il}", "elle" if fem else "il").replace("{e}", "e" if fem else "")
 
 
 def decrire(categorie: str, genre: str, fiche: dict, langue: str = "fr", graine: str = "") -> str:
@@ -357,11 +488,11 @@ def decrire(categorie: str, genre: str, fiche: dict, langue: str = "fr", graine:
 
     t = traits(fiche)
     accroche = _choisir(ACCROCHES.get(t[0], ACCROCHE_DEFAUT) if t else ACCROCHE_DEFAUT, g, 0)[i]
-    occ = OCCASIONS[occasion(categorie, genre, fiche)][i]
-    p2 = _choisir(INTRO_OCCASION, g, 1)[i].format(o=occ)
+    occ = _choisir(OCCASIONS_TEXTES[occasion(categorie, genre, fiche)], g, 4)[i]
+    p2 = _accorder(_choisir(INTRO_OCCASION, g, 1)[i], fem).format(o=occ)
 
     concret = []
-    couleur = _en_couleurs(fiche)[i]
+    couleur = _en_couleurs(fiche, g)[i]
     if couleur:
         concret.append(couleur)
     style = fiche.get("sleeve_style")
@@ -371,7 +502,7 @@ def decrire(categorie: str, genre: str, fiche: dict, langue: str = "fr", graine:
         concret.append(_MANCHES[fiche["sleeves"]][i])
     if fiche.get("length") in _LONGUEUR:
         concret.append(_LONGUEUR[fiche["length"]][i])
-    invitation = _choisir(INVITATIONS, g, 2)[i].replace("{le}", "la" if fem else "le")
+    invitation = _accorder(_choisir(INVITATIONS, g, 2)[i], fem)
     if concret:
         texte = ", ".join(concret)
         p3 = f"{texte[0].upper()}{texte[1:]}{':' if en else ' :'} {invitation}."
