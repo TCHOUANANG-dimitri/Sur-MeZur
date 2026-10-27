@@ -92,6 +92,22 @@
   color: var(--violet-primary);
 }
 
+/* Icônes Sur-MeZur (components/brandIcons) : la couture en accent, atténuée
+   au repos ; l'onglet actif remplit sa forme et avive sa couture. */
+.tabItem {
+  --icon-accent: color-mix(in oklab, var(--violet-vivid) 55%, transparent);
+}
+.tabItemActive {
+  --icon-accent: var(--violet-vivid);
+  --icon-fill: var(--violet-tint);
+}
+.tabItem .tabIcon svg {
+  transition: transform 0.25s ease;
+}
+.tabItemActive .tabIcon svg {
+  transform: translateY(-1px);
+}
+
 /* --- Navigation laterale (ordinateur) ------------------------------------ */
 .sidenav {
   display: none;

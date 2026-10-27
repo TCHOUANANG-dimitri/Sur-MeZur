@@ -22,8 +22,9 @@ import {
   IconMeasure,
   IconProfile,
   IconTailor,
-  IconUsers,
-  IconOrders,
+  IconClients,
+  IconJobs,
+  IconPattern,
 } from "./icons";
 
 export interface NavItem {
@@ -56,9 +57,9 @@ export const CLIENT_NAV: NavItem[] = [
  */
 export const TAILOR_NAV: NavItem[] = [
   { href: "/tailleur", label: "Accueil", en: "Home", Icon: IconHome },
-  { href: "/tailleur/clients", label: "Clients", en: "Clients", Icon: IconUsers },
-  { href: "/tailleur/travaux", label: "Travaux", en: "Jobs", Icon: IconOrders },
-  { href: "/tailleur/patrons", label: "Patrons", en: "Patterns", Icon: IconTailor },
+  { href: "/tailleur/clients", label: "Clients", en: "Clients", Icon: IconClients },
+  { href: "/tailleur/travaux", label: "Travaux", en: "Jobs", Icon: IconJobs },
+  { href: "/tailleur/patrons", label: "Patrons", en: "Patterns", Icon: IconPattern },
   { href: "/tailleur/profil", label: "Profil", en: "Profile", Icon: IconProfile },
 ];
 

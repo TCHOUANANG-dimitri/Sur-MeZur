@@ -15,12 +15,19 @@
  * confine (l'arborescence de la bibliotheque est vaste).
  */
 
+// Navigation : icônes dessinées pour Sur-MeZur (components/brandIcons).
 export {
-  // Navigation principale
-  House as IconHome,
-  Shirt as IconModels,
-  Ruler as IconMeasure,
-  User as IconProfile,
+  IconAtelier as IconHome,
+  IconMannequin as IconModels,
+  IconRuban as IconMeasure,
+  IconBuste as IconProfile,
+  IconCiseaux as IconTailor,
+  IconCarnet as IconClients,
+  IconBobine as IconJobs,
+  IconPiece as IconPattern,
+} from "./brandIcons";
+
+export {
   LayoutDashboard as IconDashboard,
   FolderOpen as IconCatalog,
   Users as IconUsers,
@@ -68,7 +75,6 @@ export {
   LifeBuoy as IconSupport,
   Shield as IconTeam,
   Settings as IconSettings,
-  Scissors as IconTailor,
   Menu as IconMenu,
   Moon as IconMoon,
   Columns3 as IconColumns,

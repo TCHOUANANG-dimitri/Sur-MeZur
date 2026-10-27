@@ -538,25 +538,31 @@
 .hero-demo {
   --hd-cycle: 10s;
 }
+/* Contours tracés sur les photos (repère : pixels de la photo, ~1200 de large). */
 .hero-demo .hd-face-guide,
 .hero-demo .hd-profile-guide {
   fill: none;
-  stroke: #5d06cc;
-  stroke-width: 4;
-  stroke-dasharray: 6 9;
+  stroke: #ffffff;
+  stroke-width: 9;
+  stroke-dasharray: 26 20;
   stroke-linecap: round;
 }
 .hero-demo .hd-face,
 .hero-demo .hd-profile {
-  fill: #dccbfa;
-  stroke: #5d06cc;
-  stroke-width: 3;
+  fill: rgba(140, 41, 251, 0.16);
+  stroke: #ffffff;
+  stroke-width: 8;
   stroke-linejoin: round;
 }
 .hero-demo .hd-lines path {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
 }
+/* Photo de face, puis de profil, puis de nouveau de face pour le calcul. */
+.hero-demo .hd-ph-front { animation: hd-ph-front var(--hd-cycle) linear infinite; }
+.hero-demo .hd-ph-profile { animation: hd-ph-profile var(--hd-cycle) linear infinite; }
+@keyframes hd-ph-front { 0%, 22% { opacity: 1; } 24%, 44% { opacity: 0; } 46%, 100% { opacity: 1; } }
+@keyframes hd-ph-profile { 0%, 22% { opacity: 0; } 24%, 44% { opacity: 1; } 46%, 100% { opacity: 0; } }
 .hero-demo .hd-shutter {
   transform-box: fill-box;
   transform-origin: center;
@@ -663,6 +669,7 @@
   .countup {
     animation: none !important;
   }
+  .hero-demo .hd-ph-profile,
   .hero-demo .hd-face-guide,
   .hero-demo .hd-profile-guide,
   .hero-demo .hd-profile,
