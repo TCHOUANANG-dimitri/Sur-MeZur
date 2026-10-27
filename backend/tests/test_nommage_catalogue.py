@@ -235,6 +235,32 @@ def main() -> None:
     row = ok(client.get("/api/admin/tables/models", headers=H), "tableau admin").json()
     check(any(r.get("name_en") for r in row["items"]), "tableau admin : nom anglais")
 
+    print("\n== Reprise : échecs seuls, service de vision tombé")
+    from scripts import nommer_catalogue
+
+    nommer_catalogue.time.sleep = lambda s: None  # pas d'attente réelle dans le test
+    with SessionLocal() as db:
+        cat_id = db.get(GarmentModel, ids[0]).category_id
+        nouveaux = []
+        for k in range(2):
+            m = GarmentModel(category_id=cat_id, name=f"Kaba 010{k}", status="published",
+                             photo_url=photo_fichier(f"kaba-010{k}.jpg"))
+            db.add(m)
+            db.flush()
+            nouveaux.append(m.id)
+        db.commit()
+    url_ok = settings.vl_url
+    settings.vl_url = "http://127.0.0.1:9"  # personne n'écoute
+    lancer_lot()
+    with SessionLocal() as db:
+        etats = [db.get(GarmentModel, i).ai_status for i in nouveaux]
+        check(etats == [None, None], f"service tombé : lot arrêté, modèles restants intacts ({etats})")
+    settings.vl_url = url_ok
+    lancer_lot("--echecs")
+    with SessionLocal() as db:
+        check(db.get(GarmentModel, ids[1]).ai_status == "proposed", "--echecs : l'échec est repris")
+        check(all(db.get(GarmentModel, i).ai_status is None for i in nouveaux), "--echecs : ne touche pas aux autres")
+
     print()
     if FAILS:
         print(f"{len(FAILS)} échec(s) :")

@@ -140,7 +140,10 @@ le lot, l'analyse « Nouveau patron » des tailleurs attend son tour.
    ```
 
    Interrompu, il reprend là où il s'était arrêté si on le relance. Options :
-   `--categorie Kaba`, `--limite 20`, `--refaire` (réanalyse aussi les
-   modèles déjà faits, échecs compris).
+   `--categorie Kaba`, `--limite 20`, `--echecs` (ne reprend que les échecs),
+   `--refaire` (réanalyse aussi les modèles déjà faits). Si le service de
+   vision tombe pendant le lot, le script attend qu'il revienne puis s'arrête
+   sans marquer les modèles restants en échec : vérifier
+   `systemctl status surmezur-vl` et `free -h`, puis relancer.
 4. Relire dans l'admin : corriger si besoin, « Appliquer », « Ignorer », ou
    « Tout appliquer ».
