@@ -8,7 +8,7 @@ import { AppLink } from "@/components/ui/AppLink";
 import { ArrowRight } from "@/components/ui/Icons";
 import { Reveal } from "@/components/ui/Reveal";
 import { PatternPieces } from "@/components/visuals/PatternPieces";
-import { WaxMotif } from "@/components/visuals/WaxMotif";
+import { NdopMotif } from "@/components/visuals/NdopMotif";
 
 /** Robe stylisée, en attendant la vraie photo de modèle (pattern-garment.webp). */
 function GarmentSketch({ label }: { label: string }) {
@@ -50,10 +50,10 @@ export function PatternTeaser({ dict }: { dict: Dictionary }) {
       aria-labelledby="pattern-title"
       className="section-y relative overflow-hidden bg-[radial-gradient(120%_90%_at_10%_0%,#2A0A7A_0%,#120856_45%,#08044D_100%)] text-white"
     >
-      {/* Fond : la tailleuse épingle un patron, fondue dans l'indigo, et le motif wax */}
+      {/* Fond : la tailleuse épingle un patron, fondue dans l'indigo, et le motif Ndop */}
       <Image src={photos.patternCutting} alt="" fill sizes="100vw" className="object-cover opacity-[0.1] mix-blend-luminosity" />
       <div aria-hidden className="absolute inset-0 bg-[radial-gradient(80%_70%_at_85%_50%,transparent_0%,rgba(8,4,77,0.55)_100%)]" />
-      <WaxMotif id="wax-pattern" className="text-white/[0.05]" />
+      <NdopMotif id="ndop-patron" className="text-white/[0.06]" />
 
       <div className="container-smz relative grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div>

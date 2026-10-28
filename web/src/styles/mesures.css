@@ -462,3 +462,11 @@
   margin-top: 10px;
   text-align: center;
 }
+
+
+/* Bandeau Ndop en tête de la fiche (globals.css .ndop-band). */
+.ficheBand {
+  height: 14px;
+  border-radius: 6px;
+  margin-bottom: 14px;
+}

@@ -12,6 +12,19 @@
   color: #fff;
   text-align: center;
   padding: calc(28px + env(safe-area-inset-top)) var(--gutter) 28px;
+  /* Motif Ndop en filigrane, derrière l'avatar et le nom (globals.css). */
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.profileHero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ndop) 0 0 / 64px 64px;
+  opacity: 0.11;
+  pointer-events: none;
 }
 
 .profileAvatar {

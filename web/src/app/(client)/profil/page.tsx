@@ -28,6 +28,7 @@ import {
 } from "@/components/icons";
 import { tr } from "@/lib/i18n";
 import { LangSwitch } from "@/components/LangSwitch";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 
 export default function Profil() {
   const { user, loading, refresh, logout } = useAuth();
@@ -184,6 +185,12 @@ export default function Profil() {
         <SettingsSection title={tr("Langue", "Language")}>
           <div className="langSettings">
             <LangSwitch />
+          </div>
+        </SettingsSection>
+
+        <SettingsSection title={tr("Thème", "Theme")}>
+          <div className="langSettings">
+            <ThemeSwitch />
           </div>
         </SettingsSection>
 

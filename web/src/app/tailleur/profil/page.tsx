@@ -31,6 +31,7 @@ import {
 import { currentPosition, hasPosition } from "@/lib/tailors";
 import { nameError } from "@/lib/validation";
 import { LangSwitch } from "@/components/LangSwitch";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 
 const BIO_MAX = 500;
 
@@ -323,6 +324,12 @@ export default function ProfilTailleur() {
         <SettingsSection title={tr("Langue", "Language")}>
           <div className="langSettings">
             <LangSwitch />
+          </div>
+        </SettingsSection>
+
+        <SettingsSection title={tr("Thème", "Theme")}>
+          <div className="langSettings">
+            <ThemeSwitch />
           </div>
         </SettingsSection>
 

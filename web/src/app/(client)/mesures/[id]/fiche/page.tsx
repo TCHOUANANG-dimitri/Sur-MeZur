@@ -100,6 +100,8 @@ function FicheInner() {
         </div>
 
         <article className="fiche">
+          {/* Bandeau Ndop : la fiche partagée est reconnaissable (imprimé aussi) */}
+          <div aria-hidden className="ndop-band ficheBand" />
           <header className="ficheHeader">
             <div>
               <span className="ficheBrand">Sur-MeZur</span>

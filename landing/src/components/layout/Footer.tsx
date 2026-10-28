@@ -30,6 +30,8 @@ export function Footer({ locale, dict }: FooterProps) {
 
   return (
     <footer className="border-t border-violet-950/[0.09] bg-ink-950 pb-24 md:pb-0">
+      {/* Bandeau Ndop : la signature de Sur-MeZur, en bas de chaque page */}
+      <div aria-hidden className="ndop-band h-3" />
       <div className="container-smz pb-10 pt-16 lg:pt-20">
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.6fr)_repeat(2,minmax(0,1fr))] lg:gap-10">
           <div className="flex flex-col gap-5">

@@ -78,8 +78,9 @@
   box-sizing: border-box;
 }
 
-/* Theme sombre : il suit le reglage du telephone. L'administration garde
-   son propre bouton (html[data-theme]), qui l'emporte dans les deux sens. */
+/* Theme sombre : il suit le reglage du telephone, sauf choix explicite dans
+   l'application (Profil > Theme) ou dans l'administration : html[data-theme],
+   qui l'emporte dans les deux sens. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --violet-primary: #a78bfa;
@@ -104,6 +105,33 @@
     --like-bg: #3a1420;
     color-scheme: dark;
   }
+}
+
+
+/* Thème choisi dans l'application (Profil > Thème, lib/theme.ts) : sombre
+   même si le téléphone est en clair. Mêmes valeurs que ci-dessus. */
+:root[data-theme="dark"] {
+    --violet-primary: #a78bfa;
+    --violet-vivid: #8b5cf6;
+    --violet-deep: #6d28d9;
+    --indigo-text: #ece9f6;
+    --bg: #17141f;
+    --bg-alt: #221e2d;
+    --surface: #1c1926;
+    --violet-tint: #2c2343;
+    --bg-page: #110f17;
+    --border: #322c40;
+    --text-secondary: #a8a2ba;
+    --success: #4ade80;
+    --error: #f87171;
+    --pending: #fbbf24;
+    --surface-glass: rgba(23, 20, 31, 0.92);
+    --violet-text: #c4b5fd;
+    --bg-soft: #1b1724;
+    --warn-bg: #3a2a0c;
+    --like: #fb7185;
+    --like-bg: #3a1420;
+    color-scheme: dark;
 }
 
 html,
@@ -219,7 +247,8 @@ h3 {
    ------------------------------------------------------------------------ */
 @media print {
   :root,
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme="light"]),
+  :root[data-theme="dark"] {
     --bg-page: #ffffff;
     --bg: #ffffff;
     --surface: #ffffff;
@@ -245,4 +274,19 @@ h3 {
 
 .print-only {
   display: none;
+}
+
+
+/* --- Ndop : la signature de Sur-MeZur ----------------------------------
+   Tissu royal des Grassfields de l'Ouest du Cameroun (réserves claires sur
+   indigo). Même carreau que la landing (landing/.../NdopMotif.tsx). Toujours
+   discret, jamais derrière un texte à lire ; purement décoratif.
+   ------------------------------------------------------------------------ */
+:root {
+  --ndop: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round'%3E%3Crect x='4' y='4' width='40' height='40'/%3E%3Cpath d='M4 4 44 44M44 4 4 44'/%3E%3Ccircle cx='24' cy='24' r='5'/%3E%3Crect x='52' y='52' width='40' height='40'/%3E%3Cpath d='M72 56 88 72 72 88 56 72Z'/%3E%3Cpath d='M52 14l8-8 8 8 8-8 8 8 8-8M52 34l8-8 8 8 8-8 8 8 8-8'/%3E%3Cpath d='M14 62a6 6 0 1 1 6 6 10 10 0 1 1-10-10M14 82h20'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Ccircle cx='72' cy='72' r='3'/%3E%3Ccircle cx='12' cy='88' r='2'/%3E%3Ccircle cx='36' cy='88' r='2'/%3E%3C/g%3E%3C/svg%3E");
+}
+.ndop-band {
+  background: #14105c var(--ndop) 0 0 / 40px 40px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }

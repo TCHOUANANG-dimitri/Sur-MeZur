@@ -20,6 +20,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { AcquisitionTracker } from "@/components/AcquisitionTracker";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { SwRegister } from "@/components/SwRegister";
+import { THEME_BOOT } from "@/lib/theme";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -47,8 +48,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
+    // suppressHydrationWarning : data-theme est posé par THEME_BOOT avant React.
+    <html lang="fr" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link

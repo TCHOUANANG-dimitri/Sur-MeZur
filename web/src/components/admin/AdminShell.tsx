@@ -15,6 +15,7 @@ import { usePathname, useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Core, type SearchResult } from "@/lib/api/admin";
 import { useAdmin } from "./AdminContext";
+import { applyTheme } from "@/lib/theme";
 import {
   IconAcquisition,
   IconCatalog,
@@ -100,8 +101,9 @@ function useTheme(): [string, () => void] {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     return () => {
-      // En quittant l'administration, le site reprend le theme du telephone.
-      delete document.documentElement.dataset.theme;
+      // En quittant l'administration, l'application reprend son propre choix
+      // (Profil > Theme), ou celui du telephone.
+      applyTheme();
     };
   }, [theme]);
   const toggle = () =>
