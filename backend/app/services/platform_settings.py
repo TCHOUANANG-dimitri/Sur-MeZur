@@ -52,7 +52,7 @@ DEFAULTS: dict[str, Any] = {
     # 3.6 — seuils d'alerte qualite des tailleurs.
     "tailor_quality": {"min_rating": 3.5, "max_dispute_rate": 0.15, "max_response_hours": 48, "max_late_rate": 0.3},
     # 10.5 — objectif de la campagne de collecte.
-    "collecte_target": {"total": 300, "minimum": 150, "female_share": 0.5},
+    "collecte_target": {"total": 100, "minimum": 60, "female_share": 0.5},
     # 14.9 — question « Comment nous avez-vous connu ? » a l'inscription.
     "signup_source_question": True,
     # A2 — orientation produit : bascules de fonctionnalite, lues par

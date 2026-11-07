@@ -131,8 +131,42 @@ export const HIGHLIGHTS: Record<string, string> = {
   bureau: "Bureau",
 };
 
+/** Mesures du tailleur relevees par la campagne de collecte (protocole du
+ *  07/11/2026, collecte/src/lib/protocol.ts). */
+const COLLECTE_LABELS: Record<string, string> = {
+  tour_cou: "Tour de cou",
+  longueur_epaule: "Longueur d'épaules",
+  carrure_devant: "Carrure devant",
+  carrure_dos: "Carrure dos",
+  longueur_manche: "Longueur de manche",
+  tour_biceps: "Tour de biceps (contracté)",
+  tour_poignet: "Tour de poignet",
+  tour_poitrine: "Tour de poitrine",
+  tour_dessus_poitrine: "Tour de dessus de poitrine",
+  tour_dessous_poitrine: "Tour de dessous de poitrine",
+  ecart_poitrine: "Écart de poitrine",
+  hauteur_poitrine: "Hauteur de poitrine",
+  hauteur_dessus_poitrine: "Hauteur dessus de poitrine",
+  hauteur_dessous_poitrine: "Hauteur dessous de poitrine",
+  tour_taille: "Tour de taille",
+  taille_devant: "Taille devant",
+  taille_dos: "Taille dos",
+  tour_bassin: "Tour de bassin",
+  hauteur_bassin: "Hauteur de bassin",
+  hauteur_fessier: "Hauteur fessier",
+  hauteur_braguette: "Hauteur de braguette",
+  longueur_haut: "Longueur du haut (au genou)",
+  longueur_jupe: "Longueur de jupe (au genou)",
+  longueur_pantalon: "Longueur de pantalon",
+  tour_cuisse: "Tour de cuisse (milieu)",
+  hauteur_cuisse: "Hauteur de cuisse",
+  hauteur_genou: "Hauteur de genou",
+  tour_cheville: "Tour de cheville (passage du pied)",
+};
+
 /** Libelle d'une mensuration : celui du parcours client quand la cle fait
- *  partie des 12 mesures livrees, la cle brute sinon. */
+ *  partie des 12 mesures livrees, celui de la collecte pour une mesure du
+ *  tailleur, la cle brute sinon. */
 export function measureLabel(key: string): string {
-  return isMeasureKey(key) ? MEASURES[key].label : key;
+  return isMeasureKey(key) ? MEASURES[key].label : (COLLECTE_LABELS[key] ?? key);
 }

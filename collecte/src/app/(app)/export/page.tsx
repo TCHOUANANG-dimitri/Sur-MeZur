@@ -34,7 +34,7 @@ const KINDS: ExportKind[] = [
   {
     id: "zip",
     title: "Archive complète (ZIP)",
-    body: "sujets.json au format du banc d'essai, tableaux CSV, et toutes les photos nommées par code (SMZ-0001_face.jpg…).",
+    body: "sujets_tailleur.json, sujets.json (ancien protocole), tableaux CSV, et toutes les photos nommées par code (SMZ-0001_face.jpg…).",
     query: "format=zip&photos=true",
     file: "collecte-surmezur.zip",
     Icon: IconArchive,
@@ -65,9 +65,17 @@ const KINDS: ExportKind[] = [
   },
   {
     id: "json",
-    title: "sujets.json (banc d'essai)",
-    body: "Fiches complètes uniquement, au format de ml/bench/nouveaux_sujets_exemple.json.",
+    title: "sujets_tailleur.json (calibration)",
+    body: "Fiches complètes du protocole actuel (20 mesures homme, 26 femme, 3 photos), série de contrôle comprise.",
     query: "format=json",
+    file: "sujets_tailleur.json",
+    Icon: IconJson,
+  },
+  {
+    id: "json_v1",
+    title: "sujets.json (ancien protocole)",
+    body: "Fiches complètes à 12 mesures, au format de ml/bench/nouveaux_sujets_exemple.json.",
+    query: "format=json_v1",
     file: "sujets.json",
     Icon: IconJson,
   },

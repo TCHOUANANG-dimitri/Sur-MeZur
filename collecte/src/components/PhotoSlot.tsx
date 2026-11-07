@@ -83,8 +83,11 @@ export function PhotoSlot({
   remote,
   onChange,
   disabled,
+  required = true,
 }: {
   view: ViewKey;
+  /** Vue exigee par le protocole de la fiche. */
+  required?: boolean;
   /** Photo choisie sur cet appareil, pas encore envoyee. */
   blob?: Blob | null;
   /** Photo deja sur le serveur (fiche existante). */
@@ -150,7 +153,7 @@ export function PhotoSlot({
       <div className="photoBody">
         <div className="photoTitle">
           {spec.label}
-          {spec.required ? <span className="req">obligatoire</span> : <span className="opt">facultative</span>}
+          {required ? <span className="req">obligatoire</span> : <span className="opt">facultative</span>}
           {has && <IconCheckCircle size={16} className="photoOk" aria-label="Photo présente" />}
         </div>
         <p className="photoPose">{spec.pose}</p>

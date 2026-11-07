@@ -16,24 +16,36 @@ de `web/`.
 | Écran | Rôle | Contenu |
 |---|---|---|
 | Accueil | agent, admin | statistiques, fiches en attente d'envoi, dernières fiches |
-| Nouvelle fiche | agent, admin | 4 étapes : volontaire et consentement → 12 mensurations → photos → vérification |
+| Nouvelle fiche | agent, admin | volontaire et consentement → mensurations (20 homme, 26 femme) → contrôle (1 volontaire sur 5) → photos → vérification |
 | Fiches | agent, admin | liste, recherche (code, ville, lieu), filtres ; détail, **modification**, **suppression** |
-| Protocole | agent, admin | où et comment prendre chaque mesure, postures photo — consultable hors réseau |
+| Protocole | agent, admin | préparation, règles du ruban, repères du corps, chaque mesure pas à pas (onglet par sexe), postures photo — consultable hors réseau |
 | Export | admin | ZIP (données + photos), CSV Excel, CSV standard, `sujets.json` |
 | Équipe | admin | création et désactivation des comptes d'agent |
 
-**Les 12 mesures** sont exactement celles que livre l'application :
-tour de cou, poitrine, taille, hanches, bras, cuisse, poignet, cheville,
-carrure, longueur de manche, entrejambe, longueur de dos — avec les mêmes clés
-que la chaîne (`neck`, `chest`, …), pour que l'export se compare directement à
-sa sortie. Taille et poids sont obligatoires (ils servent d'échelle à la
-chaîne).
+**Les mesures** (protocole « tailleur », depuis le 07/11/2026) sont celles du
+tailleur convenues le 30/10/2026 : **20 pour un homme, 26 pour une femme**,
+avec les clés de `pipeline_v4/mesures_v4/definitions.py` (`tour_cou`,
+`taille_devant`, `hauteur_braguette`…). Elles sont prises par des agents qui ne
+sont pas tailleurs : chaque mesure a une phrase « où » toujours visible, des
+étapes, et une mise en garde quand l'erreur est fréquente ou que la définition a
+changé (biceps contracté, cuisse au milieu, cheville = passage du pied). Une
+ficelle nouée au creux de la taille sert de repère à toutes les mesures qui
+partent de la taille. Les longueurs du haut et de la jupe s'arrêtent toujours
+au genou. Taille et poids sont obligatoires et mesurés (ils servent d'échelle à
+la chaîne).
 
-**Photos** : face et profil, toutes deux obligatoires (postures de la
-production : bras écartés de face, bras collés le long du corps de profil).
-Caméra dans la page avec silhouette de cadrage et
-retardateur (3 s / 10 s), ou import depuis la galerie. Réduites à 2048 px /
-JPEG 0,90 (~0,5 Mo) avant stockage.
+**Contrôle** : pour 1 volontaire sur 5, toutes les mesures sont reprises une 2ᵉ
+fois sans voir la première série (`measurements_check`) ; l'écart donne
+l'erreur du ruban lui-même.
+
+**Photos** : face, profil et dos, obligatoires (bras écartés de face et de dos,
+bras collés le long du corps de profil). Caméra dans la page avec silhouette de
+cadrage et retardateur (3 s / 10 s), ou import depuis la galerie. Réduites à
+2048 px / JPEG 0,90 (~0,5 Mo) avant stockage.
+
+Les fiches de l'ancien protocole (12 mesures de la chaîne, clés `neck`,
+`chest`…, photos face et profil) restent lisibles, corrigeables et exportées
+(`sujets.json`) ; le protocole d'une fiche se déduit de ses clés.
 
 ## Hors ligne
 

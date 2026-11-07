@@ -337,7 +337,9 @@ def collecte_objectives(db: Session = Depends(get_db), _=Depends(require_perm("c
     subjects = db.query(DatasetSubject).all()
     usable = [s for s in subjects if s.review_status != "rejected"]
     validated = [s for s in subjects if s.review_status == "validated"]
-    total_target = int(target.get("total", 300))
+    # Objectif decide le 07/11/2026 : 50 volontaires par sexe (minimum utile :
+    # 30 par sexe). Modifiable dans les reglages (`collecte_target`).
+    total_target = int(target.get("total", 100))
     female_share = float(target.get("female_share", 0.5))
 
     def groups(key) -> list[dict]:
@@ -347,7 +349,7 @@ def collecte_objectives(db: Session = Depends(get_db), _=Depends(require_perm("c
     by_week = Counter(local_day(s.created_at) - timedelta(days=local_day(s.created_at).weekday()) for s in subjects)
     return {
         "target": total_target,
-        "minimum": int(target.get("minimum", 150)),
+        "minimum": int(target.get("minimum", 60)),
         "collected": len(usable),
         "validated": len(validated),
         "progress_pct": round(len(usable) / total_target * 100, 1) if total_target else None,

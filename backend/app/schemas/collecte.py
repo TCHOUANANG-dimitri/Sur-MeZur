@@ -1,15 +1,17 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.auth import validate_password
 from app.services.collecte_protocol import (
     CLOTHING,
     GENDERS,
     HARD_BOUNDS,
-    MESURES,
+    MESURES_TAILLEUR,
     REVIEW_STATUSES,
+    TOUTES_LES_CLES,
     check_bounds,
+    check_protocole,
 )
 
 
@@ -52,6 +54,7 @@ class SubjectCreateIn(_SubjectFields):
     height_cm: float
     weight_kg: float
     measurements: dict[str, float | None] = Field(default_factory=dict)
+    measurements_check: dict[str, float | None] | None = None
     consent: bool
     consent_name: str | None = Field(default=None, max_length=255)
 
@@ -75,7 +78,19 @@ class SubjectCreateIn(_SubjectFields):
     @field_validator("measurements")
     @classmethod
     def _measurements(cls, v):
-        return check_bounds(v, MESURES)
+        return check_bounds(v, TOUTES_LES_CLES)
+
+    @field_validator("measurements_check")
+    @classmethod
+    def _measurements_check(cls, v):
+        # La serie de controle n'existe qu'au protocole `tailleur`.
+        return None if v is None else (check_bounds(v, list(MESURES_TAILLEUR)) or None)
+
+    @model_validator(mode="after")
+    def _protocole(self):
+        check_protocole(self.measurements, self.gender)
+        check_protocole(self.measurements_check or {}, self.gender)
+        return self
 
     @field_validator("consent")
     @classmethod
@@ -91,6 +106,7 @@ class SubjectUpdateIn(_SubjectFields):
     height_cm: float | None = None
     weight_kg: float | None = None
     measurements: dict[str, float | None] | None = None
+    measurements_check: dict[str, float | None] | None = None
     consent_name: str | None = Field(default=None, max_length=255)
 
     @field_validator("gender")
@@ -113,7 +129,15 @@ class SubjectUpdateIn(_SubjectFields):
     @field_validator("measurements")
     @classmethod
     def _measurements(cls, v):
-        return None if v is None else check_bounds(v, MESURES)
+        return None if v is None else check_bounds(v, TOUTES_LES_CLES)
+
+    @field_validator("measurements_check")
+    @classmethod
+    def _measurements_check(cls, v):
+        return None if v is None else (check_bounds(v, list(MESURES_TAILLEUR)) or None)
+
+    # Le sexe et le melange des protocoles se verifient dans la route, une fois
+    # la fiche existante connue (une modification peut ne porter que l'un).
 
 
 class ReviewIn(BaseModel):
@@ -149,6 +173,8 @@ class SubjectOut(BaseModel):
     height_cm: float
     weight_kg: float
     measurements: dict[str, float]
+    measurements_check: dict[str, float] | None
+    protocole: str
     clothing: str | None
     city: str | None
     place: str | None

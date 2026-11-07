@@ -3,7 +3,7 @@
  */
 
 import { api, fetchBlob } from "./client";
-import type { Clothing, Gender, MeasureKey, ViewKey } from "../protocol";
+import type { Clothing, Gender, MeasureKey, Protocole, ViewKey } from "../protocol";
 
 export type Role = "collector" | "admin" | "client" | "tailor";
 export type ReviewStatus = "pending" | "validated" | "rejected";
@@ -29,6 +29,8 @@ export interface SubjectFields {
   height_cm: number;
   weight_kg: number;
   measurements: Partial<Record<MeasureKey, number>>;
+  /** Seconde serie, prise sans voir la premiere (1 volontaire sur 5). */
+  measurements_check: Partial<Record<MeasureKey, number>> | null;
   clothing: Clothing | null;
   city: string | null;
   place: string | null;
@@ -63,6 +65,7 @@ export interface Subject extends SubjectFields {
   review_status: ReviewStatus;
   review_note: string | null;
   photos: Photo[];
+  protocole: Protocole;
   complete: boolean;
   created_at: string;
   updated_at: string;

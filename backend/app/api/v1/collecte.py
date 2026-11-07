@@ -44,8 +44,8 @@ from app.schemas.collecte import (
     SubjectOut,
     SubjectUpdateIn,
 )
-from app.services.collecte_export import bench_json, build_zip, csv_text, subject_row
-from app.services.collecte_protocol import VUES, is_complete
+from app.services.collecte_export import bench_json, build_zip, csv_text, subject_row, tailleur_json
+from app.services.collecte_protocol import VUES, check_protocole, is_complete, protocole
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,8 @@ def _serialize(subject: DatasetSubject, names: dict[str, str]) -> SubjectOut:
         height_cm=subject.height_cm,
         weight_kg=subject.weight_kg,
         measurements=subject.measurements or {},
+        measurements_check=subject.measurements_check or None,
+        protocole=protocole(subject.measurements),
         clothing=subject.clothing,
         city=subject.city,
         place=subject.place,
@@ -107,7 +109,7 @@ def _serialize(subject: DatasetSubject, names: dict[str, str]) -> SubjectOut:
             )
             for p in subject.photos
         ],
-        complete=is_complete(subject.measurements or {}, {p.view for p in subject.photos}),
+        complete=is_complete(subject.measurements or {}, {p.view for p in subject.photos}, subject.gender),
         created_at=subject.created_at,
         updated_at=subject.updated_at,
     )
@@ -168,7 +170,7 @@ def stats(db: Session = Depends(get_db), user: User = Depends(require_collecte))
 
     return CollecteStatsOut(
         total=len(subjects),
-        complete=sum(1 for s in subjects if is_complete(s.measurements or {}, {p.view for p in s.photos})),
+        complete=sum(1 for s in subjects if is_complete(s.measurements or {}, {p.view for p in s.photos}, s.gender)),
         validated=sum(1 for s in subjects if s.review_status == "validated"),
         rejected=sum(1 for s in subjects if s.review_status == "rejected"),
         pending=sum(1 for s in subjects if s.review_status == "pending"),
@@ -265,6 +267,14 @@ def update_subject(
     subject = _get_visible(db, subject_id, user)
     _ensure_editable(subject, user)
     changes = payload.model_dump(exclude_unset=True)
+    # La fiche telle qu'elle sera apres la modification : un changement de sexe
+    # seul peut rendre invalides des mesures deja enregistrees.
+    gender = changes.get("gender") or subject.gender
+    try:
+        check_protocole(changes.get("measurements", subject.measurements) or {}, gender)
+        check_protocole(changes.get("measurements_check", subject.measurements_check) or {}, gender)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
     for field, value in changes.items():
         setattr(subject, field, value)
     # Une fiche rejetee puis corrigee par l'agent repart en relecture.
@@ -432,7 +442,7 @@ def delete_photo(subject_id: str, view: str, db: Session = Depends(get_db), user
 
 @router.get("/export")
 def export(
-    fmt: str = Query(default="zip", alias="format", pattern="^(zip|csv|json|manifest)$"),
+    fmt: str = Query(default="zip", alias="format", pattern="^(zip|csv|json|json_v1|manifest)$"),
     review_status: str = Query(default="non_rejected", alias="statut"),
     photos: bool = True,
     excel: bool = False,
@@ -440,9 +450,10 @@ def export(
     user: User = Depends(require_admin),
 ):
     """
-    - `zip`      : sujets.json (format ml/bench) + CSV + photos/
+    - `zip`      : sujets_tailleur.json + sujets.json (format ml/bench) + CSV + photos/
     - `csv`      : le tableau seul (`excel=true` pour Excel en francais)
-    - `json`     : le sujets.json seul
+    - `json`     : le sujets_tailleur.json seul (protocole actuel)
+    - `json_v1`  : le sujets.json seul (ancien protocole, format ml/bench)
     - `manifest` : toutes les fiches avec l'empreinte de chaque photo, pour
                    ml/scripts/telecharger_collecte.py (synchronisation locale)
 
@@ -466,6 +477,11 @@ def export(
         )
     if fmt == "json":
         return JSONResponse(
+            tailleur_json(subjects),
+            headers={"Content-Disposition": f'attachment; filename="sujets-tailleur-{stamp}.json"'},
+        )
+    if fmt == "json_v1":
+        return JSONResponse(
             bench_json(subjects),
             headers={"Content-Disposition": f'attachment; filename="sujets-{stamp}.json"'},
         )
@@ -473,6 +489,7 @@ def export(
         return {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "sujets_json": bench_json(subjects),
+            "sujets_tailleur_json": tailleur_json(subjects),
             "rows": rows,
             "photos": [
                 {

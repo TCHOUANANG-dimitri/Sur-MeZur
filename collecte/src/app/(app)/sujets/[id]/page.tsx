@@ -16,14 +16,16 @@ import { IconCheck, IconDelete, IconEdit, IconReject, IconWarning } from "@/comp
 import { CollecteApi, type ReviewStatus, type Subject } from "@/lib/api/collecte";
 import {
   CLOTHING_LABELS,
+  CONTROLE_TOLERANCE_CM,
   GENDER_LABELS,
-  MEASURE_GROUPS,
   MEASURES,
   VIEW_KEYS,
   VIEWS,
   checkValue,
   fmtNum,
   formatCm,
+  measureGroups,
+  requiredViews,
 } from "@/lib/protocol";
 import { friendlyError, withRetry } from "@/lib/retry";
 
@@ -160,18 +162,28 @@ function Detail() {
           </section>
 
           <section className="card">
-            <h3 className="groupTitle">Mensurations</h3>
-            {MEASURE_GROUPS.map((g) => (
+            <h3 className="groupTitle">
+              Mensurations{" "}
+              <span className="muted small">
+                {subject.protocole === "v1" ? "(ancien protocole, 12 mesures)" : "(protocole tailleur)"}
+              </span>
+            </h3>
+            {measureGroups(subject.protocole, subject.gender).map((g) => (
               <div key={g.id} className="measureBlock">
                 <p className="blockTitle">{g.title}</p>
                 <dl className="recap">
                   {g.keys.map((k) => {
                     const v = subject.measurements[k];
+                    const v2 = subject.measurements_check?.[k];
                     const c = checkValue(v ?? null, MEASURES[k].usual, MEASURES[k].hard);
+                    const ecart = v !== undefined && v2 !== undefined && Math.abs(v - v2) > CONTROLE_TOLERANCE_CM;
                     return (
-                      <div key={k} className={`recapRow ${c.level === "warn" ? "recap-warn" : ""}`}>
+                      <div key={k} className={`recapRow ${c.level === "warn" || ecart ? "recap-warn" : ""}`}>
                         <dt>{MEASURES[k].label}</dt>
-                        <dd>{v !== undefined ? formatCm(v) : <span className="missing">manquante</span>}</dd>
+                        <dd>
+                          {v !== undefined ? formatCm(v) : <span className="missing">manquante</span>}
+                          {subject.measurements_check && <span className="recapCheck"> · 2ᵉ : {fmtNum(v2)}</span>}
+                        </dd>
                       </div>
                     );
                   })}
@@ -185,7 +197,9 @@ function Detail() {
           <section className="card">
             <h3 className="groupTitle">Photos</h3>
             <div className="photoGrid">
-              {VIEW_KEYS.map((v) => {
+              {VIEW_KEYS.filter(
+                (v) => requiredViews(subject.protocole).includes(v) || subject.photos.some((x) => x.view === v)
+              ).map((v) => {
                 const p = subject.photos.find((x) => x.view === v);
                 return (
                   <figure key={v} className="photoFigure">
@@ -194,7 +208,7 @@ function Detail() {
                         <AuthImage subjectId={subject.id} view={v} version={p.sha256} alt={VIEWS[v].label} className="photoFull" />
                       </button>
                     ) : (
-                      <div className="photoPlaceholder photoFull">{VIEWS[v].required ? "Manquante" : "—"}</div>
+                      <div className="photoPlaceholder photoFull">{requiredViews(subject.protocole).includes(v) ? "Manquante" : "—"}</div>
                     )}
                     <figcaption>
                       {VIEWS[v].label}

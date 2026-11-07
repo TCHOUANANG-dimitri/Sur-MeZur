@@ -48,10 +48,14 @@ class DatasetSubject(Base, IDMixin, TimestampMixin):
     height_cm: Mapped[float] = mapped_column(Float)
     weight_kg: Mapped[float] = mapped_column(Float)
 
-    # Les 12 mesures livrees par la chaine, relevees au metre ruban. Ce sont
-    # les SEULES relevees : la campagne se limite a ce que l'application livre
-    # au tailleur.
+    # Mesures relevees au metre ruban : celles du tailleur (20 homme, 26
+    # femme) depuis le 07/11/2026, les 12 de la chaine avant (protocole v1,
+    # voir app/services/collecte_protocol.py).
     measurements: Mapped[dict] = mapped_column(JSON, default=dict)
+    # Seconde serie, prise sans regarder la premiere, sur environ 1 volontaire
+    # sur 5 : elle donne l'erreur du ruban lui-meme, plancher de toute
+    # methode. Absente (None) pour les autres fiches.
+    measurements_check: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # Contexte de prise de vue : le vetement ample est le premier facteur
     # d'erreur mesure (jusqu'a 24 cm, RAPPORT_PROJET.md §5.3).
@@ -86,7 +90,7 @@ class DatasetPhoto(Base, IDMixin, TimestampMixin):
     __table_args__ = (UniqueConstraint("subject_id", "view", name="uq_dataset_photo_view"),)
 
     subject_id: Mapped[str] = mapped_column(ForeignKey("dataset_subjects.id"), index=True)
-    view: Mapped[str] = mapped_column(String(16))  # face | profil
+    view: Mapped[str] = mapped_column(String(16))  # face | profil | dos
     # Chemin RELATIF a settings.dataset_dir (ex. "SMZ-0001/SMZ-0001_face.jpg") :
     # le dossier peut etre deplace sans reecrire la base.
     file_path: Mapped[str] = mapped_column(String(500))
